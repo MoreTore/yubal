@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ytad = "app.cli:main"
+ytad = "app.cli:main"  # app/cli/__init__.py
 
 [project.optional-dependencies]
 dev = [
