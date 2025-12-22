@@ -29,3 +29,6 @@ Thumbs.db
 # Tailwind
 tailwindcss
 app/static/css/output.css
+
+# keys
+config/spotify_token.json

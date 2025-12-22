@@ -66,6 +66,9 @@ class Tagger:
                     error=f"Beets import failed: {result.stderr}",
                 )
 
+            # Sync database changes (genre, lyrics) to files
+            self._run_beets_write()
+
             # Find where the album was imported
             dest_dir = self._find_imported_album(source_dir)
             track_count = len(audio_files)
@@ -151,6 +154,19 @@ class Tagger:
             stdout="\n".join(stdout_lines),
             stderr="",
         )
+
+    def _run_beets_write(self) -> None:
+        """Sync database changes to files (for lastgenre, lyrics, etc.)."""
+        env = os.environ.copy()
+        env["BEETSDIR"] = str(self.beets_config.parent)
+
+        cmd = self._get_beet_command() + [
+            "--config", str(self.beets_config),
+            "write",
+        ]
+
+        print(f"Running beets write: {' '.join(cmd)}")
+        subprocess.run(cmd, env=env, capture_output=True, timeout=60)
 
     def _find_audio_files(self, directory: Path) -> list[Path]:
         """Find all audio files in a directory."""

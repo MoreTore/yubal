@@ -1,42 +1,29 @@
-# Beets configuration for ytad
-# Based on Tidarr's config for non-interactive imports
-
-# Library paths
+---
 directory: /Users/guille/repos/ytad/data/library
 library: /Users/guille/repos/ytad/data/beets.db
 
-# Plugins
-plugins: embedart fetchart fromfilename spotify zero
+plugins: fetchart fromfilename spotify zero lastgenre lyrics
 
-# General settings
 threaded: yes
 asciify_paths: true
 
 ui:
   color: no
 
-# Path format for organized files
 paths:
   default: "%asciify{$albumartist}/$year - %asciify{$album}%aunique{}/$track - %asciify{$title}"
   singleton: Non-Album/%asciify{$artist} - %asciify{$title}
   comp: Compilations/%asciify{$album}%aunique{}/$track - %asciify{$title}
 
-# Import settings
 import:
   write: yes
-  copy: no
   move: yes
-  resume: no
-  incremental: no
   quiet: yes
   quiet_fallback: asis
-  timid: no
   duplicate_action: skip
   log: /Users/guille/repos/ytad/data/beets_import.log
-  languages: ["en"]
-  group_albums: no
 
-# Matching settings - relaxed for YouTube rips
+# Relaxed matching for YouTube rips
 match:
   strong_rec_thresh: 0.10
   medium_rec_thresh: 0.25
@@ -44,38 +31,32 @@ match:
   max_rec:
     missing_tracks: medium
     unmatched_tracks: medium
-    track_length: medium
-    track_index: medium
-  ignored: ["missing_tracks", "track_length", "unmatched_tracks", "track_index"]
-  ignore_data_tracks: yes
-  ignore_video_tracks: yes
+  ignored: [missing_tracks, track_length, unmatched_tracks, track_index]
   track_length_grace: 10
   track_length_max: 30
 
-# MusicBrainz settings
-musicbrainz:
-  host: musicbrainz.org
-  https: yes
-  ratelimit: 1
-  ratelimit_interval: 1.0
-
-# Fetch album art
 fetchart:
   auto: yes
   sources: filesystem coverart itunes amazon albumart
 
-# Embed album art - disabled for speed
-embedart:
-  auto: no
-
-# Spotify metadata source (get credentials from https://developer.spotify.com/dashboard)
+# Spotify as primary metadata source
 spotify:
-  data_source_mismatch_penalty: 0.0  # Prefer Spotify matches
+  data_source_mismatch_penalty: 0.0
   search_limit: 10
   client_id: fde699cf3cef46a796cdf80b0c714701
   client_secret: a07797d4a0894aab939a26545f38dc56
 
-# Zero plugin - keep only useful tags, strip everything else
+lastgenre:
+  auto: yes
+  source: album
+  force: yes
+
+lyrics:
+  auto: yes
+  sources: [lrclib, genius]
+  synced: yes
+
+# Strip unwanted tags, keep only essentials
 zero:
   auto: yes
-  keep_fields: title artist album albumartist track tracktotal disc disctotal year month day label images
+  keep_fields: title artist album albumartist track tracktotal disc disctotal year month day label genre genres lyrics images
