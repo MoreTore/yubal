@@ -33,7 +33,7 @@ class Tagger:
         # Use python -m to avoid shebang issues with venv scripts
         return [sys.executable, "-m", "beets"]
 
-    def tag_album(self, source_dir: Path, no_move: bool = False) -> TagResult:
+    def tag_album(self, source_dir: Path, copy: bool = False) -> TagResult:
         """
         Tag and organize an album using beets.
 
@@ -42,7 +42,7 @@ class Tagger:
 
         Args:
             source_dir: Directory containing downloaded audio files
-            no_move: If True, copy files to library instead of moving (originals stay tagged in place)
+            copy: If True, copy files to library instead of moving (originals stay tagged in place)
 
         Returns:
             TagResult with success status and final location
@@ -57,7 +57,7 @@ class Tagger:
             )
 
         try:
-            result = self._run_beets_import(source_dir, no_move=no_move)
+            result = self._run_beets_import(source_dir, copy=copy)
 
             if result.returncode != 0:
                 return TagResult(
@@ -96,12 +96,12 @@ class Tagger:
                 error=f"Unexpected error during tagging: {str(e)}",
             )
 
-    def _run_beets_import(self, source_dir: Path, no_move: bool = False) -> subprocess.CompletedProcess:
+    def _run_beets_import(self, source_dir: Path, copy: bool = False) -> subprocess.CompletedProcess:
         """
         Execute beets import command.
 
         Uses quiet mode (-q) for non-interactive import.
-        Uses move mode to relocate files to library (unless no_move is True).
+        Uses move mode to relocate files to library (unless copy is True).
         """
         # Ensure library directory exists (beets prompts otherwise)
         self.library_dir.mkdir(parents=True, exist_ok=True)
@@ -118,7 +118,7 @@ class Tagger:
         ]
 
         # --copy: copy files to library instead of moving (originals stay in place, tagged)
-        if no_move:
+        if copy:
             cmd.append("--copy")
 
         cmd.append(str(source_dir))
@@ -159,6 +159,51 @@ class Tagger:
             f for f in directory.iterdir()
             if f.is_file() and f.suffix.lower() in audio_extensions
         ]
+
+    def _get_album_metadata(self, audio_file: Path) -> tuple[Optional[str], Optional[str]]:
+        """Extract album and artist from an audio file using ffprobe."""
+        try:
+            import json
+            result = subprocess.run(
+                ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(audio_file)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            data = json.loads(result.stdout)
+            tags = data.get("format", {}).get("tags", {})
+            return tags.get("album"), tags.get("artist")
+        except Exception:
+            return None, None
+
+    def _album_exists_in_library(self, album: str, artist: str) -> Optional[Path]:
+        """Check if an album already exists in the beets library."""
+        if not album:
+            return None
+
+        env = os.environ.copy()
+        env["BEETSDIR"] = str(self.beets_config.parent)
+
+        # Query beets for the album
+        cmd = self._get_beet_command() + [
+            "--config", str(self.beets_config),
+            "ls", "-a", "-p",  # -a for albums, -p for path
+            f"album:{album}",
+        ]
+
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, env=env, timeout=30
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                # Return the first matching album path
+                paths = result.stdout.strip().split("\n")
+                if paths and paths[0]:
+                    return Path(paths[0])
+        except Exception:
+            pass
+
+        return None
 
     def _find_imported_album(self, source_dir: Path) -> Optional[Path]:
         """

@@ -31,7 +31,7 @@ import:
   quiet: yes
   quiet_fallback: asis
   timid: no
-  duplicate_action: merge
+  duplicate_action: skip
   log: /Users/guille/repos/ytad/data/beets_import.log
   languages: ["en"]
   group_albums: no

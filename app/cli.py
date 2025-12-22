@@ -120,10 +120,10 @@ def tag(
         "--beets-config", "-c",
         help="Path to beets configuration file",
     ),
-    no_move: bool = typer.Option(
+    copy: bool = typer.Option(
         False,
-        "--no-move",
-        help="Tag files in place without moving (copies to library instead)",
+        "--copy", "-C",
+        help="Copy to library instead of moving (original files unchanged)",
     ),
 ) -> None:
     """
@@ -138,10 +138,10 @@ def tag(
     if not beets_config.exists():
         echo_error(f"Beets config not found: {beets_config}")
 
-    echo_info(f"Tagging files in: {input_dir}")
-    echo_info(f"Library directory: {library_dir}")
-    if no_move:
-        echo_info("Mode: tag in place (files won't be moved)")
+    echo_info(f"Source: {input_dir}")
+    echo_info(f"Library: {library_dir}")
+    if copy:
+        echo_info("Mode: copy (original files will be preserved)")
 
     beets_db = library_dir.parent / "beets.db"
 
@@ -151,16 +151,17 @@ def tag(
         beets_db=beets_db,
     )
 
-    result = tagger.tag_album(input_dir, no_move=no_move)
+    result = tagger.tag_album(input_dir, copy=copy)
 
     if not result.success:
         echo_error(result.error or "Tagging failed")
 
     echo_info(f"Tagged {result.track_count} tracks")
-    if no_move:
-        echo_success(f"Files tagged in place: {input_dir}")
-    elif result.dest_dir:
-        echo_success(f"Organized to: {result.dest_dir}")
+    if result.dest_dir:
+        if copy:
+            echo_success(f"Copied and tagged to: {result.dest_dir}")
+        else:
+            echo_success(f"Moved and tagged to: {result.dest_dir}")
     else:
         echo_success("Tagging complete")
 
