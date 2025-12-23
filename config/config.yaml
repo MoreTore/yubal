@@ -2,7 +2,7 @@
 directory: ../data
 library: ./beets.db
 
-plugins: fetchart embedart fromfilename spotify zero lastgenre lyrics
+plugins: fetchart embedart fromfilename spotify zero lastgenre
 
 threaded: yes
 asciify_paths: true
@@ -11,9 +11,10 @@ ui:
   color: no
 
 paths:
-  default: "%asciify{$albumartist}/$year - %asciify{$album}%aunique{}/$track - %asciify{$title}"
+  default: "Albums/%asciify{$albumartist}/$year - %asciify{$album}%aunique{}/$track - %asciify{$title}"
   singleton: Non-Album/%asciify{$artist} - %asciify{$title}
   comp: Compilations/%asciify{$album}%aunique{}/$track - %asciify{$title}
+  albumtype_soundtrack: Soundtracks/%asciify{$album}%aunique{}/$track - %asciify{$title}
 
 import:
   write: yes
@@ -34,6 +35,10 @@ match:
   ignored: [missing_tracks, track_length, unmatched_tracks, track_index]
   track_length_grace: 10
   track_length_max: 30
+  # Ignore album artist (unreliable from YouTube), use track artist for matching
+  distance_weights:
+    artist: 0.0        # Album artist - ignore
+    track_artist: 1.0  # Track artist - moderate weight (now clean from artists.0)
 
 fetchart:
   auto: yes
@@ -54,12 +59,7 @@ lastgenre:
   source: album
   force: yes
 
-lyrics:
-  auto: yes
-  sources: [lrclib, genius]
-  synced: yes
-
 # Strip unwanted tags, keep only essentials
 zero:
   auto: yes
-  keep_fields: title artist album albumartist track tracktotal disc disctotal year month day label genre genres lyrics images
+  keep_fields: title artist album albumartist track tracktotal disc disctotal year month day label genre genres images

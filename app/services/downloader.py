@@ -230,7 +230,7 @@ class Downloader:
                     "actions": [
                         (MetadataParserPP.Actions.INTERPRET, "playlist_index", "%(meta_track)s"),
                         (MetadataParserPP.Actions.INTERPRET, "release_date", "%(meta_date)s"),
-                        (MetadataParserPP.Actions.INTERPRET, "artist", "%(meta_album_artist)s"),
+                        (MetadataParserPP.Actions.INTERPRET, "%(artists.0)s", "%(meta_artist)s")
                     ],
                 },
                 {

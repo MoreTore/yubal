@@ -142,15 +142,19 @@ class Tagger:
         print(f"Running beets: {' '.join(cmd)}")
 
         # Use Popen to stream output in real-time
+        # Pipe stdin with newlines to auto-accept prompts (beets -q needs stdin open)
         process = subprocess.Popen(
             cmd,
-            stdin=subprocess.DEVNULL,  # Prevent hanging on prompts
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,  # Combine stderr into stdout
             text=True,
             env=self._get_beets_env(),
             cwd=str(self.beets_config.parent.parent),
         )
+        # Send newlines to accept any prompts, then close stdin
+        process.stdin.write("\n" * 10)
+        process.stdin.close()
 
         stdout_lines = []
         for line in process.stdout:
