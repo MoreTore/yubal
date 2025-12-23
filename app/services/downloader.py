@@ -18,6 +18,14 @@ from app.core import (
 )
 
 
+def _get_first_valid(*values: Any, default: str = "Unknown") -> str:
+    """Return first non-None, non-empty string value, or default."""
+    for v in values:
+        if v is not None and str(v).strip():
+            return str(v)
+    return default
+
+
 class Downloader:
     """Handles YouTube Music album downloads via yt-dlp."""
 
@@ -194,40 +202,38 @@ class Downloader:
                 if entry:
                     tracks.append(
                         TrackInfo(
-                            title=entry.get("title", f"Track {i}"),
-                            artist=entry.get(
-                                "artist", entry.get("uploader", "Unknown")
-                            ),
+                            title=_get_first_valid(entry.get("title"), default=f"Track {i}"),
+                            artist=_get_first_valid(entry.get("artist"), entry.get("uploader")),
                             track_number=i,
-                            duration=entry.get("duration", 0),
+                            duration=entry.get("duration") or 0,
                         )
                     )
 
             return AlbumInfo(
-                title=info.get("title", "Unknown Album"),
-                artist=info.get("uploader", info.get("channel", "Unknown")),
+                title=_get_first_valid(info.get("title"), default="Unknown Album"),
+                artist=_get_first_valid(info.get("uploader"), info.get("channel")),
                 year=self._extract_year(info),
                 track_count=len(tracks),
                 tracks=tracks,
-                playlist_id=info.get("id", ""),
+                playlist_id=info.get("id") or "",
                 url=url,
             )
 
         # Single track
         return AlbumInfo(
-            title=info.get("album", info.get("title", "Unknown")),
-            artist=info.get("artist", info.get("uploader", "Unknown")),
+            title=_get_first_valid(info.get("album"), info.get("title")),
+            artist=_get_first_valid(info.get("artist"), info.get("uploader")),
             year=self._extract_year(info),
             track_count=1,
             tracks=[
                 TrackInfo(
-                    title=info.get("title", "Unknown"),
-                    artist=info.get("artist", "Unknown"),
+                    title=_get_first_valid(info.get("title")),
+                    artist=_get_first_valid(info.get("artist")),
                     track_number=1,
-                    duration=info.get("duration", 0),
+                    duration=info.get("duration") or 0,
                 )
             ],
-            playlist_id=info.get("id", ""),
+            playlist_id=info.get("id") or "",
             url=url,
         )
 

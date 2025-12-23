@@ -40,7 +40,7 @@ def download(
 
     echo_info(f"Downloaded {len(result.downloaded_files)} tracks:")
     for f in sorted(result.downloaded_files):
-        echo_info(f"  - {f.name}")
+        echo_info(f"  - {Path(f).name}")
 
     if result.album_info:
         echo_success(
