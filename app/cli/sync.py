@@ -1,7 +1,5 @@
 """Sync command."""
 
-import shutil
-import tempfile
 from pathlib import Path
 
 import typer
@@ -9,13 +7,41 @@ import typer
 from app.cli.utils import (
     DEFAULT_BEETS_CONFIG,
     DEFAULT_LIBRARY_DIR,
-    create_tagger,
     echo_error,
     echo_info,
     echo_success,
     validate_beets_config,
 )
-from app.services.downloader import Downloader
+from app.core.progress import ProgressEvent, ProgressStep
+from app.services.sync import SyncService
+
+
+def _cli_progress_callback(event: ProgressEvent) -> None:
+    """Handle progress events for CLI output."""
+    if event.step == ProgressStep.ERROR:
+        # Don't call echo_error here as it raises Exit
+        typer.echo(f"Error: {event.message}", err=True)
+    elif event.step == ProgressStep.COMPLETE:
+        if "Cleaning up" in event.message:
+            echo_info(event.message)
+        else:
+            echo_success(event.message)
+    elif event.step == ProgressStep.DOWNLOADING:
+        if event.progress is not None and event.progress < 100:
+            # In-progress download - print on same line
+            print(f"\r  {event.message}", end="", flush=True)
+        else:
+            echo_info(event.message)
+    elif event.step == ProgressStep.STARTING:
+        echo_info(f"\n--- Starting ---")
+        echo_info(event.message)
+    elif event.step == ProgressStep.TAGGING:
+        if "[beets]" in event.message:
+            echo_info(f"  {event.message}")
+        else:
+            echo_info(event.message)
+    else:
+        echo_info(event.message)
 
 
 def sync(
@@ -47,46 +73,13 @@ def sync(
     """
     validate_beets_config(beets_config)
 
-    temp_dir = Path(tempfile.mkdtemp(prefix="ytadl_"))
-    echo_info(f"Temp directory: {temp_dir}")
+    service = SyncService(
+        library_dir=library_dir,
+        beets_config=beets_config,
+        audio_format=audio_format,
+    )
 
-    try:
-        # Step 1: Download
-        echo_info("\n--- Step 1: Download ---")
-        echo_info(f"URL: {url}")
+    result = service.sync_album(url, progress_callback=_cli_progress_callback)
 
-        downloader = Downloader(audio_format=audio_format)
-        download_result = downloader.download_album(url, temp_dir)
-
-        if not download_result.success:
-            echo_error(download_result.error or "Download failed")
-
-        echo_info(f"Downloaded {len(download_result.downloaded_files)} tracks")
-        if download_result.album_info:
-            echo_info(
-                f"Album: {download_result.album_info.title} "
-                f"by {download_result.album_info.artist}"
-            )
-
-        # Step 2: Tag
-        echo_info("\n--- Step 2: Tag ---")
-
-        tagger = create_tagger(library_dir, beets_config)
-        tag_result = tagger.tag_album(temp_dir)
-
-        if not tag_result.success:
-            echo_error(tag_result.error or "Tagging failed")
-
-        echo_info(f"Tagged {tag_result.track_count} tracks")
-
-        # Success
-        echo_info("\n--- Complete ---")
-        if tag_result.dest_dir:
-            echo_success(f"Album saved to: {tag_result.dest_dir}")
-        else:
-            echo_success("Sync complete")
-
-    finally:
-        if temp_dir.exists():
-            echo_info("Cleaning up temp directory...")
-            shutil.rmtree(temp_dir, ignore_errors=True)
+    if not result.success:
+        echo_error(result.error or "Sync failed")

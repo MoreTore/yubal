@@ -9,6 +9,7 @@ import yt_dlp
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
 from app.constants import AUDIO_EXTENSIONS
+from app.core.progress import ProgressCallback, ProgressEvent, ProgressStep
 
 
 @dataclass
@@ -92,32 +93,70 @@ class Downloader:
         return None
 
     def _create_progress_hook(
-        self, downloaded_files: list[Path]
+        self,
+        downloaded_files: list[Path],
+        progress_callback: ProgressCallback | None = None,
     ) -> Callable[[dict[str, Any]], None]:
         """Create a progress hook that tracks downloaded files."""
 
         def hook(d: dict[str, Any]) -> None:
             if d["status"] == "downloading":
-                percent = d.get("_percent_str", "").strip()
+                percent_str = d.get("_percent_str", "").strip()
                 speed = d.get("_speed_str", "").strip()
-                if percent:
-                    print(f"\r  Downloading: {percent} at {speed}", end="", flush=True)
+                # Parse percentage for callback
+                percent_value: float | None = None
+                if percent_str:
+                    try:
+                        percent_value = float(percent_str.rstrip("%"))
+                    except ValueError:
+                        pass
+
+                if progress_callback and percent_value is not None:
+                    progress_callback(
+                        ProgressEvent(
+                            step=ProgressStep.DOWNLOADING,
+                            message=f"Downloading: {percent_str} at {speed}",
+                            progress=percent_value,
+                            details={"speed": speed},
+                        )
+                    )
+                elif percent_str:
+                    print(
+                        f"\r  Downloading: {percent_str} at {speed}", end="", flush=True
+                    )
             elif d["status"] == "finished":
                 print()  # New line after progress
                 filename = d.get("info_dict", {}).get("filepath") or d.get("filename")
                 if filename:
                     downloaded_files.append(Path(filename))
-                    print(f"  Completed: {Path(filename).name}")
+                    msg = f"Completed: {Path(filename).name}"
+                    if progress_callback:
+                        progress_callback(
+                            ProgressEvent(
+                                step=ProgressStep.DOWNLOADING,
+                                message=msg,
+                                progress=100.0,
+                                details={"filename": Path(filename).name},
+                            )
+                        )
+                    else:
+                        print(f"  {msg}")
 
         return hook
 
-    def download_album(self, url: str, output_dir: Path) -> DownloadResult:
+    def download_album(
+        self,
+        url: str,
+        output_dir: Path,
+        progress_callback: ProgressCallback | None = None,
+    ) -> DownloadResult:
         """
         Download all tracks from a YouTube Music album.
 
         Args:
             url: YouTube Music playlist URL
             output_dir: Directory to save downloaded files
+            progress_callback: Optional callback for progress updates
 
         Returns:
             DownloadResult with success status and file paths
@@ -128,7 +167,8 @@ class Downloader:
         album_info: AlbumInfo | None = None
 
         ydl_opts = self._get_ydl_opts(
-            output_dir, self._create_progress_hook(downloaded_files)
+            output_dir,
+            self._create_progress_hook(downloaded_files, progress_callback),
         )
 
         try:

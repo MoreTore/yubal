@@ -1,7 +1,4 @@
-"""Application configuration paths.
-
-This module re-exports from app.core.config for backward compatibility.
-"""
+"""Core utilities shared across CLI and API."""
 
 from app.core.config import (
     APP_ROOT,
@@ -11,6 +8,7 @@ from app.core.config import (
     DEFAULT_BEETS_DB,
     DEFAULT_LIBRARY_DIR,
 )
+from app.core.progress import ProgressCallback, ProgressEvent, ProgressStep
 
 __all__ = [
     "APP_ROOT",
@@ -19,4 +17,7 @@ __all__ = [
     "DEFAULT_BEETS_CONFIG",
     "DEFAULT_BEETS_DB",
     "DEFAULT_LIBRARY_DIR",
+    "ProgressCallback",
+    "ProgressEvent",
+    "ProgressStep",
 ]

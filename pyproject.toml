@@ -10,10 +10,13 @@ dependencies = [
     "beets[lastgenre,lyrics]>=2.0.0",
     "requests>=2.31.0",
     "pillow>=10.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
 ]
 
 [project.scripts]
-ytadl = "app.cli:main"  # app/cli/__init__.py
+ytadl = "app.cli:main"
+ytadl-api = "app.api:run"
 
 [project.optional-dependencies]
 dev = [

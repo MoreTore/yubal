@@ -1,0 +1,17 @@
+"""FastAPI application module."""
+
+from app.api.app import app
+
+__all__ = ["app"]
+
+
+def run() -> None:
+    """Run the API server."""
+    import uvicorn
+
+    uvicorn.run(
+        "app.api.app:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+    )

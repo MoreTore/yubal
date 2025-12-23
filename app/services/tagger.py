@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.constants import AUDIO_EXTENSIONS
+from app.core.progress import ProgressCallback, ProgressEvent, ProgressStep
 
 
 @dataclass
@@ -52,7 +53,12 @@ class Tagger:
         env["BEETSDIR"] = str(self.beets_config.parent)
         return env
 
-    def tag_album(self, source_dir: Path, copy: bool = False) -> TagResult:
+    def tag_album(
+        self,
+        source_dir: Path,
+        copy: bool = False,
+        progress_callback: ProgressCallback | None = None,
+    ) -> TagResult:
         """
         Tag and organize an album using beets.
 
@@ -62,6 +68,7 @@ class Tagger:
         Args:
             source_dir: Directory containing downloaded audio files
             copy: If True, copy files instead of moving (originals stay)
+            progress_callback: Optional callback for progress updates
 
         Returns:
             TagResult with success status and final location
@@ -76,7 +83,9 @@ class Tagger:
             )
 
         try:
-            result = self._run_beets_import(source_dir, copy=copy)
+            result = self._run_beets_import(
+                source_dir, copy=copy, progress_callback=progress_callback
+            )
 
             if result.returncode != 0:
                 return TagResult(
@@ -116,7 +125,10 @@ class Tagger:
             )
 
     def _run_beets_import(
-        self, source_dir: Path, copy: bool = False
+        self,
+        source_dir: Path,
+        copy: bool = False,
+        progress_callback: ProgressCallback | None = None,
     ) -> subprocess.CompletedProcess[str]:
         """
         Execute beets import command.
@@ -142,7 +154,16 @@ class Tagger:
 
         cmd.append(str(source_dir))
 
-        print(f"Running beets: {' '.join(cmd)}")
+        msg = f"Running beets: {' '.join(cmd)}"
+        if progress_callback:
+            progress_callback(
+                ProgressEvent(
+                    step=ProgressStep.TAGGING,
+                    message=msg,
+                )
+            )
+        else:
+            print(msg)
 
         # Use Popen to stream output in real-time
         # Pipe stdin with newlines to auto-accept prompts (beets -q needs stdin open)
@@ -162,11 +183,30 @@ class Tagger:
         stdout_lines = []
         for line in process.stdout:
             line = line.rstrip()
-            print(f"  [beets] {line}")
+            if progress_callback:
+                progress_callback(
+                    ProgressEvent(
+                        step=ProgressStep.TAGGING,
+                        message=f"[beets] {line}",
+                    )
+                )
+            else:
+                print(f"  [beets] {line}")
             stdout_lines.append(line)
 
         process.wait(timeout=300)
-        print(f"Beets returncode: {process.returncode}")
+
+        msg = f"Beets returncode: {process.returncode}"
+        if progress_callback:
+            progress_callback(
+                ProgressEvent(
+                    step=ProgressStep.TAGGING,
+                    message=msg,
+                    details={"returncode": process.returncode},
+                )
+            )
+        else:
+            print(msg)
 
         # Return a CompletedProcess-like result for compatibility
         return subprocess.CompletedProcess(
