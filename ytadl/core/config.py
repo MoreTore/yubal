@@ -2,12 +2,15 @@
 
 from pathlib import Path
 
-# APP_ROOT: project root from ytadl/core/config.py
-APP_ROOT = Path(__file__).parent.parent.parent
+# PACKAGE_ROOT: ytadl package directory
+PACKAGE_ROOT = Path(__file__).parent.parent
+
+# APP_ROOT: project root (where pyproject.toml is)
+APP_ROOT = PACKAGE_ROOT.parent
 
 # Default directories (can be overridden via CLI options)
 DATA_DIR = APP_ROOT / "data"
-CONFIG_DIR = APP_ROOT / "config"
+CONFIG_DIR = PACKAGE_ROOT / "config"
 
 DEFAULT_BEETS_CONFIG = CONFIG_DIR / "config.yaml"
 DEFAULT_BEETS_DB = CONFIG_DIR / "beets.db"

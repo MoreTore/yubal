@@ -7,7 +7,7 @@ from typing import Any
 import yt_dlp
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
-from ytadl.constants import AUDIO_EXTENSIONS
+from ytadl.core.constants import AUDIO_EXTENSIONS
 from ytadl.core import (
     AlbumInfo,
     DownloadResult,

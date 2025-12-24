@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ytadl.constants import AUDIO_EXTENSIONS
+from ytadl.core.constants import AUDIO_EXTENSIONS
 from ytadl.core import (
     LibraryHealth,
     ProgressCallback,

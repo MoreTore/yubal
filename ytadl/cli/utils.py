@@ -4,7 +4,7 @@ from pathlib import Path
 
 import typer
 
-from ytadl.config import DEFAULT_BEETS_CONFIG, DEFAULT_LIBRARY_DIR
+from ytadl.core.config import DEFAULT_BEETS_CONFIG, DEFAULT_LIBRARY_DIR
 
 __all__ = [
     "DEFAULT_BEETS_CONFIG",
