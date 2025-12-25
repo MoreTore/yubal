@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { LogEntry, ProgressStep } from "../hooks/useSync";
+import { Card } from "@heroui/react";
 
 interface ConsoleOutputProps {
   logs: LogEntry[];
@@ -57,20 +58,19 @@ export function ConsoleOutput({ logs, status }: ConsoleOutputProps) {
   }, [isActive]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10 bg-[#0d0d0d]">
+    <Card className="border-default-200 bg-background border-2 shadow-none">
       {/* Terminal Header */}
-      <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-3 py-2">
-        <Terminal className="h-3.5 w-3.5 text-gray-500" />
-        <span className="font-mono text-xs text-gray-500">console</span>
+      <div className="flex items-center gap-2 px-3 py-2 border-b-2 border-default-200 bg-content1">
+        <Terminal className="text-foreground-500 h-3.5 w-3.5" />
+        <span className="text-foreground-500 font-mono text-xs">console</span>
       </div>
-
       {/* Console Content */}
       <div
         ref={containerRef}
-        className="console-output h-48 space-y-1 overflow-y-auto p-3 font-mono text-xs"
+        className="h-48 space-y-1 overflow-y-auto p-3 font-mono text-xs"
       >
         {logs.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-gray-600">
+          <div className="text-foreground-600 flex h-full items-center justify-center">
             <span>Awaiting YouTube URL...</span>
           </div>
         ) : (
@@ -98,6 +98,6 @@ export function ConsoleOutput({ logs, status }: ConsoleOutputProps) {
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
