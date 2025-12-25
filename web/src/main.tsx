@@ -7,7 +7,9 @@ import "./index.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HeroUIProvider>
-      <App />
+      <main className="custom-heroui-theme">
+        <App />
+      </main>
     </HeroUIProvider>
   </StrictMode>
 );

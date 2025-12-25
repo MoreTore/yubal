@@ -1,3 +1,117 @@
 import { heroui } from "@heroui/react";
 
-export default heroui();
+export default heroui({
+  "themes": {
+    "custom-heroui-theme": {
+      "colors": {
+        "default": {
+          "50": "#0d0c0c",
+          "100": "#1a1918",
+          "200": "#262524",
+          "300": "#333230",
+          "400": "#403e3c",
+          "500": "#666563",
+          "600": "#8c8b8a",
+          "700": "#b3b2b1",
+          "800": "#d9d8d8",
+          "900": "#ffffff",
+          "foreground": "#fff",
+          "DEFAULT": "#403e3c"
+        },
+        "primary": {
+          "50": "#113330",
+          "100": "#1c504c",
+          "200": "#266e67",
+          "300": "#308b83",
+          "400": "#3aa99f",
+          "500": "#5cb8b0",
+          "600": "#7fc7c1",
+          "700": "#a1d6d1",
+          "800": "#c4e5e2",
+          "900": "#e6f4f3",
+          "foreground": "#000",
+          "DEFAULT": "#3aa99f"
+        },
+        "secondary": {
+          "50": "#2a263c",
+          "100": "#423c5f",
+          "200": "#5a5282",
+          "300": "#7368a5",
+          "400": "#8b7ec8",
+          "500": "#9f95d2",
+          "600": "#b4abdb",
+          "700": "#c8c2e5",
+          "800": "#dcd8ef",
+          "900": "#f1eff8",
+          "foreground": "#000",
+          "DEFAULT": "#8b7ec8"
+        },
+        "success": {
+          "50": "#292e11",
+          "100": "#40491b",
+          "200": "#586425",
+          "300": "#6f7f2f",
+          "400": "#879a39",
+          "500": "#9cac5c",
+          "600": "#b1bd7e",
+          "700": "#c6cfa1",
+          "800": "#dbe1c4",
+          "900": "#f0f2e6",
+          "foreground": "#000",
+          "DEFAULT": "#879a39"
+        },
+        "warning": {
+          "50": "#41220d",
+          "100": "#683515",
+          "200": "#8e491d",
+          "300": "#b45c24",
+          "400": "#da702c",
+          "500": "#e08951",
+          "600": "#e7a276",
+          "700": "#edbb9b",
+          "800": "#f4d4c0",
+          "900": "#faede5",
+          "foreground": "#000",
+          "DEFAULT": "#da702c"
+        },
+        "danger": {
+          "50": "#3f1714",
+          "100": "#63251f",
+          "200": "#88322a",
+          "300": "#ac4036",
+          "400": "#d14d41",
+          "500": "#d96c62",
+          "600": "#e18b84",
+          "700": "#e9aaa5",
+          "800": "#f1cac6",
+          "900": "#f9e9e7",
+          "foreground": "#000",
+          "DEFAULT": "#d14d41"
+        },
+        "background": "#100F0F",
+        "foreground": "#CECDC3",
+        "content1": {
+          "DEFAULT": "#1C1B1A",
+          "foreground": "#fff"
+        },
+        "content2": {
+          "DEFAULT": "#282726",
+          "foreground": "#fff"
+        },
+        "content3": {
+          "DEFAULT": "#343331",
+          "foreground": "#fff"
+        },
+        "content4": {
+          "DEFAULT": "#403E3C",
+          "foreground": "#fff"
+        },
+        "focus": "#3AA99F",
+        "overlay": "#100F0F"
+      }
+    }
+  },
+  "layout": {
+    "disabledOpacity": "0.6"
+  }
+});
