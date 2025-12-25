@@ -116,9 +116,7 @@ class SyncService:
                 library_dir=self.library_dir,
                 beets_db=self.beets_config.parent / "beets.db",
             )
-            tag_result = tagger.tag_album(
-                temp_dir, progress_callback=progress_callback
-            )
+            tag_result = tagger.tag_album(temp_dir, progress_callback=progress_callback)
 
             if not tag_result.success:
                 if progress_callback:

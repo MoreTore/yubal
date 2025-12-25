@@ -1,5 +1,5 @@
 """API routes."""
 
-from yubal.api.routes import sync
+from yubal.api.routes import jobs
 
-__all__ = ["sync"]
+__all__ = ["jobs"]

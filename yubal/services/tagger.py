@@ -6,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-from yubal.core.constants import AUDIO_EXTENSIONS
 from yubal.core import (
     LibraryHealth,
     ProgressCallback,
@@ -14,6 +13,7 @@ from yubal.core import (
     ProgressStep,
     TagResult,
 )
+from yubal.core.constants import AUDIO_EXTENSIONS
 
 
 class Tagger:

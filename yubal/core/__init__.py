@@ -8,6 +8,7 @@ from yubal.core.config import (
     DEFAULT_BEETS_DB,
     DEFAULT_LIBRARY_DIR,
 )
+from yubal.core.jobs import Job, JobStatus, LogEntry, job_store
 from yubal.core.models import (
     AlbumInfo,
     DownloadResult,
@@ -27,11 +28,15 @@ __all__ = [
     "DEFAULT_LIBRARY_DIR",
     "AlbumInfo",
     "DownloadResult",
+    "Job",
+    "JobStatus",
     "LibraryHealth",
+    "LogEntry",
     "ProgressCallback",
     "ProgressEvent",
     "ProgressStep",
     "SyncResult",
     "TagResult",
     "TrackInfo",
+    "job_store",
 ]

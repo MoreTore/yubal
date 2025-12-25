@@ -7,7 +7,6 @@ from typing import Any
 import yt_dlp
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
-from yubal.core.constants import AUDIO_EXTENSIONS
 from yubal.core import (
     AlbumInfo,
     DownloadResult,
@@ -16,6 +15,7 @@ from yubal.core import (
     ProgressStep,
     TrackInfo,
 )
+from yubal.core.constants import AUDIO_EXTENSIONS
 
 # Shared yt-dlp instance for template evaluation
 _ydl = yt_dlp.YoutubeDL({"quiet": True})

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@heroui/react";
 import { Download, X, Music2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -6,72 +6,56 @@ import { UrlInput } from "./components/UrlInput";
 import { isValidUrl } from "./utils/url";
 import { ConsoleOutput } from "./components/ConsoleOutput";
 import { AlbumInfoCard, type TrackInfo } from "./components/AlbumInfoCard";
-import {
-  DownloadHistory,
-  type DownloadedAlbum,
-} from "./components/DownloadHistory";
-import { useSync } from "./hooks/useSync";
+import { JobHistory } from "./components/JobHistory";
+import { useJobs } from "./hooks/useJobs";
 
 export default function App() {
   const [url, setUrl] = useState("");
-  const { status, progress, logs, result, startSync, cancelSync, clearLogs } =
-    useSync();
-  const [downloadHistory, setDownloadHistory] = useState<DownloadedAlbum[]>([]);
-  const lastCompletedRef = useRef<string | null>(null);
+  const {
+    currentJobId,
+    status,
+    progress,
+    logs,
+    albumInfo,
+    error,
+    startJob,
+    stopPolling,
+    clearCurrentJob,
+    jobs,
+    refreshJobs,
+    resumeJob,
+  } = useJobs();
 
   const isSyncing =
-    status !== "idle" && status !== "complete" && status !== "error";
+    status === "pending" || status === "downloading" || status === "tagging";
   const canSync = isValidUrl(url) && !isSyncing;
   const showAlbumCard = isSyncing || status === "complete";
 
-  // TODO: Wire to backend when album metadata is available in SSE events
-  // For now, extract from result when complete, otherwise show skeleton
+  // Extract track info from album info for the card
   const trackInfo: TrackInfo | null =
-    result?.album && status === "complete"
+    albumInfo && status === "complete"
       ? {
-          title: result.album.title,
-          artist: result.album.artist,
-          album: result.album.title,
+          title: albumInfo.title,
+          artist: albumInfo.artist,
+          album: albumInfo.title,
         }
       : null;
 
-  const handleSync = () => {
+  const handleSync = async () => {
     if (canSync) {
-      startSync(url);
+      await startJob(url);
     }
   };
 
   const handleClear = () => {
-    clearLogs();
+    clearCurrentJob();
     setUrl("");
+    refreshJobs();
   };
 
-  // Add to history when sync completes successfully
-  // This effect reacts to external async completion and is a valid use case
-  useEffect(() => {
-    if (
-      status === "complete" &&
-      result?.success &&
-      result.album &&
-      lastCompletedRef.current !== result.album.title
-    ) {
-      lastCompletedRef.current = result.album.title;
-      const newAlbum: DownloadedAlbum = {
-        id: Date.now().toString(),
-        title: result.album.title,
-        artist: result.album.artist,
-        album: result.album.title,
-        downloadedAt: new Date().toISOString(),
-        trackCount: result.track_count,
-        size: "-- MB", // TODO: Get real size from backend
-      };
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reacting to async completion
-      setDownloadHistory((prev) => [newAlbum, ...prev]);
-    }
-  }, [status, result]);
-
-  const removeFromHistory = (id: string) => {
-    setDownloadHistory((prev) => prev.filter((album) => album.id !== id));
+  const handleCancel = () => {
+    stopPolling();
+    // Note: This only stops watching the job, the job continues on the server
   };
 
   return (
@@ -105,11 +89,29 @@ export default function App() {
             {!isSyncing && <Download className="h-4 w-4" />}
           </Button>
           {isSyncing && (
-            <Button color="danger" isIconOnly onPress={cancelSync}>
+            <Button color="danger" isIconOnly onPress={handleCancel}>
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
+
+        {/* Error toast for job conflict */}
+        {error && status === "error" && currentJobId && (
+          <div className="bg-danger/10 text-danger border-danger/20 mb-4 rounded-lg border p-3 font-mono text-sm">
+            <p>{error}</p>
+            {currentJobId && (
+              <Button
+                size="sm"
+                variant="light"
+                color="danger"
+                className="mt-2"
+                onPress={() => resumeJob(currentJobId)}
+              >
+                View active job
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Album Info Card */}
         <AnimatePresence>
@@ -139,10 +141,12 @@ export default function App() {
           </div>
         )}
 
-        {/* Download History */}
-        <DownloadHistory
-          history={downloadHistory}
-          onRemove={removeFromHistory}
+        {/* Job History (from backend) */}
+        <JobHistory
+          jobs={jobs}
+          currentJobId={currentJobId}
+          onRefresh={refreshJobs}
+          onResume={resumeJob}
         />
 
         {/* Footer */}
