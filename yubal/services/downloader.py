@@ -88,6 +88,12 @@ class Downloader:
             if cancel_check and cancel_check():
                 raise DownloadCancelled("Download cancelled by user")
 
+            # Get track index from playlist_index in info_dict.
+            # For single videos (not playlists), playlist_index is None,
+            # so we default to track 0.
+            info = d.get("info_dict", {})
+            track_idx = (info.get("playlist_index") or 1) - 1  # 0-based
+
             if d["status"] == "downloading":
                 percent_str = d.get("_percent_str", "").strip()
                 speed = d.get("_speed_str", "").strip()
@@ -103,28 +109,33 @@ class Downloader:
                     progress_callback(
                         ProgressEvent(
                             step=ProgressStep.DOWNLOADING,
-                            message=f"Downloading: {percent_str} at {speed}",
+                            message=f"Track {track_idx + 1}: {percent_str} at {speed}",
                             progress=percent_value,
-                            details={"speed": speed},
+                            details={"speed": speed, "track_index": track_idx},
                         )
                     )
                 elif percent_str:
                     print(
-                        f"\r  Downloading: {percent_str} at {speed}", end="", flush=True
+                        f"\r  Track {track_idx + 1}: {percent_str} at {speed}",
+                        end="",
+                        flush=True,
                     )
             elif d["status"] == "finished":
                 print()  # New line after progress
                 filename = d.get("info_dict", {}).get("filepath") or d.get("filename")
                 if filename:
                     downloaded_files.append(Path(filename))
-                    msg = f"Completed: {Path(filename).name}"
+                    msg = f"Track {track_idx + 1} completed: {Path(filename).name}"
                     if progress_callback:
                         progress_callback(
                             ProgressEvent(
                                 step=ProgressStep.DOWNLOADING,
                                 message=msg,
                                 progress=100.0,
-                                details={"filename": Path(filename).name},
+                                details={
+                                    "filename": Path(filename).name,
+                                    "track_index": track_idx,
+                                },
                             )
                         )
                     else:
@@ -224,15 +235,38 @@ class Downloader:
                     tracks.append(
                         TrackInfo(
                             title=_eval(f"%(title|Track {i})s", entry),
-                            artist=_eval("%(artist,uploader|Unknown)s", entry),
+                            artist=_eval(
+                                "%(artists.0,artist,uploader|Unknown)s", entry
+                            ),
                             track_number=i,
                             duration=entry.get("duration") or 0,
                         )
                     )
 
+            # For album artist: try playlist-level artists, then first entry's artist
+            album_artist = _eval("%(artists.0,channel,uploader|)s", info)
+            if not album_artist and entries:
+                # Fall back to first track's artist
+                first_entry = entries[0]
+                if first_entry:
+                    album_artist = _eval(
+                        "%(artists.0,artist,uploader|Unknown)s", first_entry
+                    )
+            album_artist = album_artist or "Unknown"
+
+            # For album title: try first track's album field, then playlist title
+            # Note: correct album name will be read from file metadata after download
+            album_title = ""
+            if entries:
+                first_entry = entries[0]
+                if first_entry:
+                    album_title = _eval("%(album|)s", first_entry)
+            if not album_title:
+                album_title = _eval("%(title|Unknown Album)s", info)
+
             return AlbumInfo(
-                title=_eval("%(title|Unknown Album)s", info),
-                artist=_eval("%(uploader,channel|Unknown)s", info),
+                title=album_title,
+                artist=album_artist,
                 year=self._extract_year(info),
                 track_count=len(tracks),
                 tracks=tracks,
@@ -243,13 +277,13 @@ class Downloader:
         # Single track
         return AlbumInfo(
             title=_eval("%(album,title|Unknown)s", info),
-            artist=_eval("%(artist,uploader|Unknown)s", info),
+            artist=_eval("%(artists.0,artist,uploader|Unknown)s", info),
             year=self._extract_year(info),
             track_count=1,
             tracks=[
                 TrackInfo(
                     title=_eval("%(title|Unknown)s", info),
-                    artist=_eval("%(artist|Unknown)s", info),
+                    artist=_eval("%(artists.0,artist|Unknown)s", info),
                     track_number=1,
                     duration=info.get("duration") or 0,
                 )

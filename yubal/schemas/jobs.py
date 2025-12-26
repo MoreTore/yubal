@@ -31,10 +31,14 @@ class JobResponse(BaseModel):
     id: str
     url: str
     audio_format: str
-    status: str
+    status: (
+        str  # "pending", "fetching_info", "downloading", "importing", "completed", etc.
+    )
     progress: float
     message: str
     album_info: AlbumInfo | None = None
+    current_track: int | None = None  # 1-based track number being processed
+    total_tracks: int | None = None  # Total tracks in album
     logs: list[LogEntrySchema] = []
     error: str | None = None
     created_at: datetime

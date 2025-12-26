@@ -11,15 +11,20 @@ from typing import Any
 from yubal.core.models import AlbumInfo
 
 
-class JobStatus(str, Enum):
-    """Status of a background job."""
+class JobPhase(str, Enum):
+    """Phase of a background job."""
 
-    PENDING = "pending"
-    DOWNLOADING = "downloading"
-    TAGGING = "tagging"
-    COMPLETE = "complete"
+    PENDING = "pending"  # Job created, not started
+    FETCHING_INFO = "fetching_info"  # Extracting album metadata
+    DOWNLOADING = "downloading"  # Downloading tracks (0-80%)
+    IMPORTING = "importing"  # Beets import (80-100%)
+    COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+
+# Alias for backward compatibility
+JobStatus = JobPhase
 
 
 @dataclass
@@ -40,10 +45,12 @@ class Job:
     id: str
     url: str
     audio_format: str = "mp3"
-    status: JobStatus = JobStatus.PENDING
+    phase: JobPhase = JobPhase.PENDING
     progress: float = 0.0
     message: str = ""
     album_info: AlbumInfo | None = None
+    current_track: int | None = None  # 1-based track number being processed
+    total_tracks: int | None = None  # Total tracks in album
     logs: list[LogEntry] = field(default_factory=list)
     error: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -74,10 +81,10 @@ class JobStore:
             # Check if there's an active job
             if self._active_job_id is not None:
                 active = self._jobs.get(self._active_job_id)
-                if active and active.status not in (
-                    JobStatus.COMPLETE,
-                    JobStatus.FAILED,
-                    JobStatus.CANCELLED,
+                if active and active.phase not in (
+                    JobPhase.COMPLETED,
+                    JobPhase.FAILED,
+                    JobPhase.CANCELLED,
                 ):
                     return None  # Job already running
 
@@ -136,16 +143,16 @@ class JobStore:
                 return False
 
             # Cannot cancel already finished jobs
-            if job.status in (
-                JobStatus.COMPLETE,
-                JobStatus.FAILED,
-                JobStatus.CANCELLED,
+            if job.phase in (
+                JobPhase.COMPLETED,
+                JobPhase.FAILED,
+                JobPhase.CANCELLED,
             ):
                 return False
 
             # Mark as cancelled
             self._cancellation_requested.add(job_id)
-            job.status = JobStatus.CANCELLED
+            job.phase = JobPhase.CANCELLED
             job.message = "Job cancelled by user"
             job.completed_at = datetime.now(UTC)
 
@@ -162,10 +169,12 @@ class JobStore:
     async def update_job(
         self,
         job_id: str,
-        status: JobStatus | None = None,
+        phase: JobPhase | None = None,
         progress: float | None = None,
         message: str | None = None,
         album_info: AlbumInfo | None = None,
+        current_track: int | None = None,
+        total_tracks: int | None = None,
         error: str | None = None,
         started_at: datetime | None = None,
         completed_at: datetime | None = None,
@@ -177,17 +186,21 @@ class JobStore:
                 return None
 
             # Don't update cancelled jobs (prevents race conditions)
-            if job.status == JobStatus.CANCELLED:
+            if job.phase == JobPhase.CANCELLED:
                 return job
 
-            if status is not None:
-                job.status = status
+            if phase is not None:
+                job.phase = phase
             if progress is not None:
                 job.progress = progress
             if message is not None:
                 job.message = message
             if album_info is not None:
                 job.album_info = album_info
+            if current_track is not None:
+                job.current_track = current_track
+            if total_tracks is not None:
+                job.total_tracks = total_tracks
             if error is not None:
                 job.error = error
             if started_at is not None:
@@ -196,10 +209,10 @@ class JobStore:
                 job.completed_at = completed_at
 
             # Clear active job if completed, failed, or cancelled
-            if job.status in (
-                JobStatus.COMPLETE,
-                JobStatus.FAILED,
-                JobStatus.CANCELLED,
+            if job.phase in (
+                JobPhase.COMPLETED,
+                JobPhase.FAILED,
+                JobPhase.CANCELLED,
             ):
                 job.completed_at = job.completed_at or datetime.now(UTC)
                 if self._active_job_id == job_id:
@@ -222,7 +235,7 @@ class JobStore:
                 return
 
             # Don't add logs to cancelled jobs (prevents stale updates)
-            if job.status == JobStatus.CANCELLED:
+            if job.phase == JobPhase.CANCELLED:
                 return
 
             entry = LogEntry(
@@ -249,10 +262,10 @@ class JobStore:
             if not job:
                 return False
 
-            if job.status not in (
-                JobStatus.COMPLETE,
-                JobStatus.FAILED,
-                JobStatus.CANCELLED,
+            if job.phase not in (
+                JobPhase.COMPLETED,
+                JobPhase.FAILED,
+                JobPhase.CANCELLED,
             ):
                 return False  # Cannot delete running job
 
@@ -271,8 +284,8 @@ class JobStore:
             to_remove = [
                 job_id
                 for job_id, job in self._jobs.items()
-                if job.status
-                in (JobStatus.COMPLETE, JobStatus.FAILED, JobStatus.CANCELLED)
+                if job.phase
+                in (JobPhase.COMPLETED, JobPhase.FAILED, JobPhase.CANCELLED)
             ]
             for job_id in to_remove:
                 del self._jobs[job_id]
@@ -285,14 +298,14 @@ class JobStore:
 
         Returns True if job was timed out.
         """
-        if job.started_at and job.status not in (
-            JobStatus.COMPLETE,
-            JobStatus.FAILED,
-            JobStatus.CANCELLED,
+        if job.started_at and job.phase not in (
+            JobPhase.COMPLETED,
+            JobPhase.FAILED,
+            JobPhase.CANCELLED,
         ):
             elapsed = datetime.now(UTC) - job.started_at
             if elapsed.total_seconds() > self.TIMEOUT_SECONDS:
-                job.status = JobStatus.FAILED
+                job.phase = JobPhase.FAILED
                 job.error = "Job timed out after 30 minutes"
                 job.completed_at = datetime.now(UTC)
                 if self._active_job_id == job.id:

@@ -12,8 +12,9 @@ import {
 export type ProgressStep =
   | "idle"
   | "pending"
+  | "fetching_info"
   | "downloading"
-  | "tagging"
+  | "importing"
   | "complete"
   | "error"
   | "cancelled";
@@ -54,11 +55,13 @@ function mapJobStatus(status: JobStatus): ProgressStep {
   switch (status) {
     case "pending":
       return "pending";
+    case "fetching_info":
+      return "fetching_info";
     case "downloading":
       return "downloading";
-    case "tagging":
-      return "tagging";
-    case "complete":
+    case "importing":
+      return "importing";
+    case "completed":
       return "complete";
     case "failed":
       return "error";
@@ -66,6 +69,27 @@ function mapJobStatus(status: JobStatus): ProgressStep {
       return "cancelled";
     default:
       return "idle";
+  }
+}
+
+// Map backend log step values to frontend ProgressStep
+// Backend ProgressStep: "starting", "downloading", "tagging", "complete", "error"
+function mapLogStep(step: string): ProgressStep {
+  switch (step) {
+    case "starting":
+      return "fetching_info";
+    case "downloading":
+      return "downloading";
+    case "tagging":
+      return "importing";
+    case "complete":
+      return "complete";
+    case "error":
+      return "error";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "pending";
   }
 }
 
@@ -137,6 +161,9 @@ export function useJobs(): UseJobsResult {
         setStatus(newStatus);
         setProgress(job.progress);
 
+        // Update the job in the jobs array so DownloadsPanel gets live updates
+        setJobs((prevJobs) => prevJobs.map((j) => (j.id === jobId ? job : j)));
+
         if (job.album_info) {
           setAlbumInfo(job.album_info);
         }
@@ -149,8 +176,12 @@ export function useJobs(): UseJobsResult {
           setError(job.error);
         }
 
-        // Stop polling if job is complete or failed
-        if (newStatus === "complete" || newStatus === "error") {
+        // Stop polling if job is complete, failed, or cancelled
+        if (
+          newStatus === "complete" ||
+          newStatus === "error" ||
+          newStatus === "cancelled"
+        ) {
           stopPolling();
         }
       };
@@ -210,7 +241,7 @@ export function useJobs(): UseJobsResult {
       const activeJob = jobList.find((j) => j.id === activeJobId);
       if (
         activeJob &&
-        !["complete", "failed", "cancelled"].includes(activeJob.status)
+        !["completed", "failed", "cancelled"].includes(activeJob.status)
       ) {
         // Resume the active job
         setCurrentJobId(activeJobId);
@@ -224,7 +255,7 @@ export function useJobs(): UseJobsResult {
         const newLogs = activeJob.logs.map((log, i) => ({
           id: i + 1,
           timestamp: new Date(log.timestamp),
-          step: mapJobStatus(log.step as JobStatus),
+          step: mapLogStep(log.step),
           message: log.message,
         }));
         setLogs(newLogs);
@@ -238,18 +269,16 @@ export function useJobs(): UseJobsResult {
 
   const cancelJob = useCallback(
     async (jobId: string) => {
-      const success = await cancelJobApi(jobId);
-      if (success) {
-        // If cancelling current job, stop polling and update status
-        if (jobId === currentJobId) {
-          stopPolling();
-          setStatus("cancelled");
-          addLog("cancelled", "Job cancelled by user");
-        }
-        // Refresh the job list to get updated statuses
-        const { jobs: jobList } = await listJobs();
-        setJobs(jobList);
+      await cancelJobApi(jobId);
+      // If cancelling current job, stop polling and update status
+      if (jobId === currentJobId) {
+        stopPolling();
+        setStatus("cancelled");
+        addLog("cancelled", "Job cancelled by user");
       }
+      // Refresh the job list to get updated statuses
+      const { jobs: jobList } = await listJobs();
+      setJobs(jobList);
     },
     [currentJobId, stopPolling, addLog]
   );
@@ -274,14 +303,14 @@ export function useJobs(): UseJobsResult {
       const newLogs = job.logs.map((log, i) => ({
         id: i + 1,
         timestamp: new Date(log.timestamp),
-        step: mapJobStatus(log.step as JobStatus),
+        step: mapLogStep(log.step),
         message: log.message,
       }));
       setLogs(newLogs);
       logIdRef.current = newLogs.length;
 
       // If job is still running, start polling
-      if (!["complete", "failed", "cancelled"].includes(job.status)) {
+      if (!["completed", "failed", "cancelled"].includes(job.status)) {
         startPolling(jobId);
       }
     },
@@ -290,10 +319,12 @@ export function useJobs(): UseJobsResult {
 
   // Computed job lists
   const activeJobs = jobs.filter((job) =>
-    ["pending", "downloading", "tagging"].includes(job.status)
+    ["pending", "fetching_info", "downloading", "importing"].includes(
+      job.status
+    )
   );
   const completedJobs = jobs.filter((job) =>
-    ["complete", "failed", "cancelled"].includes(job.status)
+    ["completed", "failed", "cancelled"].includes(job.status)
   );
 
   // Refresh jobs on mount and check for active job

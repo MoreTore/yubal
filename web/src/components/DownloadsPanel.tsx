@@ -23,10 +23,12 @@ export function DownloadsPanel({
 }: DownloadsPanelProps) {
   // Split jobs into active (queue) and completed (history)
   const activeJobs = jobs.filter((job) =>
-    ["pending", "downloading", "tagging"].includes(job.status)
+    ["pending", "fetching_info", "downloading", "importing"].includes(
+      job.status
+    )
   );
   const completedJobs = jobs.filter((job) =>
-    ["complete", "failed", "cancelled"].includes(job.status)
+    ["completed", "failed", "cancelled"].includes(job.status)
   );
 
   const hasCompletedJobs = completedJobs.length > 0;

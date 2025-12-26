@@ -22,18 +22,18 @@ function getStatusIcon(status: JobStatus) {
   switch (status) {
     case "pending":
       return <Clock className="text-default-400 h-3.5 w-3.5" />;
+    case "fetching_info":
+      return <Loader2 className="text-default-500 h-3.5 w-3.5 animate-spin" />;
     case "downloading":
       return <Loader2 className="text-primary h-3.5 w-3.5 animate-spin" />;
-    case "tagging":
+    case "importing":
       return <Loader2 className="text-secondary h-3.5 w-3.5 animate-spin" />;
-    case "complete":
+    case "completed":
       return <CheckCircle className="text-success h-3.5 w-3.5" />;
     case "failed":
       return <XCircle className="text-danger h-3.5 w-3.5" />;
     case "cancelled":
       return <X className="text-warning h-3.5 w-3.5" />;
-    default:
-      return <Clock className="text-default-400 h-3.5 w-3.5" />;
   }
 }
 
@@ -43,9 +43,9 @@ function getProgressColor(
   switch (status) {
     case "downloading":
       return "primary";
-    case "tagging":
+    case "importing":
       return "secondary";
-    case "complete":
+    case "completed":
       return "success";
     case "failed":
       return "danger";
@@ -57,11 +57,13 @@ function getProgressColor(
 }
 
 function isRunningStatus(status: JobStatus): boolean {
-  return ["pending", "downloading", "tagging"].includes(status);
+  return ["pending", "fetching_info", "downloading", "importing"].includes(
+    status
+  );
 }
 
 function isFinishedStatus(status: JobStatus): boolean {
-  return ["complete", "failed", "cancelled"].includes(status);
+  return ["completed", "failed", "cancelled"].includes(status);
 }
 
 export function JobCard({
@@ -71,8 +73,8 @@ export function JobCard({
   onResume,
   onDelete,
 }: JobCardProps) {
-  const isRunning = isRunningStatus(job.status as JobStatus);
-  const isFinished = isFinishedStatus(job.status as JobStatus);
+  const isRunning = isRunningStatus(job.status);
+  const isFinished = isFinishedStatus(job.status);
   const showProgress = isRunning;
 
   // Get display info - prefer album_info if available
@@ -91,7 +93,7 @@ export function JobCard({
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="shrink-0">{getStatusIcon(job.status as JobStatus)}</div>
+        <div className="shrink-0">{getStatusIcon(job.status)}</div>
         <div className="min-w-0 flex-1">
           {title ? (
             <>
@@ -159,6 +161,9 @@ export function JobCard({
             size="sm"
             color={getProgressColor(job.status as JobStatus)}
             className="flex-1"
+            classNames={{
+              indicator: "transition-all duration-500 ease-out",
+            }}
             aria-label="Job progress"
           />
           <span className="text-default-500 w-8 text-right font-mono text-xs">

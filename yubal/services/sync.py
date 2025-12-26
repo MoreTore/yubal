@@ -5,7 +5,13 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
-from yubal.core import ProgressCallback, ProgressEvent, ProgressStep, SyncResult
+from yubal.core import (
+    AlbumInfo,
+    ProgressCallback,
+    ProgressEvent,
+    ProgressStep,
+    SyncResult,
+)
 from yubal.services.downloader import Downloader
 from yubal.services.tagger import Tagger
 
@@ -43,6 +49,11 @@ class SyncService:
         """
         Download and tag an album in one operation.
 
+        Progress is calculated as:
+        - 0% → 10%: Fetching info phase
+        - 10% → 90%: Download phase (proportional to tracks)
+        - 90% → 100%: Import/tagging phase
+
         Args:
             url: YouTube Music album/playlist URL
             progress_callback: Optional callback for progress updates
@@ -51,33 +62,108 @@ class SyncService:
         Returns:
             SyncResult with success status and details
         """
-        # Create temp directory for download
         temp_dir = Path(tempfile.mkdtemp(prefix="yubal_"))
-
-        if progress_callback:
-            progress_callback(
-                ProgressEvent(
-                    step=ProgressStep.STARTING,
-                    message=f"Starting sync from: {url}",
-                    details={"temp_dir": str(temp_dir)},
-                )
-            )
+        album_info: AlbumInfo | None = None
 
         try:
-            # Step 1: Download
+            # Phase 1: Extract album info (0% → 10%)
+            if progress_callback:
+                progress_callback(
+                    ProgressEvent(
+                        step=ProgressStep.STARTING,
+                        message="Fetching album info...",
+                        progress=0.0,
+                        details={"temp_dir": str(temp_dir)},
+                    )
+                )
+
+            downloader = Downloader(audio_format=self.audio_format)
+
+            try:
+                album_info = downloader.extract_info(url)
+                total_tracks = album_info.track_count or 1  # Fallback to 1
+            except Exception as e:
+                if progress_callback:
+                    progress_callback(
+                        ProgressEvent(
+                            step=ProgressStep.ERROR,
+                            message=f"Failed to fetch album info: {e}",
+                        )
+                    )
+                return SyncResult(
+                    success=False,
+                    error=f"Failed to fetch album info: {e}",
+                )
+
+            # Notify with album info - fetching complete at 10%
+            if progress_callback:
+                progress_callback(
+                    ProgressEvent(
+                        step=ProgressStep.STARTING,
+                        message=f"Found {total_tracks} tracks: {album_info.title}",
+                        progress=10.0,
+                        details={
+                            "album_info": album_info.model_dump(),
+                            "total_tracks": total_tracks,
+                        },
+                    )
+                )
+
+            # Phase 2: Download (10% → 90%)
+            def download_progress_wrapper(event: ProgressEvent) -> None:
+                """Wrapper that calculates album-wide progress for download phase."""
+                if not progress_callback:
+                    return
+
+                # If no progress info, pass through as-is
+                if event.progress is None:
+                    progress_callback(event)
+                    return
+
+                # Get track index from details (0-based)
+                track_idx = 0
+                if event.details:
+                    track_idx = event.details.get("track_index", 0)
+
+                track_progress = event.progress
+
+                # Calculate album-wide progress: 10 + (tracks_done / total) * 80
+                # This maps download progress to the 10-90% range
+                album_progress = (
+                    10 + ((track_idx + track_progress / 100) / total_tracks) * 80
+                )
+
+                progress_callback(
+                    ProgressEvent(
+                        step=ProgressStep.DOWNLOADING,
+                        message=event.message,
+                        progress=album_progress,
+                        details={
+                            "current_track": track_idx + 1,  # 1-based for display
+                            "total_tracks": total_tracks,
+                            "track_progress": track_progress,
+                            **(event.details or {}),
+                        },
+                    )
+                )
+
             if progress_callback:
                 progress_callback(
                     ProgressEvent(
                         step=ProgressStep.DOWNLOADING,
                         message="Starting download...",
+                        progress=10.0,
+                        details={
+                            "current_track": 1,
+                            "total_tracks": total_tracks,
+                        },
                     )
                 )
 
-            downloader = Downloader(audio_format=self.audio_format)
             download_result = downloader.download_album(
                 url,
                 temp_dir,
-                progress_callback=progress_callback,
+                progress_callback=download_progress_wrapper,
                 cancel_check=cancel_check,
             )
 
@@ -86,6 +172,7 @@ class SyncService:
                 return SyncResult(
                     success=False,
                     download_result=download_result,
+                    album_info=album_info,
                     error="Download cancelled",
                 )
 
@@ -100,31 +187,34 @@ class SyncService:
                 return SyncResult(
                     success=False,
                     download_result=download_result,
+                    album_info=album_info,
                     error=download_result.error or "Download failed",
                 )
 
+            # Download complete - progress at 90%
             if progress_callback:
                 track_count = len(download_result.downloaded_files)
                 progress_callback(
                     ProgressEvent(
                         step=ProgressStep.DOWNLOADING,
                         message=f"Downloaded {track_count} tracks",
-                        progress=100.0,
+                        progress=90.0,
                         details={
+                            "current_track": track_count,
+                            "total_tracks": total_tracks,
                             "track_count": track_count,
-                            "album": download_result.album_info.title
-                            if download_result.album_info
-                            else None,
+                            "album": album_info.title if album_info else None,
                         },
                     )
                 )
 
-            # Step 2: Tag
+            # Phase 3: Import/Tag (90% → 100%)
             if progress_callback:
                 progress_callback(
                     ProgressEvent(
                         step=ProgressStep.TAGGING,
-                        message="Starting tagging...",
+                        message="Starting import...",
+                        progress=90.0,
                     )
                 )
 
@@ -140,23 +230,24 @@ class SyncService:
                     progress_callback(
                         ProgressEvent(
                             step=ProgressStep.ERROR,
-                            message=tag_result.error or "Tagging failed",
+                            message=tag_result.error or "Import failed",
                         )
                     )
                 return SyncResult(
                     success=False,
                     download_result=download_result,
                     tag_result=tag_result,
-                    album_info=download_result.album_info,
-                    error=tag_result.error or "Tagging failed",
+                    album_info=album_info,
+                    error=tag_result.error or "Import failed",
                 )
 
-            # Success
+            # Success - progress at 100%
             if progress_callback:
                 progress_callback(
                     ProgressEvent(
                         step=ProgressStep.COMPLETE,
                         message=f"Sync complete: {tag_result.dest_dir}",
+                        progress=100.0,
                         details={
                             "destination": str(tag_result.dest_dir)
                             if tag_result.dest_dir
@@ -170,18 +261,26 @@ class SyncService:
                 success=True,
                 download_result=download_result,
                 tag_result=tag_result,
-                album_info=download_result.album_info,
+                album_info=album_info,
                 destination=tag_result.dest_dir,
+            )
+
+        except Exception as e:
+            # Cleanup on any unexpected failure
+            if progress_callback:
+                progress_callback(
+                    ProgressEvent(
+                        step=ProgressStep.ERROR,
+                        message=str(e),
+                    )
+                )
+            return SyncResult(
+                success=False,
+                album_info=album_info,
+                error=str(e),
             )
 
         finally:
             # Cleanup temp directory
             if temp_dir.exists():
-                if progress_callback:
-                    progress_callback(
-                        ProgressEvent(
-                            step=ProgressStep.COMPLETE,
-                            message="Cleaning up temp directory...",
-                        )
-                    )
                 shutil.rmtree(temp_dir, ignore_errors=True)

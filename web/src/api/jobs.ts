@@ -2,17 +2,22 @@ import { api } from "./client";
 import type { components } from "./schema";
 
 // Re-export types from schema
-export type Job = components["schemas"]["JobResponse"];
 export type JobLog = components["schemas"]["LogEntrySchema"];
 export type AlbumInfo = components["schemas"]["AlbumInfo"];
 
 export type JobStatus =
   | "pending"
+  | "fetching_info"
   | "downloading"
-  | "tagging"
-  | "complete"
+  | "importing"
+  | "completed"
   | "failed"
   | "cancelled";
+
+// Override status field to use JobStatus instead of string
+export type Job = Omit<components["schemas"]["JobResponse"], "status"> & {
+  status: JobStatus;
+};
 
 export type CreateJobResult =
   | {
@@ -36,11 +41,11 @@ export async function createJob(
   if (error) {
     if (response.status === 409) {
       // Job conflict - another job is running
-      const detail = error.detail as { error: string; active_job_id: string };
+      const conflict = error as { error: string; active_job_id?: string };
       return {
         success: false,
-        error: detail.error,
-        activeJobId: detail.active_job_id,
+        error: conflict.error,
+        activeJobId: conflict.active_job_id,
       };
     }
     return { success: false, error: "Failed to create job" };
@@ -55,7 +60,7 @@ export async function getJob(jobId: string): Promise<Job | null> {
   });
 
   if (error) return null;
-  return data;
+  return data as Job;
 }
 
 export async function listJobs(): Promise<{
@@ -66,30 +71,30 @@ export async function listJobs(): Promise<{
 
   if (error) return { jobs: [], activeJobId: null };
   return {
-    jobs: data.jobs,
+    jobs: data.jobs as Job[],
     activeJobId: data.active_job_id ?? null,
   };
 }
 
-export async function deleteJob(jobId: string): Promise<boolean> {
+export async function deleteJob(jobId: string): Promise<void> {
   const { error } = await api.DELETE("/api/v1/jobs/{job_id}", {
     params: { path: { job_id: jobId } },
   });
 
-  return !error;
+  if (error) throw new Error("Failed to delete job");
 }
 
 export async function clearJobs(): Promise<number> {
   const { data, error } = await api.DELETE("/api/v1/jobs");
 
-  if (error) return 0;
+  if (error) throw new Error("Failed to clear jobs");
   return data.cleared;
 }
 
-export async function cancelJob(jobId: string): Promise<boolean> {
+export async function cancelJob(jobId: string): Promise<void> {
   const { error } = await api.POST("/api/v1/jobs/{job_id}/cancel", {
     params: { path: { job_id: jobId } },
   });
 
-  return !error;
+  if (error) throw new Error("Failed to cancel job");
 }

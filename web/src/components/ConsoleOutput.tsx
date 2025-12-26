@@ -12,8 +12,9 @@ interface ConsoleOutputProps {
 const stepColors: Record<ProgressStep, string> = {
   idle: "text-default-400",
   pending: "text-default-500",
+  fetching_info: "text-default-500",
   downloading: "text-primary",
-  tagging: "text-secondary",
+  importing: "text-secondary",
   complete: "text-success",
   error: "text-danger",
   cancelled: "text-warning",
