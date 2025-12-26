@@ -23,6 +23,7 @@ class AlbumInfo(BaseModel):
     tracks: list[TrackInfo] = []
     playlist_id: str = ""
     url: str = ""
+    thumbnail_url: str | None = None
 
 
 class DownloadResult(BaseModel):

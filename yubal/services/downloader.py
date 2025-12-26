@@ -75,6 +75,24 @@ class Downloader:
                 pass
         return None
 
+    def _extract_thumbnail(self, info: dict[str, Any]) -> str | None:
+        """Extract best thumbnail URL from info."""
+        # Try direct thumbnail field first
+        if info.get("thumbnail"):
+            return info["thumbnail"]
+
+        # Try thumbnails array - prefer larger ones
+        thumbnails = info.get("thumbnails", [])
+        if thumbnails:
+            # Sort by preference (width if available, otherwise last in list)
+            best = max(
+                thumbnails,
+                key=lambda t: t.get("width", 0) or t.get("preference", 0),
+            )
+            return best.get("url")
+
+        return None
+
     def _create_progress_hook(
         self,
         downloaded_files: list[Path],
@@ -264,14 +282,26 @@ class Downloader:
             if not album_title:
                 album_title = _eval("%(title|Unknown Album)s", info)
 
+            # Prefer first track's data over playlist-level data
+            year = None
+            thumbnail_url = None
+            if entries and entries[0]:
+                year = self._extract_year(entries[0])
+                thumbnail_url = self._extract_thumbnail(entries[0])
+            if not year:
+                year = self._extract_year(info)
+            if not thumbnail_url:
+                thumbnail_url = self._extract_thumbnail(info)
+
             return AlbumInfo(
                 title=album_title,
                 artist=album_artist,
-                year=self._extract_year(info),
+                year=year,
                 track_count=len(tracks),
                 tracks=tracks,
                 playlist_id=_eval("%(id|)s", info),
                 url=url,
+                thumbnail_url=thumbnail_url,
             )
 
         # Single track
@@ -290,6 +320,7 @@ class Downloader:
             ],
             playlist_id=_eval("%(id|)s", info),
             url=url,
+            thumbnail_url=self._extract_thumbnail(info),
         )
 
     def _get_ydl_opts(

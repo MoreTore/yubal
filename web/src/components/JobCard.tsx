@@ -64,7 +64,9 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
   // Get display info - prefer album_info if available
   const title = job.album_info?.title || null;
   const artist = job.album_info?.artist || null;
+  const year = job.album_info?.year || null;
   const trackCount = job.album_info?.track_count || null;
+  const thumbnailUrl = job.album_info?.thumbnail_url || null;
 
   return (
     <div
@@ -75,7 +77,24 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="shrink-0">{getStatusIcon(job.status)}</div>
+        <div className="relative shrink-0">
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className="h-10 w-10 rounded object-cover"
+            />
+          ) : (
+            <div className="bg-default-100 flex h-10 w-10 items-center justify-center rounded">
+              {getStatusIcon(job.status)}
+            </div>
+          )}
+          {thumbnailUrl && (
+            <div className="bg-background/80 absolute -right-1 -bottom-1 rounded-full p-0.5">
+              {getStatusIcon(job.status)}
+            </div>
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           {title ? (
             <>
@@ -85,6 +104,7 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
               <div className="flex items-center gap-2">
                 <p className="text-default-500 truncate font-mono text-xs">
                   {artist}
+                  {year && ` · ${year}`}
                 </p>
                 {isFinished && trackCount && (
                   <>
