@@ -1,39 +1,39 @@
 import { forwardRef } from "react";
 import type { ReactNode, HTMLAttributes } from "react";
 
-export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
+export interface PanelProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
 }
 
-export const Panel = forwardRef<HTMLDivElement, PanelProps>(
+export const Panel = forwardRef<HTMLElement, PanelProps>(
   ({ children, className = "", ...props }, ref) => {
     return (
-      <div
+      <section
         ref={ref}
         className={`border-default-200 rounded-large border-medium flex flex-col overflow-hidden ${className}`}
         {...props}
       >
         {children}
-      </div>
+      </section>
     );
   }
 );
 Panel.displayName = "Panel";
 
-export interface PanelHeaderProps extends HTMLAttributes<HTMLDivElement> {
+export interface PanelHeaderProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
 }
 
-export const PanelHeader = forwardRef<HTMLDivElement, PanelHeaderProps>(
+export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
   ({ children, className = "", ...props }, ref) => {
     return (
-      <div
+      <header
         ref={ref}
         className={`border-default-200 border-b-medium shrink-0 px-4 py-3 ${className}`}
         {...props}
       >
         {children}
-      </div>
+      </header>
     );
   }
 );

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { LogEntry, ProgressStep } from "../hooks/useJobs";
 import { Panel, PanelHeader, PanelTitle, PanelContent } from "./Panel";
 
-interface ConsoleOutputProps {
+interface ConsolePanelProps {
   logs: LogEntry[];
   status: ProgressStep;
 }
@@ -37,7 +37,7 @@ function getTimestamp(): string {
   return `${h}:${m}:${s}`;
 }
 
-export function ConsoleOutput({ logs, status }: ConsoleOutputProps) {
+export function ConsolePanel({ logs, status }: ConsolePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isActive =
     status !== "idle" &&

@@ -14,7 +14,7 @@ export function UrlInput({ value, onChange, disabled }: UrlInputProps) {
   return (
     <Input
       variant="bordered"
-      size="lg"
+      size="md"
       classNames={{
         input: "text-foreground",
       }}
