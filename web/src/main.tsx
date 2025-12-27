@@ -7,7 +7,7 @@ import "./index.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HeroUIProvider>
-      <main className="flexoki">
+      <main className="flexoki-dark">
         <App />
       </main>
     </HeroUIProvider>
