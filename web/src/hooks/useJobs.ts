@@ -64,8 +64,8 @@ export function useJobs(): UseJobsResult {
   }, [poll]);
 
   const startJob = useCallback(
-    async (url: string, audioFormat = "mp3") => {
-      const result = await createJob(url, audioFormat);
+    async (url: string) => {
+      const result = await createJob(url);
 
       if (!result.success) {
         // Refresh to show current state

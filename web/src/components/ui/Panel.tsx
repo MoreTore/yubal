@@ -29,7 +29,7 @@ export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
     return (
       <header
         ref={ref}
-        className={`border-divider border-b-small shrink-0 px-4 py-3 ${className}`}
+        className={`shrink-0 px-4 py-3 ${className}`}
         {...props}
       >
         {children}
@@ -43,10 +43,11 @@ export interface PanelTitleProps extends HTMLAttributes<HTMLDivElement> {
   icon?: ReactNode;
   children: ReactNode;
   badge?: ReactNode;
+  trailingIcon?: ReactNode;
 }
 
 export const PanelTitle = forwardRef<HTMLDivElement, PanelTitleProps>(
-  ({ icon, children, badge, className = "", ...props }, ref) => {
+  ({ icon, children, badge, trailingIcon, className = "", ...props }, ref) => {
     return (
       <div
         ref={ref}
@@ -54,14 +55,15 @@ export const PanelTitle = forwardRef<HTMLDivElement, PanelTitleProps>(
         {...props}
       >
         {icon && (
-          <span className="text-foreground-400 [&>svg]:h-4 [&>svg]:w-4">
+          <span className="text-foreground-500 [&>svg]:h-4 [&>svg]:w-4">
             {icon}
           </span>
         )}
-        <span className="text-foreground-400 font-mono text-xs tracking-wider uppercase">
+        <span className="text-foreground-500 font-mono text-xs tracking-wider uppercase">
           {children}
         </span>
         {badge}
+        <span className="ml-auto text-foreground-500 [&>svg]:h-4 [&>svg]:w-4">{trailingIcon}</span>
       </div>
     );
   }
@@ -77,7 +79,7 @@ export const PanelContent = forwardRef<HTMLDivElement, PanelContentProps>(
     return (
       <div
         ref={ref}
-        className={`h-72 overflow-y-auto p-3 ${className}`}
+        className={`border-divider border-t-small h-72 overflow-y-auto p-3 ${className}`}
         {...props}
       >
         {children}

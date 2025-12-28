@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Terminal } from "lucide-react";
+import { ChevronDown, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Job, JobLog } from "../hooks/useJobs";
 import { Panel, PanelHeader, PanelTitle, PanelContent } from "./ui/Panel";
@@ -41,6 +41,7 @@ export function ConsolePanel({ logs, jobs }: ConsolePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasActiveJobs = jobs.some((j) => isActive(j.status));
   const [currentTime, setCurrentTime] = useState(getTimestamp());
+  const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -58,48 +59,83 @@ export function ConsolePanel({ logs, jobs }: ConsolePanelProps) {
     }
   }, [hasActiveJobs]);
 
+  const panelHeader = (
+    <PanelHeader
+      className="hover:bg-content2 cursor-pointer select-none"
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      <PanelTitle
+        icon={<Terminal />}
+        trailingIcon={
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center justify-center"
+          >
+            <ChevronDown />
+          </motion.div>
+        }
+      >
+        console
+      </PanelTitle>
+    </PanelHeader>
+  );
+  const panelContent = (
+    <PanelContent
+      ref={containerRef}
+      className="space-y-1 p-4 font-mono text-xs"
+    >
+      {logs.length === 0 ? (
+        <div className="flex h-full items-center justify-center">
+          <span className="text-foreground-400/50">
+            Awaiting YouTube URL...
+          </span>
+        </div>
+      ) : (
+        <AnimatePresence initial={false}>
+          {logs.map((log, idx) => (
+            <motion.div
+              key={`${log.timestamp}-${idx}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-2"
+            >
+              <span className="text-foreground-400/50 shrink-0">
+                [{formatTime(log.timestamp)}]
+              </span>
+              <span className={statusColors[log.status] ?? "text-foreground"}>
+                {log.message}
+              </span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      )}
+      {/* Blinking cursor when active */}
+      {hasActiveJobs && (
+        <div className="flex gap-2">
+          <span className="text-foreground-400/50">[{currentTime}]</span>
+          <span className="text-foreground-500 animate-pulse">&#9608;</span>
+        </div>
+      )}
+    </PanelContent>
+  );
+
   return (
     <Panel>
-      <PanelHeader>
-        <PanelTitle icon={<Terminal />}>console</PanelTitle>
-      </PanelHeader>
-      <PanelContent
-        ref={containerRef}
-        className="space-y-1 p-4 font-mono text-xs"
-      >
-        {logs.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <span className="text-foreground-400/50">
-              Awaiting YouTube URL...
-            </span>
-          </div>
-        ) : (
-          <AnimatePresence initial={false}>
-            {logs.map((log, idx) => (
-              <motion.div
-                key={`${log.timestamp}-${idx}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-2"
-              >
-                <span className="text-foreground-400/50 shrink-0">
-                  [{formatTime(log.timestamp)}]
-                </span>
-                <span className={statusColors[log.status] ?? "text-foreground"}>
-                  {log.message}
-                </span>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+      {panelHeader}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            {panelContent}
+          </motion.div>
         )}
-        {/* Blinking cursor when active */}
-        {hasActiveJobs && (
-          <div className="flex gap-2">
-            <span className="text-foreground-400/50">[{currentTime}]</span>
-            <span className="text-foreground-500 animate-pulse">&#9608;</span>
-          </div>
-        )}
-      </PanelContent>
+      </AnimatePresence>
     </Panel>
   );
 }
