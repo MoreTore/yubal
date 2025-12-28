@@ -3,7 +3,7 @@ import { ThemeContext, type Theme } from "./ThemeContext";
 import { useLocalStorage } from "./useLocalStorage";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useLocalStorage<Theme>("yubal-theme", "dark")
+  const [theme, setTheme] = useLocalStorage<Theme>("yubal-theme", "dark");
 
   const toggle = useCallback(() => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));

@@ -51,7 +51,10 @@ export function ConsolePanel({ logs, jobs }: ConsolePanelProps) {
   const currentJob = jobs.find((j) => isActive(j.status));
   const hasActiveJobs = !!currentJob;
   const [currentTime, setCurrentTime] = useState(getTimestamp());
-  const [isExpanded, setIsExpanded] = useLocalStorage("yubal-console-expanded", false);
+  const [isExpanded, setIsExpanded] = useLocalStorage(
+    "yubal-console-expanded",
+    false
+  );
 
   const statusColors: Record<string, string> = {
     pending: "text-foreground-500",

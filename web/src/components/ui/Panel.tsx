@@ -28,28 +28,26 @@ export interface PanelHeaderProps extends HTMLAttributes<HTMLElement> {
 }
 
 export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
-  ({ leadingIcon, badge, trailingIcon, children, className = "", ...props }, ref) => {
+  (
+    { leadingIcon, badge, trailingIcon, children, className = "", ...props },
+    ref
+  ) => {
     return (
       <header
         ref={ref}
         className={`shrink-0 px-4 py-3 ${className}`}
         {...props}
       >
-        <div
-          className={`flex items-center gap-2 ${className}`}
-          {...props}
-        >
+        <div className={`flex items-center gap-2 ${className}`} {...props}>
           {leadingIcon && (
-            <span className="text-foreground-500">
-              {leadingIcon}
-            </span>
+            <span className="text-foreground-500">{leadingIcon}</span>
           )}
           <span className="text-foreground-500 font-mono text-xs tracking-wider uppercase">
             {children}
           </span>
           {badge}
           {trailingIcon && (
-            <span className="ml-auto text-foreground-500">{trailingIcon}</span>
+            <span className="text-foreground-500 ml-auto">{trailingIcon}</span>
           )}
         </div>
       </header>

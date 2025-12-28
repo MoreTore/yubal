@@ -28,7 +28,8 @@ export function DownloadsPanel({
               {jobs.length}
             </span>
           )
-        }>
+        }
+      >
         Downloads
       </PanelHeader>
       <PanelContent className="space-y-2">
