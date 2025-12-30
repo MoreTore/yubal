@@ -2,21 +2,26 @@
 
 # yubal
 
-**YouTube albums, downloaded and tagged automatically**
+**YouTube albums, downloaded and tagged automatically.**
+<br/>
+*Powered by yt-dlp and beets. Metadata from Spotify*
 
-[![ci](https://github.com/guillevc/yubal/actions/workflows/ci.yaml/badge.svg)](https://github.com/guillevc/yubal/actions/workflows/ci.yaml)
+[![CI Status](https://github.com/guillevc/yubal/actions/workflows/ci.yaml/badge.svg)](https://github.com/guillevc/yubal/actions/workflows/ci.yaml)
 [![GitHub Release](https://img.shields.io/github/v/release/guillevc/yubal)](https://github.com/guillevc/yubal/releases)
-[![Docker](https://img.shields.io/badge/Docker-ghcr-blue?logo=docker&logoColor=white)](https://ghcr.io/guillevc/yubal)
+[![Docker Image](https://img.shields.io/badge/ghcr.io-blue?logo=docker&logoColor=white)](https://ghcr.io/guillevc/yubal)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white)](LICENSE)
 
 <picture>
-  <img src="docs/demo.gif" alt="Demo" width="700">
+  <img src="docs/demo.gif" alt="Yubal Demo Interface" width="700">
 </picture>
+
 </div>
 
-## How It Works
+## 📖 Overview
 
-Paste a YouTube Music album URL, and _yubal_ handles the rest:
+**Yubal** is a self-hosted web application that streamlines the process of building a local music library. Simply paste a YouTube Music album URL, and Yubal orchestrates a background pipeline to download the audio and apply high-quality metadata tags automatically.
+
+### The Pipeline
 
 ```
                                  ┌──────────┐
@@ -32,79 +37,91 @@ YouTube Music ─────►│                  │        ├─01 - Track
                                                 └─cover.jpg
 ```
 
-- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — Downloads audio from YouTube/YouTube Music
-- **[beets](https://beets.io)** — Auto-tags music using Spotify metadata
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** downloads audio from YouTube
+- **[beets](https://beets.io)** auto-tags using Spotify metadata and gets album arts.
 
-## Features
+## ✨ Features
 
-- Web UI for submitting albums and monitoring progress
-- Sequential job queue — one download at a time, no conflicts
-- Auto-tagging via MusicBrainz + Spotify
-- Album art fetching and embedding
-- Docker-ready with multi-arch support
+* **Web Interface:** Clean UI for submitting albums and monitoring progress.
+* **Job queue:** Add albums to a LIFO job queue that gets processed one at a time for reliability and to avoid rate limiting.
+* **Auto-Tagging:** Auto-tagging via beets with Spotify metadata and album art fetching and embedding.
+* **Docker Image:** Docker-ready with multi-arch support (amd64/arm64)
+* **Format Control:** Defaults to efficient `opus`, with optional transcoding capabilities.
 
-## Quick Start
+## 🚀 Quick Start
+
+The recommended way to run *yubal* is via Docker Compose.
+
+### 1. Create a `compose.yaml`
 
 ```yaml
-# compose.yaml
----
 services:
   yubal:
-    image: ghcr.io/guillevc/yubal:dev
+    image: ghcr.io/guillevc/yubal:latest
+    container_name: yubal
+    ports:
+      - "8000:8000"
     environment:
       YUBAL_TZ: UTC
-    ports:
-      - 8000:8000
+      # check README.md for more configurations.
     volumes:
-      - ./data:/app/data
-      - ./beets:/app/beets
-      - ./ytdlp:/app/ytdlp
+      - ./data:/app/data        # Where your music will be saved
+      - ./beets:/app/beets      # Beets configuration and database
+      - ./ytdlp:/app/ytdlp      # yt-dlp configuration (cookies)
+    restart: unless-stopped
+
 ```
 
-Open [http://localhost:8000](http://localhost:8000) and paste a YouTube Music album URL.
+### 2. Run the container
+
+```bash
+docker compose up -d
+
+```
+
+### 3. Start Downloading
+
+Open your browser to `http://localhost:8000` and paste a YouTube Music album URL.
+
+> [!TIP]
+> **Premium Quality & Age Restrictions**
+> 
+> To download age-restricted content or access higher bitrate audio (Premium users), you must provide your cookies:
+> 1. Export your cookies from YouTube using a browser extension. [See yt-dlp FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp)
+> 2. Save the file as `cookies.txt`.
+> 3. Place it in your mounted `ytdlp` volume (or upload via the Web UI).
+> 
+> 
+> *See [yt-dlp Wiki](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube) for details.*
+
+## ⚙️ Configuration
+
+*yubal* is configured entirely via Environment Variables.
+
+| Variable | Description | Default (Docker) | Default (Local) |
+| --- | --- | --- | --- |
+| `YUBAL_HOST` | Server bind address | `0.0.0.0` | `127.0.0.1` |
+| `YUBAL_PORT` | Server listening port | `8000` | `8000` |
+| `YUBAL_DATA_DIR` | Destination for tagged music | `/app/data` | `./data` |
+| `YUBAL_BEETS_DIR` | Location of Beets DB/Config | `/app/beets` | `./beets` |
+| `YUBAL_YTDLP_DIR` | Location of cookies.txt | `/app/ytdlp` | `./ytdlp` |
+| `YUBAL_AUDIO_FORMAT` | Output audio codec | `opus` | `opus` |
+| `YUBAL_AUDIO_QUALITY` | Transcoding quality (VBR scale 0-9) | `0` (Best) | `0` (Best) |
+| `YUBAL_TZ` | Timezone (IANA format) | `UTC` | `UTC` |
 
 > [!NOTE]
-> You can upload your YouTube cookies to be used by yubal from the Web UI or by adding `cookies.txt` to your `yt-dlp` folder.
->
-> This is only required for age-restricted or private content.
-> Although If you own a premium YouTube account, you may also benefit from better audio quality when downloading with your extracted cookies.
->
-> More information here: https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube
+> **Audio Transcoding**
+> By default, *yubal* keeps the original `opus` stream from YouTube for maximum quality and speed. Transcoding (e.g., to MP3) only occurs if you explicitly change `YUBAL_AUDIO_FORMAT`.
 
-## Configuration
+## 🤝 Acknowledgments
 
-> [!NOTE]
-> Default audio settings will output `opus` audio files without transcoding.
->
-> Transcoding at best quality will be performed if source is different from `opus` (rare cases).
+* **Color Scheme:** [Flexoki](https://stephango.com/flexoki) by Steph Ango.
+* **Core Tools:** Powered by the incredible open-source communities of [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [beets](https://github.com/beetbox/beets).
 
-All configuration is done via Environment Variables. You can override any of these via `environment` if running in Docker or by `.env` file when running locally.
+## 📄 License
 
-| Variable              | Description                     | Docker       | Local       |
-| --------------------- | ------------------------------- | ------------ | ----------- |
-| `YUBAL_HOST`          | Server bind address             | `0.0.0.0`    | `127.0.0.1` |
-| `YUBAL_PORT`          | Server port                     | `8000`       | `8000`      |
-| `YUBAL_DATA_DIR`      | Music library output            | `/app/data`  | `./data`    |
-| `YUBAL_BEETS_DIR`     | Beets config + database         | `/app/beets` | `./beets`   |
-| `YUBAL_YTDLP_DIR`     | yt-dlp config (cookies)         | `/app/ytdlp` | `./ytdlp`   |
-| `YUBAL_AUDIO_FORMAT`  | Output format                   | `opus`       | `opus`      |
-| `YUBAL_AUDIO_QUALITY` | Transcoding quality (VBR scale) | `0`          | `0`         |
-| `YUBAL_TZ`            | Timezone (IANA format)          | `UTC`        | `UTC`       |
+This project is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
 
-## Acknowledgments
+## ⚠️ Disclaimer
 
-- Color scheme: [Flexoki](https://stephango.com/flexoki) by Steph Ango
-- https://github.com/yt-dlp/yt-dlp
-- https://github.com/beetbox/beets
-
-## License
-
-[MIT](LICENSE)
-
-## Disclaimer
-
-This software is provided for **personal use only**. Users are responsible
-for complying with YouTube's Terms of Service and applicable copyright laws
-in their jurisdiction.
-
-The authors are not responsible for any misuse of this software.
+This software is provided for **personal archiving purposes only**. Users are responsible for complying with YouTube's Terms of Service and applicable copyright laws in their jurisdiction. The authors do not promote piracy and are not responsible for misuse of this software.
