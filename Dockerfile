@@ -33,7 +33,9 @@ RUN apt-get update \
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=web /app/web/dist ./web/dist
 COPY yubal/ ./yubal/
-COPY beets/config.yaml ./beets/config.yaml
+COPY beets/config.yaml /app/beets-default/config.yaml
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
@@ -46,4 +48,5 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 EXPOSE 8000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["python", "-m", "yubal"]
