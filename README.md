@@ -15,6 +15,8 @@ _Powered by yt-dlp and beets._
   <img src="docs/demo.gif" alt="Yubal Demo Interface" width="600">
 </picture>
 
+<sub>*GIF is at 3x speed*</sub>
+
 </div>
 
 ## 📖 Overview
