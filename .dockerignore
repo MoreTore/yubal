@@ -19,7 +19,6 @@ web/dist
 # Data
 data
 beets/beets.db
-beets/secrets.yaml
 beets/beets_import.log
 beets/*.json
 ytdlp/

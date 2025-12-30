@@ -6,8 +6,8 @@
 
 [![ci](https://github.com/guillevc/yubal/actions/workflows/ci.yaml/badge.svg)](https://github.com/guillevc/yubal/actions/workflows/ci.yaml)
 [![GitHub Release](https://img.shields.io/github/v/release/guillevc/yubal)](https://github.com/guillevc/yubal/releases)
-[![Docker](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://ghcr.io/guillevc/yubal)
-[![License: MIT](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ghcr-blue?logo=docker&logoColor=white)](https://ghcr.io/guillevc/yubal)
+[![License: MIT](https://img.shields.io/badge/License-MIT-white)](LICENSE)
 
 <picture>
   <img src="docs/demo.gif" alt="Demo" width="700">
@@ -45,84 +45,59 @@ YouTube Music ─────►│                  │        ├─01 - Track
 
 ## Quick Start
 
-```bash
-docker run -d \
-  --name yubal \
-  -p 8000:8000 \
-  -v ~/Music:/app/data \
-  -v yubal-beets:/app/beets \
-  -v yubal-ytdlp:/app/ytdlp \
-  ghcr.io/youruser/yubal:latest
+```yaml
+# compose.yaml
+---
+services:
+  yubal:
+    image: ghcr.io/guillevc/yubal:dev
+    environment:
+      YUBAL_TZ: UTC
+    ports:
+      - 8000:8000
+    volumes:
+      - ./data:/app/data
+      - ./beets:/app/beets
+      - ./ytdlp:/app/ytdlp
 ```
 
 Open [http://localhost:8000](http://localhost:8000) and paste a YouTube Music album URL.
 
-> **Note:** For age-restricted or private content, add your YouTube cookies to `/app/ytdlp/cookies.txt`
+> You can upload your YouTube cookies to be used by yubal from the Web UI or by adding `cookies.txt` to your `yt-dlp` folder.
+>
+> This is only required for age-restricted or private content.
+> Although If you own a premium YouTube account, you may also benefit from better audio quality when downloading with your extracted cookies.
+>
+> More information here: https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube
 
 ## Configuration
 
-All settings use the `YUBAL_` prefix.
+> Default audio settings will output `opus` audio files without transcoding.
+>
+> Transcoding at best quality will be performed if source is different from `opus` (rare cases).
 
-| Variable             | Description             | Default      |
-| -------------------- | ----------------------- | ------------ |
-| `YUBAL_HOST`         | Server bind address     | `127.0.0.1`  |
-| `YUBAL_PORT`         | Server port             | `8000`       |
-| `YUBAL_DATA_DIR`     | Music library output    | `/app/data`  |
-| `YUBAL_BEETS_DIR`    | Beets config + database | `/app/beets` |
-| `YUBAL_YTDLP_DIR`    | yt-dlp config (cookies) | `/app/ytdlp` |
-| `YUBAL_AUDIO_FORMAT` | Output format           | `opus`       |
-| `YUBAL_TZ`           | Timezone (IANA format)  | `UTC`        |
+All configuration is done via Environment Variables. You can override any of these via `environment` if running in Docker or by `.env` file when running locally.
 
-### Volumes
-
-| Path         | Purpose                               |
-| ------------ | ------------------------------------- |
-| `/app/data`  | Your music library — mount to persist |
-| `/app/beets` | Beets config and database             |
-| `/app/ytdlp` | yt-dlp cookies and config             |
-
-### Spotify Metadata (Optional)
-
-For better matching, add Spotify API credentials. Create `/app/beets/secrets.yaml`:
-
-```yaml
-spotify:
-  client_id: your_client_id
-  client_secret: your_client_secret
-```
-
-Get credentials at [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
-
-## Development
-
-### Prerequisites
-
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (Python package manager)
-- [Bun](https://bun.sh/) (JS runtime)
-- ffmpeg
-
-### Setup
-
-```bash
-git clone https://github.com/youruser/yubal.git
-cd yubal
-just install   # Install all dependencies
-just dev       # Start API + web dev servers
-```
-
-### Commands
-
-| Command       | Description                 |
-| ------------- | --------------------------- |
-| `just dev`    | Run API and web in dev mode |
-| `just check`  | Lint, typecheck, and test   |
-| `just format` | Format all code             |
-| `just build`  | Build for production        |
+| Variable              | Description                     | Docker       | Local       |
+| --------------------- | ------------------------------- | ------------ | ----------- |
+| `YUBAL_HOST`          | Server bind address             | `0.0.0.0`    | `127.0.0.1` |
+| `YUBAL_PORT`          | Server port                     | `8000`       | `8000`      |
+| `YUBAL_DATA_DIR`      | Music library output            | `/app/data`  | `./data`    |
+| `YUBAL_BEETS_DIR`     | Beets config + database         | `/app/beets` | `./beets`   |
+| `YUBAL_YTDLP_DIR`     | yt-dlp config (cookies)         | `/app/ytdlp` | `./ytdlp`   |
+| `YUBAL_AUDIO_FORMAT`  | Output format                   | `opus`       | `opus`      |
+| `YUBAL_AUDIO_QUALITY` | Transcoding quality (VBR scale) | `0`          | `0`         |
+| `YUBAL_TZ`            | Timezone (IANA format)          | `UTC`        | `UTC`       |
 
 ## Acknowledgments
 
 - Color scheme: [Flexoki](https://stephango.com/flexoki) by Steph Ango
+- https://github.com/yt-dlp/yt-dlp
+- https://github.com/beetbox/beets
+
+## License
+
+[MIT](LICENSE)
 
 ## Disclaimer
 
@@ -131,7 +106,3 @@ for complying with YouTube's Terms of Service and applicable copyright laws
 in their jurisdiction.
 
 The authors are not responsible for any misuse of this software.
-
-## License
-
-[MIT](LICENSE)

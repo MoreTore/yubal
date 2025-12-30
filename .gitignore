@@ -162,12 +162,12 @@ pyvenv.cfg
 pip-selfcheck.json
 
 ### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/tasks.json
+!/.vscode/launch.json
+!/.vscode/extensions.json
+!/.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
 .history/
@@ -183,10 +183,8 @@ pip-selfcheck.json
 # End of https://www.toptal.com/developers/gitignore/api/python,deno,react,visualstudiocode,macos,venv
 
 /data/
-/beets/
-/ytdlp/
+/beets/*
 !/beets/config.yaml
-!/beets/secrets.example.yaml
 .env
 .env.docker
 *.tsbuildinfo
