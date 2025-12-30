@@ -2,9 +2,6 @@
 directory: ../data
 library: ./beets.db
 
-include:
-  - secrets.yaml
-
 plugins: fetchart embedart fromfilename spotify zero lastgenre
 
 threaded: yes
@@ -40,8 +37,8 @@ match:
   track_length_max: 30
   # Ignore album artist (unreliable from YouTube), use track artist for matching
   distance_weights:
-    artist: 0.0        # Album artist - ignore
-    track_artist: 1.0  # Track artist - moderate weight (now clean from artists.0)
+    artist: 0.0 # Album artist - ignore
+    track_artist: 1.0 # Track artist - moderate weight (now clean from artists.0)
 
 fetchart:
   auto: yes
