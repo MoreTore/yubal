@@ -1,6 +1,8 @@
+import { GitCommit } from "lucide-react";
+
 export function Footer() {
   return (
-    <footer className="mt-6 space-y-1 text-center">
+    <footer className="mt-6 text-center">
       <p className="text-foreground-500 font-mono text-xs">
         Made by{" "}
         <a
@@ -11,6 +13,22 @@ export function Footer() {
         >
           guillevc
         </a>
+        {__COMMIT_SHA__ !== "dev" && (
+          <>
+            {" · "}
+            <a
+              href={`https://github.com/guillevc/yubal/commit/${__COMMIT_SHA__}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group text-primary/70 hover:text-primary"
+            >
+              <GitCommit className="-mt-px inline h-4 w-4" />{" "}
+              <span className="group-hover:underline">
+                {__COMMIT_SHA__.slice(0, 7)}
+              </span>
+            </a>
+          </>
+        )}
         {" · Powered by "}
         <a
           href="https://github.com/yt-dlp/yt-dlp"
