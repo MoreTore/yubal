@@ -4,13 +4,13 @@ services:
   yubal:
     image: ghcr.io/guillevc/yubal:dev
     container_name: yubal
+    ports:
+      - 8000:${YUBAL_PORT}
     environment:
       YUBAL_PORT: ${YUBAL_PORT}
       YUBAL_AUDIO_FORMAT: ${YUBAL_AUDIO_FORMAT}
       YUBAL_AUDIO_QUALITY: ${YUBAL_AUDIO_QUALITY}
       YUBAL_TZ: ${YUBAL_TZ}
-    ports:
-      - 8000:${YUBAL_PORT}
     volumes:
       - ./data:/app/data
       - ./beets:/app/beets
