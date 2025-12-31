@@ -189,3 +189,4 @@ pip-selfcheck.json
 .env
 .env.docker
 *.tsbuildinfo
+/CLAUDE.md
