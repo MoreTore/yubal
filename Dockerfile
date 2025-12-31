@@ -1,11 +1,13 @@
 # Build frontend
 FROM oven/bun:1-alpine AS web
 ARG VERSION=dev
+ARG COMMIT_SHA=dev
+ARG IS_RELEASE=false
 WORKDIR /app/web
 COPY web/package.json web/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY web/ ./
-RUN VITE_VERSION=$VERSION bun run build
+RUN VITE_VERSION=$VERSION VITE_COMMIT_SHA=$COMMIT_SHA VITE_IS_RELEASE=$IS_RELEASE bun run build
 
 # Builder - install Python deps
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder

@@ -14,9 +14,34 @@ function getVersion(): string {
   }
 }
 
+function getCommitSha(): string {
+  if (process.env.VITE_COMMIT_SHA) return process.env.VITE_COMMIT_SHA;
+  try {
+    return execSync("git rev-parse --short HEAD", {
+      encoding: "utf-8",
+    }).trim();
+  } catch {
+    return "dev";
+  }
+}
+
+function isRelease(): boolean {
+  if (process.env.VITE_IS_RELEASE !== undefined) {
+    return process.env.VITE_IS_RELEASE === "true";
+  }
+  try {
+    execSync("git describe --tags --exact-match HEAD", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default defineConfig({
   define: {
     __VERSION__: JSON.stringify(getVersion()),
+    __COMMIT_SHA__: JSON.stringify(getCommitSha()),
+    __IS_RELEASE__: isRelease(),
   },
   plugins: [react(), tailwindcss()],
   server: {
