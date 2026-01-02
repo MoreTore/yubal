@@ -12,16 +12,20 @@ This document captures the research and POC testing for adding YouTube Music **p
 
 **Track type determines metadata availability, not playlist type.**
 
-| Track Type | Has Metadata? | Description Pattern |
-|------------|---------------|---------------------|
-| Album track (auto-generated) | ✅ Full (album, artist, track) | "Provided to YouTube by..." |
-| Music video (manual upload) | ❌ None (only channel, messy title) | Custom description |
+| Track Type | yt-dlp Metadata? | YouTube Music UI? | Description Pattern |
+|------------|------------------|-------------------|---------------------|
+| Album track (auto-generated) | ✅ Full | ✅ Full | "Provided to YouTube by..." |
+| Music video (official) | ❌ None | ✅ Full | "Director...", "Official video..." |
+| Non-music video | ❌ None | ❌ None | Anything else |
+
+**Important:** YouTube Music's web UI shows metadata for music videos that yt-dlp cannot access. The UI has its own metadata layer that enriches videos, but this is not available for download.
 
 This means:
 - **Album URLs** (`OLAK*`) → Always have metadata (album tracks)
 - **Playlist URLs** (`PL*`) → Depends on what tracks were added
 - **User playlists with album tracks** → Have full metadata!
-- **Curated playlists (Top 100, etc.)** → Usually music videos, no metadata
+- **Curated playlists (Top 100, etc.)** → Usually music videos, no yt-dlp metadata
+- **Music videos** → Show metadata in browser but yt-dlp can't extract it
 
 ---
 
@@ -114,6 +118,31 @@ Cookies were tested to see if authentication provides additional metadata:
 | Personal playlists (RDTMAK*) | Require auth, but follow same metadata rules |
 
 **Conclusion:** Cookies provide no benefit for metadata extraction and may cause issues with YouTube's bot detection. Unauthenticated extraction is preferred.
+
+### YouTube Music UI vs yt-dlp Metadata
+
+**Important finding:** YouTube Music's web UI shows metadata for music videos that yt-dlp cannot access.
+
+Testing playlist with mixed content types:
+
+| Track | Type | yt-dlp Metadata? | YouTube Music UI Shows? |
+|-------|------|------------------|------------------------|
+| S P E Y S I D E | Album track | ✅ Full | ✅ Full |
+| Latin Girl | Album track | ✅ Full | ✅ Full |
+| A COLD PLAY | Album track | ✅ Full | ✅ Full |
+| luther | Album track | ✅ Full | ✅ Full |
+| 40.000 de vida... | Non-music video | ❌ None | ❌ None |
+| ME INCREPAN... | Non-music video | ❌ None | ❌ None |
+| Holocene (Official Video) | **Music video** | ❌ None | ✅ Full |
+
+**Key insight:** YouTube Music has a **separate metadata layer** that enriches music videos with album/artist information in their web UI. This metadata exists in YouTube Music's database but is not:
+- Embedded in the video file
+- Accessible via yt-dlp's extraction
+- Part of the YouTube Data API v3 (which doesn't expose music-specific metadata)
+
+This means music videos like "Holocene" show correct artist/album in YouTube Music's interface, but when downloaded via yt-dlp, this enrichment is lost.
+
+**Implication for implementation:** We cannot rely on YouTube Music's UI metadata - we must work with what yt-dlp provides, which means music videos will always lack album/artist metadata regardless of what the user sees in the browser.
 
 ### Available Fields for Playlist Tracks
 
