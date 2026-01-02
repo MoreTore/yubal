@@ -21,6 +21,7 @@ on:
       - "mise.toml"
       - "tests/**"
       - "CLAUDE.md"
+      - ".mcp.json"
 
 env:
   REGISTRY: ghcr.io
