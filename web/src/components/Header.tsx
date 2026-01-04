@@ -105,12 +105,12 @@ export function Header() {
         <h1 className="text-foreground font-mono text-xl font-semibold tracking-tight">
           yubal
         </h1>
-        <p className="text-foreground-500 font-mono text-xs">
+        <p className="font-mono text-xs">
           <a
             href={`https://github.com/guillevc/yubal/${__IS_RELEASE__ ? `releases/tag/${__VERSION__}` : `commit/${__COMMIT_SHA__}`}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:underline"
+            className="text-primary/70 underline-offset-2 transition-colors hover:text-primary hover:underline"
           >
             {__VERSION__}
           </a>
