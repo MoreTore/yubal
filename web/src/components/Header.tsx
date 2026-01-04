@@ -110,7 +110,7 @@ export function Header() {
             href={`https://github.com/guillevc/yubal/${__IS_RELEASE__ ? `releases/tag/${__VERSION__}` : `commit/${__COMMIT_SHA__}`}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary/70 underline-offset-2 transition-colors hover:text-primary hover:underline"
+            className="text-primary/70 hover:text-primary underline-offset-2 transition-colors hover:underline"
           >
             {__VERSION__}
           </a>
