@@ -68,6 +68,7 @@ export function AnimatedThemeToggler({
     <Button
       ref={buttonRef}
       isIconOnly
+      size="sm"
       variant="light"
       aria-label="Toggle theme"
       onPress={handleToggle}

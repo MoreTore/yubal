@@ -179,6 +179,7 @@ export function Header() {
         >
           <Button
             isIconOnly
+            size="sm"
             variant="light"
             aria-label="Upload cookies"
             isLoading={isUploading}
