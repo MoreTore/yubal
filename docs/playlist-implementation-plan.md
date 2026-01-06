@@ -4,6 +4,38 @@
 > **Status:** Ready for Implementation
 > **Branch:** feat/playlists
 
+## Table of Contents
+
+1. [Overview](#overview) - V1 scope and future plans
+2. [URL Detection & Classification](#url-detection--classification) - How to identify albums vs playlists
+3. [ytmusicapi Test Results](#ytmusicapi-test-results) - Real API response data
+4. [Architecture](#architecture) - Data flow diagram and tool responsibilities
+5. [File Structure](#file-structure) - Output paths, metadata, M3U format
+6. [Configuration](#configuration) - UI toggle and beets config
+7. [Implementation Details](#implementation-details) - Complete code for all services
+8. [API Changes](#api-changes) - Schema and router updates
+9. [Frontend Changes](#frontend-changes) - Experimental toggle UI
+10. [Dependencies](#dependencies) - Python packages to add
+11. [Files Summary](#files-summary) - Quick reference of files to create/modify
+12. [Testing](#testing) - Unit tests and integration test URLs
+13. [Limitations](#limitations--known-issues) - Known constraints
+14. [Rollout Plan](#rollout-plan) - Implementation order
+
+---
+
+## Quick Reference
+
+| Item | Value |
+|------|-------|
+| **Classification** | `OLAK5uy_*` = Album, everything else = Playlist |
+| **Output folder** | `Playlists/{playlist_name}/` |
+| **Track numbering** | Continuous (skips unavailable tracks) |
+| **Beets config** | `beets/playlist-config.yaml` with `move: no` |
+| **New dependency** | `ytmusicapi>=1.9.0` |
+| **New services** | `metadata_enricher.py`, `metadata_patcher.py`, `m3u_generator.py` |
+
+---
+
 ## Overview
 
 This document consolidates the POC findings and implementation decisions for YouTube Music playlist support in Yubal.
@@ -102,6 +134,69 @@ def is_album_url(url: str) -> bool:
     playlist_id = extract_playlist_id(url)
     return playlist_id.startswith("OLAK5uy_") if playlist_id else False
 ```
+
+---
+
+## ytmusicapi Test Results
+
+### Test Playlist
+
+**URL:** `https://music.youtube.com/playlist?list=PLbE6wFkAlDUeDUu98GuzkCWm60QjYvagQ`
+**Title:** "test123 public playlist"
+
+### Raw API Response (`get_playlist`)
+
+| # | Title | Artist(s) | Album | isAvailable | videoId |
+|---|-------|-----------|-------|-------------|---------|
+| 1 | S P E Y S I D E | Bon Iver | SABLE, fABLE | ✅ | 9cTn9Txi2JA |
+| 2 | Latin Girl | Claudia Arenas | OT GALA 9 | ✅ | 2V1exaAqx-k |
+| 3 | A COLD PLAY | The Kid LAROI | A COLD PLAY | ✅ | Vgpv5PtWsn4 |
+| 4 | luther | Kendrick Lamar, SZA | GNX | ✅ | XVveECQmiAk |
+| 5 | 40.000 de vida... | Clau | None | ❌ | **None** |
+| 6 | I WAS HEARD... | Roma Gallardo | None | ❌ | **None** |
+| 7 | Holocene | Bon Iver | **None** | ✅ | TWcyIpul8OE |
+| 8 | Para Mí | Lucia Casani | **None** | ✅ | b_uNXFFQp3w |
+
+### Track Classification
+
+| Condition | Type | Action |
+|-----------|------|--------|
+| `isAvailable=False` OR `videoId=None` | Non-music content | Skip (don't download) |
+| `isAvailable=True` AND `album=None` | Music video | Search for album |
+| `isAvailable=True` AND `album={...}` | Album track | Use existing metadata |
+
+### Search Enrichment Results
+
+For tracks without album info, `search(filter='songs')` successfully finds album:
+
+| Track | Artist | Search Result | Album Found |
+|-------|--------|---------------|-------------|
+| Holocene | Bon Iver | ✅ Match | Bon Iver, Bon Iver |
+| Para Mí | Lucia Casani | ✅ Match | Para Mí |
+
+### Expected Output Files
+
+After processing (6 available tracks):
+
+```
+Playlists/test123 public playlist/
+├── test123 public playlist.m3u
+├── 01 - Bon Iver - S P E Y S I D E.opus           ← album track
+├── 02 - Claudia Arenas - Latin Girl.opus          ← album track
+├── 03 - The Kid LAROI - A COLD PLAY.opus          ← album track
+├── 04 - Kendrick Lamar - luther.opus              ← album track (multi-artist)
+├── 05 - Bon Iver - Holocene.opus                  ← enriched via search
+└── 06 - Lucia Casani - Para Mí.opus               ← enriched via search
+```
+
+> **Note:** Tracks 5-6 in original playlist are skipped (`isAvailable=False`), so output tracks are renumbered 1-6 continuously.
+
+### Key Findings
+
+1. **Multi-artist tracks**: `artists` is an array (e.g., `[{name: "Kendrick Lamar"}, {name: "SZA"}]`). We use first artist for filename, but could join for metadata.
+2. **Non-music detection**: `isAvailable=False` AND `videoId=None` reliably identifies non-music content.
+3. **Search accuracy**: First search result with matching artist is reliable for album lookup.
+4. **Thumbnails**: Available for all tracks (1-2 per track), can be used for album art.
 
 ---
 
@@ -206,8 +301,9 @@ data/
     └── {playlist_name}/
         ├── {playlist_name}.m3u    # M3U playlist file
         ├── 01 - Bon Iver - S P E Y S I D E.opus
-        ├── 02 - ROSALÍA - La Perla.opus
-        └── 03 - Kendrick Lamar - luther.opus
+        ├── 02 - Claudia Arenas - Latin Girl.opus
+        ├── 03 - The Kid LAROI - A COLD PLAY.opus
+        └── ...
 ```
 
 ### Embedded Metadata (per track)
@@ -225,13 +321,19 @@ artwork:     [individual album art]     ← Per-track album artwork
 
 ```m3u
 #EXTM3U
-#PLAYLIST:My Favorite Songs
-#EXTINF:234,Bon Iver - S P E Y S I D E
+#PLAYLIST:test123 public playlist
+#EXTINF:210,Bon Iver - S P E Y S I D E
 01 - Bon Iver - S P E Y S I D E.opus
-#EXTINF:198,ROSALÍA - La Perla
-02 - ROSALÍA - La Perla.opus
-#EXTINF:267,Kendrick Lamar - luther
-03 - Kendrick Lamar - luther.opus
+#EXTINF:163,Claudia Arenas - Latin Girl
+02 - Claudia Arenas - Latin Girl.opus
+#EXTINF:180,The Kid LAROI - A COLD PLAY
+03 - The Kid LAROI - A COLD PLAY.opus
+#EXTINF:178,Kendrick Lamar - luther
+04 - Kendrick Lamar - luther.opus
+#EXTINF:344,Bon Iver - Holocene
+05 - Bon Iver - Holocene.opus
+#EXTINF:200,Lucia Casani - Para Mí
+06 - Lucia Casani - Para Mí.opus
 ```
 
 ---
@@ -340,6 +442,7 @@ class MetadataEnricher:
 
         Returns:
             Tuple of (playlist_title, list of EnrichedTrack)
+            Only available tracks are returned, with continuous numbering.
         """
         logger.info("Enriching playlist metadata: {}", playlist_id)
 
@@ -348,23 +451,18 @@ class MetadataEnricher:
         tracks = playlist.get("tracks", [])
         enriched: list[EnrichedTrack] = []
         search_count = 0
+        available_index = 0  # Continuous index for available tracks only
 
-        for idx, track in enumerate(tracks, start=1):
+        for track in tracks:
             video_id = track.get("videoId")
             is_available = track.get("isAvailable", False)
 
+            # Skip non-music content (no videoId or not available)
             if not is_available or not video_id:
-                enriched.append(EnrichedTrack(
-                    video_id=video_id or "",
-                    title=track.get("title", ""),
-                    artist=self._get_artist(track),
-                    album=None,
-                    album_art_url=None,
-                    is_available=False,
-                    playlist_index=idx,
-                ))
+                logger.debug("Skipping unavailable track: {}", track.get("title"))
                 continue
 
+            available_index += 1
             title = track.get("title", "")
             artist = self._get_artist(track)
 
@@ -380,7 +478,7 @@ class MetadataEnricher:
                 # Get highest quality thumbnail
                 album_art_url = thumbnails[-1].get("url")
 
-            # If missing album, search for it
+            # If missing album, search for it (music videos need this)
             if not album and artist and title:
                 if search_count > 0 and self.request_delay > 0:
                     time.sleep(self.request_delay)
@@ -399,7 +497,7 @@ class MetadataEnricher:
                 album=album,
                 album_art_url=album_art_url,
                 is_available=True,
-                playlist_index=idx,
+                playlist_index=available_index,  # Continuous numbering
             ))
 
         logger.info(
@@ -530,17 +628,14 @@ def patch_playlist_metadata(
 
     Args:
         audio_files: Downloaded audio files (in playlist order)
-        tracks: Enriched track metadata (in same order)
+        tracks: Enriched track metadata (in same order, only available tracks)
 
     Returns:
         Number of successfully patched files
     """
     success_count = 0
 
-    # Match files to tracks by playlist index
-    available_tracks = [t for t in tracks if t.is_available]
-
-    for audio_file, track in zip(audio_files, available_tracks):
+    for audio_file, track in zip(audio_files, tracks):
         if patch_track_metadata(audio_file, track):
             success_count += 1
 
@@ -573,21 +668,20 @@ def generate_m3u(
     Args:
         playlist_dir: Directory containing the playlist files
         playlist_name: Name of the playlist
-        tracks: Enriched track metadata
+        tracks: Enriched track metadata (only available tracks)
         audio_files: Downloaded audio files
 
     Returns:
         Path to the generated M3U file
     """
     m3u_path = playlist_dir / f"{playlist_name}.m3u"
-    available_tracks = [t for t in tracks if t.is_available]
 
     lines = [
         "#EXTM3U",
         f"#PLAYLIST:{playlist_name}",
     ]
 
-    for track, audio_file in zip(available_tracks, audio_files):
+    for track, audio_file in zip(tracks, audio_files):
         # EXTINF format: #EXTINF:duration,artist - title
         # Duration -1 means unknown
         lines.append(f"#EXTINF:-1,{track.artist} - {track.title}")
@@ -636,20 +730,19 @@ class SyncService:
         job_temp_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            # Phase 1: Enrich metadata
+            # Phase 1: Enrich metadata (returns only available tracks)
             self._report_progress(progress_callback, ProgressStep.FETCHING_INFO,
                                   "Enriching playlist metadata...", 0.0)
 
             enricher = MetadataEnricher()
-            playlist_title, enriched_tracks = enricher.enrich_playlist(playlist_id)
+            playlist_title, tracks = enricher.enrich_playlist(playlist_id)
 
-            available_tracks = [t for t in enriched_tracks if t.is_available]
-            if not available_tracks:
+            if not tracks:
                 return SyncResult(success=False, error="No available tracks in playlist")
 
             # Phase 2: Download
             self._report_progress(progress_callback, ProgressStep.DOWNLOADING,
-                                  f"Downloading {len(available_tracks)} tracks...", 0.1)
+                                  f"Downloading {len(tracks)} tracks...", 0.1)
 
             download_result = self.downloader.download_album(
                 url=url,
@@ -666,16 +759,16 @@ class SyncService:
                                   "Patching metadata...", 0.5)
 
             audio_files = sorted(job_temp_dir.glob("*.opus"))
-            patch_playlist_metadata(audio_files, enriched_tracks)
+            patch_playlist_metadata(audio_files, tracks)
 
             # Phase 4: Move to playlist folder
             playlist_dir = self.data_dir / "Playlists" / self._sanitize_filename(playlist_title)
             playlist_dir.mkdir(parents=True, exist_ok=True)
 
             final_files = []
-            for i, (audio_file, track) in enumerate(zip(audio_files, available_tracks), start=1):
-                # Rename to: {index} - {artist} - {title}.opus
-                new_name = f"{i:02d} - {track.artist} - {track.title}.opus"
+            for audio_file, track in zip(audio_files, tracks):
+                # Rename using track's playlist_index (already continuous)
+                new_name = f"{track.playlist_index:02d} - {track.artist} - {track.title}.opus"
                 new_name = self._sanitize_filename(new_name)
                 dest = playlist_dir / new_name
                 shutil.move(str(audio_file), str(dest))
@@ -692,13 +785,13 @@ class SyncService:
             self._report_progress(progress_callback, ProgressStep.IMPORTING,
                                   "Embedding album artwork...", 0.85)
 
-            self._embed_album_art(final_files, available_tracks)
+            self._embed_album_art(final_files, tracks)
 
             # Phase 7: Generate M3U
             self._report_progress(progress_callback, ProgressStep.IMPORTING,
                                   "Generating playlist file...", 0.95)
 
-            generate_m3u(playlist_dir, playlist_title, enriched_tracks, final_files)
+            generate_m3u(playlist_dir, playlist_title, tracks, final_files)
 
             return SyncResult(
                 success=True,
@@ -953,9 +1046,9 @@ playlist_with_meta = "https://music.youtube.com/playlist?list=PLbE6wFkAlDUeDUu98
 - Artist name validation reduces false matches
 
 ### Non-Music Content
-- Videos with `isAvailable=False` are skipped
-- Gaming streams, vlogs won't have music metadata
-- These still download but without enriched metadata
+- Videos with `isAvailable=False` or `videoId=None` are skipped entirely
+- Gaming streams, vlogs won't be downloaded
+- Only music tracks appear in final output
 
 ### Track Numbers
 - Uses playlist index (1, 2, 3...) not album track number
@@ -973,3 +1066,14 @@ playlist_with_meta = "https://music.youtube.com/playlist?list=PLbE6wFkAlDUeDUu98
 5. **Add frontend toggle** with experimental tag (controls URL validation)
 6. **Test with known playlists**
 7. **Deploy** - feature available via UI toggle
+
+---
+
+## Related Documents
+
+These documents contain the original research and can be archived after implementation:
+
+- `docs/playlist-support-poc.md` - Original POC findings and metadata analysis
+- `docs/ytmusicapi-enrichment-implementation.md` - Initial ytmusicapi research
+
+This document (`playlist-implementation-plan.md`) consolidates and supersedes both.
