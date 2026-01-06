@@ -4,6 +4,8 @@
 > Replace with `deezer` if you want an additional metadata source.
 >
 > The default config in new releases will not include Spotify until the issue is solved.
+>
+> More info in https://github.com/beetbox/beets/issues/6270
 <div align="center">
 
 # yubal
