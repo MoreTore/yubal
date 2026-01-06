@@ -25,7 +25,7 @@ export function Footer() {
           className="group text-primary/70 hover:text-[#FF5E5B]"
         >
           <KofiIcon className="-mt-px inline h-4 w-4" />{" "}
-          <span className="group-hover:underline">Buy me a coffee</span>
+          <span className="group-hover:underline">Ko-fi</span>
         </a>
       </p>
       <p className="text-foreground-400 mt-1 font-mono text-xs">
