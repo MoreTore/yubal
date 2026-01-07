@@ -46,7 +46,7 @@ This document consolidates the POC findings and implementation decisions for You
 - **Enriched metadata** - ytmusicapi provides clean album/artist/title
 - **Beets enrichment** - additional metadata (genres, MusicBrainz IDs)
 - **M3U generation** - playlist file for easy playback
-- **Experimental UI toggle** - enables playlist URL validation (backend always supports both)
+- **One-time confirmation dialog** - warns about experimental status on first playlist import
 
 ### Future Scope (Not V1)
 
@@ -94,9 +94,10 @@ def classify_url(url: str) -> ImportType:
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
 │  CLIENT (Frontend)                                              │
-│  ├─ Validates URL format (is it a YouTube Music playlist URL?) │
-│  ├─ Playlist toggle OFF → only accept OLAK5uy_*                │
-│  ├─ Playlist toggle ON  → accept any playlist ID               │
+│  ├─ Validates URL format (any YouTube Music playlist URL)      │
+│  ├─ Detects if playlist (not OLAK5uy_*)                        │
+│  ├─ If playlist + first time → show confirmation dialog        │
+│  ├─ Store acknowledgment in localStorage                       │
 │  └─ Sends URL to server                                        │
 │                              │                                  │
 │                              ▼                                  │
@@ -340,16 +341,25 @@ artwork:     [individual album art]     ← Per-track album artwork
 
 ## Configuration
 
-### Feature Toggle (UI Only)
+### One-Time Confirmation Dialog
 
-Playlist support is **enabled by default** in the backend. The UI toggle controls input validation:
+Playlist support is **always enabled** - both album and playlist URLs are accepted. When a user first submits a playlist URL (not an album), a confirmation dialog appears:
 
-| Toggle State | URL Validation |
-|--------------|----------------|
-| Off (default) | Only album URLs (`OLAK5uy_*`) accepted |
-| On | Any playlist URL accepted |
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ⚠️ Experimental Feature                                    │
+│                                                             │
+│  Playlist support is new and may have issues with          │
+│  metadata accuracy.                                         │
+│                                                             │
+│  Files will be saved to:                                    │
+│  Playlists/{playlist_name}/                                 │
+│                                                             │
+│                        [Cancel]  [Continue]                 │
+└─────────────────────────────────────────────────────────────┘
+```
 
-The toggle is marked as "Experimental" to set user expectations about playlist metadata quality.
+After acknowledging, the preference is stored in `localStorage` (`yubal:playlist-warning-acknowledged`) and the dialog won't appear again.
 
 > **Note:** V1 only supports playlist folder mode. The `YUBAL_PLAYLIST_MODE` env var is reserved for future use when album folder mode is implemented.
 
@@ -892,46 +902,86 @@ async def create_job(request: CreateJobRequest):
     return job
 ```
 
-The backend accepts both album and playlist URLs - validation happens in the frontend based on toggle state.
+The backend accepts both album and playlist URLs. The frontend shows a one-time confirmation for playlists.
 
 ---
 
 ## Frontend Changes
 
-### Experimental Toggle
+### One-Time Confirmation Dialog
 
-Add to the job creation form:
+The frontend accepts any valid YouTube Music playlist URL. When a playlist (non-album) URL is detected and the user hasn't acknowledged the warning before, show a confirmation dialog.
+
+**File:** `web/src/components/AddJobForm.tsx`
 
 ```tsx
-// web/src/components/AddJobForm.tsx
+// URL validation - accepts any playlist URL
+const urlPattern = /youtube\.com\/playlist\?list=.+/;
 
-const [playlistModeEnabled, setPlaylistModeEnabled] = useState(false);
+// Check if URL is a playlist (not album)
+const isPlaylistUrl = (url: string) => {
+  const match = url.match(/list=([^&]+)/);
+  if (!match) return false;
+  return !match[1].startsWith("OLAK5uy_");
+};
 
-// URL validation regex based on toggle state
-const urlPattern = playlistModeEnabled
-  ? /youtube\.com\/playlist\?list=.+/       // Any playlist ID
-  : /youtube\.com\/playlist\?list=OLAK5uy_/; // Albums only
+// localStorage key for acknowledgment
+const PLAYLIST_WARNING_KEY = "yubal:playlist-warning-acknowledged";
 
-// In the form:
-<div className="flex items-center gap-2">
-  <Switch
-    isSelected={playlistModeEnabled}
-    onValueChange={setPlaylistModeEnabled}
-  />
-  <span className="text-sm">
-    Enable playlist URLs
-    <Chip size="sm" color="warning" variant="flat" className="ml-2">
-      Experimental
-    </Chip>
-  </span>
-  <Tooltip content="Files will be placed in Playlists/{name}/ folder">
-    <InfoIcon className="w-4 h-4 text-foreground-400" />
-  </Tooltip>
-</div>
+// In the submit handler:
+const handleSubmit = async () => {
+  const isPlaylist = isPlaylistUrl(url);
+  const hasAcknowledged = localStorage.getItem(PLAYLIST_WARNING_KEY) === "true";
+
+  if (isPlaylist && !hasAcknowledged) {
+    // Show confirmation dialog
+    onOpenConfirmDialog();
+    return;
+  }
+
+  // Proceed with job creation
+  await createJob(url);
+};
+
+// Confirmation dialog handler
+const handleConfirmPlaylist = () => {
+  localStorage.setItem(PLAYLIST_WARNING_KEY, "true");
+  onCloseConfirmDialog();
+  createJob(url);
+};
 ```
 
-When toggle is **off**: Input only accepts album URLs (`OLAK5uy_*`)
-When toggle is **on**: Input accepts any playlist URL (server classifies it)
+**Confirmation Dialog Component:**
+
+```tsx
+<Modal isOpen={isConfirmOpen} onClose={onCloseConfirmDialog}>
+  <ModalContent>
+    <ModalHeader className="flex gap-2 items-center">
+      <WarningIcon className="text-warning" />
+      Experimental Feature
+    </ModalHeader>
+    <ModalBody>
+      <p>Playlist support is new and may have issues with metadata accuracy.</p>
+      <p className="text-foreground-500 text-sm mt-2">
+        Files will be saved to: <code>Playlists/{"{playlist_name}"}/ </code>
+      </p>
+    </ModalBody>
+    <ModalFooter>
+      <Button variant="light" onPress={onCloseConfirmDialog}>
+        Cancel
+      </Button>
+      <Button color="primary" onPress={handleConfirmPlaylist}>
+        Continue
+      </Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
+```
+
+**Behavior:**
+- Albums (`OLAK5uy_*`): Submit directly, no dialog
+- Playlists (first time): Show confirmation dialog
+- Playlists (after acknowledgment): Submit directly
 
 ---
 
@@ -969,7 +1019,7 @@ uv sync
 | `yubal/schemas/jobs.py` | Edit | Add `import_type` field |
 | `yubal/api/routes/jobs.py` | Edit | Handle playlist import type |
 | `beets/playlist-config.yaml` | Create | Beets config for playlists |
-| `web/src/components/AddJobForm.tsx` | Edit | Add experimental toggle |
+| `web/src/components/AddJobForm.tsx` | Edit | Add playlist confirmation dialog |
 | `tests/test_metadata_enricher.py` | Create | Unit tests |
 
 ---
@@ -1063,9 +1113,9 @@ playlist_with_meta = "https://music.youtube.com/playlist?list=PLbE6wFkAlDUeDUu98
 2. **Add sync_playlist()** to sync service
 3. **Create playlist-config.yaml** for beets
 4. **Add API changes** (import_type field)
-5. **Add frontend toggle** with experimental tag (controls URL validation)
+5. **Add frontend confirmation dialog** for first-time playlist imports
 6. **Test with known playlists**
-7. **Deploy** - feature available via UI toggle
+7. **Deploy** - playlists work immediately, one-time warning shown
 
 ---
 
