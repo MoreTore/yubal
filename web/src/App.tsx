@@ -64,6 +64,15 @@ export default function App() {
           >
             Download
           </Button>
+          <Button
+            color="secondary"
+            size="md"
+            onPress={handleSync}
+            isDisabled={!canSync}
+            startContent={<Download className="h-4 w-4" />}
+          >
+            Enable playlists
+          </Button>
         </motion.section>
 
         {/* Stacked Panels */}
