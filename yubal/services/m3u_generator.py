@@ -10,20 +10,31 @@ from loguru import logger
 
 from yubal.services.metadata_enricher import TrackMetadata
 
+# Translation table to remove invalid filename characters
+_INVALID_CHARS = '<>:"/\\|?*'
+_SANITIZE_TABLE = str.maketrans("", "", _INVALID_CHARS)
+
 
 def sanitize_filename(name: str) -> str:
-    """Remove invalid filename characters.
+    """Remove invalid filename characters and prevent path traversal.
 
     Args:
         name: Raw string to sanitize
 
     Returns:
-        Safe filename string
+        Safe filename string, or "untitled" if result would be empty
     """
-    invalid_chars = '<>:"/\\|?*'
-    for char in invalid_chars:
-        name = name.replace(char, "")
-    return name.strip()[:100]
+    # Remove path separators and invalid chars (str.translate is faster than loop)
+    name = name.translate(_SANITIZE_TABLE)
+
+    # Remove any remaining dots at start (prevent hidden files and ..)
+    name = name.lstrip(".")
+
+    # Final cleanup
+    result = name.strip()[:100]
+
+    # Fallback for empty result
+    return result if result else "untitled"
 
 
 def generate_m3u(
@@ -51,7 +62,13 @@ def generate_m3u(
         f"#PLAYLIST:{playlist_name}",
     ]
 
-    for track_file, metadata in zip(track_files, track_metadata, strict=False):
+    if len(track_files) != len(track_metadata):
+        raise ValueError(
+            f"File count ({len(track_files)}) doesn't match "
+            f"metadata count ({len(track_metadata)})"
+        )
+
+    for track_file, metadata in zip(track_files, track_metadata, strict=True):
         # EXTINF format: #EXTINF:duration,artist - title
         # Duration -1 means unknown
         lines.append(f"#EXTINF:-1,{metadata.artist} - {metadata.title}")

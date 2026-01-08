@@ -1,10 +1,11 @@
 import asyncio
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable
 from datetime import datetime
 
 from yubal.core.enums import JobStatus
 from yubal.core.models import AlbumInfo, Job, LogEntry
+from yubal.core.types import AudioFormat, LogStatus
 
 
 class JobStore:
@@ -23,13 +24,13 @@ class JobStore:
         self._clock = clock
         self._id_generator = id_generator
         self._jobs: OrderedDict[str, Job] = OrderedDict()
-        self._logs: dict[str, list[LogEntry]] = {}  # job_id -> logs
+        self._logs: defaultdict[str, list[LogEntry]] = defaultdict(list)
         self._lock = asyncio.Lock()
         self._active_job_id: str | None = None
         self._cancellation_requested: set[str] = set()
 
     async def create_job(
-        self, url: str, audio_format: str = "mp3"
+        self, url: str, audio_format: AudioFormat = "opus"
     ) -> tuple[Job, bool] | None:
         """
         Create a new job.
@@ -164,7 +165,7 @@ class JobStore:
     async def add_log(
         self,
         job_id: str,
-        status: str,
+        status: LogStatus,
         message: str,
     ) -> None:
         """Add a log entry for a job."""
@@ -182,9 +183,6 @@ class JobStore:
                 status=status,
                 message=message,
             )
-
-            if job_id not in self._logs:
-                self._logs[job_id] = []
             self._logs[job_id].append(entry)
 
             # Trim logs per job if exceeded

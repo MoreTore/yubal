@@ -224,7 +224,7 @@ class TestLogEntry:
     def test_json_serialization_preserves_timezone(self):
         """LogEntry timestamp should preserve UTC timezone."""
         now = datetime.now(UTC)
-        entry = LogEntry(timestamp=now, status="test", message="test")
+        entry = LogEntry(timestamp=now, status="downloading", message="test")
 
         json_str = entry.model_dump_json()
         restored = LogEntry.model_validate_json(json_str)
@@ -243,7 +243,7 @@ class TestJob:
         assert job.id == "job-123"
         assert job.url == "https://music.youtube.com/playlist?list=PLxxx"
         # Defaults
-        assert job.audio_format == "mp3"
+        assert job.audio_format == "opus"
         assert job.status == JobStatus.PENDING
         assert job.progress == 0.0
         assert job.album_info is None
@@ -252,25 +252,32 @@ class TestJob:
         # created_at should be auto-set
         assert job.created_at is not None
 
-    def test_status_transition(self):
-        """Job status can be updated (validate_assignment=True)."""
+    @pytest.mark.parametrize(
+        "new_status",
+        [
+            JobStatus.FETCHING_INFO,
+            JobStatus.DOWNLOADING,
+            JobStatus.IMPORTING,
+            JobStatus.COMPLETED,
+            JobStatus.FAILED,
+            JobStatus.CANCELLED,
+        ],
+    )
+    def test_status_transition(self, new_status: JobStatus):
+        """Job status can be updated to any valid status (validate_assignment=True)."""
         job = Job(id="job-123", url="https://example.com")
+        job.status = new_status
+        assert job.status == new_status
 
-        job.status = JobStatus.DOWNLOADING
-        assert job.status == JobStatus.DOWNLOADING
-
-        job.status = JobStatus.COMPLETED
-        assert job.status == JobStatus.COMPLETED
-
-    def test_progress_update(self):
-        """Job progress can be updated."""
+    @pytest.mark.parametrize(
+        "progress_value",
+        [0.0, 25.0, 50.0, 75.0, 100.0],
+    )
+    def test_progress_update(self, progress_value: float):
+        """Job progress can be updated to any valid value."""
         job = Job(id="job-123", url="https://example.com")
-
-        job.progress = 50.0
-        assert job.progress == 50.0
-
-        job.progress = 100.0
-        assert job.progress == 100.0
+        job.progress = progress_value
+        assert job.progress == progress_value
 
     def test_with_album_info(self):
         """Job can have album_info attached."""
@@ -319,11 +326,21 @@ class TestJob:
         assert restored.album_info is not None
         assert restored.album_info.title == "Test"
 
-    def test_is_finished_property_via_status(self):
-        """Job status is_finished property works through Job."""
-        job = Job(id="job-123", url="https://example.com")
-
-        assert job.status.is_finished is False
-
-        job.status = JobStatus.COMPLETED
-        assert job.status.is_finished is True
+    @pytest.mark.parametrize(
+        ("status", "expected_finished"),
+        [
+            (JobStatus.PENDING, False),
+            (JobStatus.FETCHING_INFO, False),
+            (JobStatus.DOWNLOADING, False),
+            (JobStatus.IMPORTING, False),
+            (JobStatus.COMPLETED, True),
+            (JobStatus.FAILED, True),
+            (JobStatus.CANCELLED, True),
+        ],
+    )
+    def test_is_finished_property_via_status(
+        self, status: JobStatus, expected_finished: bool
+    ):
+        """Job status is_finished property works correctly for all statuses."""
+        job = Job(id="job-123", url="https://example.com", status=status)
+        assert job.status.is_finished is expected_finished

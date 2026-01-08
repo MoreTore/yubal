@@ -1,6 +1,6 @@
 """Cookies management endpoints."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from yubal.api.dependencies import CookiesFileDep, YtdlpDirDep
 from yubal.schemas.cookies import (
@@ -26,12 +26,13 @@ async def upload_cookies(
 ) -> CookiesUploadResponse:
     """Upload cookies.txt content (Netscape format)."""
     if not body.content.strip():
-        raise HTTPException(400, "Empty cookie file")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Empty cookie file")
     # Basic validation: Netscape cookie format starts with comment or domain
     first_line = body.content.split("\n")[0]
-    if not (first_line.startswith("#") or first_line.startswith(".")):
+    if not first_line.startswith(("#", ".")):
         raise HTTPException(
-            400, "Invalid cookie file format (expected Netscape format)"
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid cookie file format (expected Netscape format)",
         )
 
     ytdlp_dir.mkdir(parents=True, exist_ok=True)

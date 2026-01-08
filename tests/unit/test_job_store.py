@@ -40,7 +40,7 @@ class TestCreateJob:
         job, _ = result
         assert job.id == "job-0"
         assert job.url == "https://example.com/playlist"
-        assert job.audio_format == "mp3"
+        assert job.audio_format == "opus"
         assert job.status == JobStatus.PENDING
 
     @pytest.mark.asyncio
@@ -288,7 +288,7 @@ class TestAddLog:
 
         # Add 5 logs (exceeds limit of 3)
         for i in range(5):
-            await store.add_log(job.id, "status", f"Log {i}")
+            await store.add_log(job.id, "downloading", f"Log {i}")
 
         logs = await store.get_all_logs()
         assert len(logs) == 3

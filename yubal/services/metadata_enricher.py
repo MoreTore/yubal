@@ -6,9 +6,17 @@ cleaner titles, artists, and album info than yt-dlp's raw video metadata.
 
 import time
 from dataclasses import dataclass
+from typing import TypedDict
 
 from loguru import logger
 from ytmusicapi import YTMusic
+
+
+class AlbumSearchResult(TypedDict):
+    """Result from album search lookup."""
+
+    album: str
+    thumbnail_url: str | None
 
 
 @dataclass
@@ -132,7 +140,7 @@ class MetadataEnricher:
             tracks=tracks,
         )
 
-    def _search_album(self, artist: str, title: str) -> dict | None:
+    def _search_album(self, artist: str, title: str) -> AlbumSearchResult | None:
         """Search for album version of a track to get album name.
 
         Args:
@@ -140,7 +148,7 @@ class MetadataEnricher:
             title: Track title to search for
 
         Returns:
-            Dict with 'album' and 'thumbnail_url' or None if not found
+            AlbumSearchResult with 'album' and 'thumbnail_url' or None if not found
         """
         try:
             query = f"{artist} {title}"

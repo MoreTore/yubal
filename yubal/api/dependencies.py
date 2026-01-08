@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from yubal.core.types import AudioFormat
 from yubal.services.downloader import Downloader
 from yubal.services.job_store import JobStore
 from yubal.services.sync import SyncService
@@ -25,7 +26,7 @@ def get_job_store() -> JobStore:
     return job_store
 
 
-def get_audio_format() -> str:
+def get_audio_format() -> AudioFormat:
     """Get audio format from settings."""
     return get_settings().audio_format
 
@@ -65,4 +66,4 @@ SyncServiceDep = Annotated[SyncService, Depends(get_sync_service)]
 CookiesFileDep = Annotated[Path, Depends(get_cookies_file)]
 YtdlpDirDep = Annotated[Path, Depends(get_ytdlp_dir)]
 JobStoreDep = Annotated[JobStore, Depends(get_job_store)]
-AudioFormatDep = Annotated[str, Depends(get_audio_format)]
+AudioFormatDep = Annotated[AudioFormat, Depends(get_audio_format)]

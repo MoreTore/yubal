@@ -50,15 +50,18 @@ class TestProgressStep:
             assert isinstance(step.value, str)
             assert len(step.value) > 0
 
-    def test_progress_step_values_match_job_status(self):
-        """ProgressStep values should match corresponding JobStatus values."""
-        # These steps should have matching values in JobStatus
-        matching_steps = [
+    @pytest.mark.parametrize(
+        ("progress_step", "job_status"),
+        [
             (ProgressStep.FETCHING_INFO, JobStatus.FETCHING_INFO),
             (ProgressStep.DOWNLOADING, JobStatus.DOWNLOADING),
             (ProgressStep.IMPORTING, JobStatus.IMPORTING),
             (ProgressStep.COMPLETED, JobStatus.COMPLETED),
             (ProgressStep.FAILED, JobStatus.FAILED),
-        ]
-        for progress_step, job_status in matching_steps:
-            assert progress_step.value == job_status.value
+        ],
+    )
+    def test_progress_step_values_match_job_status(
+        self, progress_step: ProgressStep, job_status: JobStatus
+    ):
+        """ProgressStep values should match corresponding JobStatus values."""
+        assert progress_step.value == job_status.value

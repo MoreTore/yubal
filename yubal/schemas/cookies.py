@@ -1,5 +1,7 @@
 """Cookies schemas."""
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -18,4 +20,4 @@ class CookiesUploadRequest(BaseModel):
 class CookiesUploadResponse(BaseModel):
     """Cookies upload response model."""
 
-    status: str
+    status: Literal["ok"]

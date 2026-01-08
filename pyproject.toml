@@ -12,7 +12,7 @@ dependencies = [
   "pydantic-settings>=2.12.0",
   "uvicorn[standard]>=0.40.0",
   "yt-dlp[default]>=2025.12.8",
-  "ytmusicapi>=1.9.0",          # YouTube Music metadata for playlists
+  "ytmusicapi>=1.9.0",
 ]
 
 [dependency-groups]

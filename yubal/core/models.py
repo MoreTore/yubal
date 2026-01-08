@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from yubal.core.enums import JobStatus
+from yubal.core.types import AudioFormat, LogStatus
 
 
 class AlbumInfo(BaseModel):
@@ -57,18 +58,18 @@ class LogEntry(BaseModel):
     """A log entry for a job."""
 
     timestamp: datetime
-    status: str
+    status: LogStatus
     message: str
 
 
 class Job(BaseModel):
     """A background sync job."""
 
-    model_config = {"validate_assignment": True}
+    model_config = ConfigDict(validate_assignment=True)
 
     id: str
     url: str
-    audio_format: str = "mp3"
+    audio_format: AudioFormat = "opus"
     status: JobStatus = JobStatus.PENDING
     progress: float = 0.0
     album_info: AlbumInfo | None = None

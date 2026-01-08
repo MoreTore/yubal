@@ -2,13 +2,14 @@
 
 import asyncio
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from yubal.api.dependencies import AudioFormatDep, JobStoreDep, SyncServiceDep
 from yubal.core.callbacks import ProgressEvent
 from yubal.core.enums import ImportType, JobStatus, detect_import_type
-from yubal.core.models import AlbumInfo
+from yubal.core.models import AlbumInfo, Job
 from yubal.schemas.jobs import (
     CancelJobResponse,
     ClearJobsResponse,
@@ -21,6 +22,34 @@ from yubal.services.job_store import JobStore
 from yubal.services.sync import SyncService
 
 router = APIRouter()
+
+# Set to hold references to background tasks (prevents premature garbage collection)
+_background_tasks: set[asyncio.Task[Any]] = set()
+
+# Progress value for completed jobs
+PROGRESS_COMPLETE = 100.0
+
+
+def _start_background_job(
+    job: Job,
+    job_store: JobStore,
+    sync_service: SyncService,
+) -> None:
+    """Start a job as a background task with proper cleanup."""
+    task = asyncio.create_task(run_sync_job(job.id, job.url, job_store, sync_service))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+async def _get_job_or_404(job_store: JobStore, job_id: str) -> Job:
+    """Get job by ID or raise 404."""
+    job = await job_store.get_job(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+    return job
 
 
 async def run_sync_job(
@@ -82,16 +111,16 @@ async def run_sync_job(
                 sync_service.sync_album,
                 url,
                 job_id,
-                progress_callback,
-                cancel_check,
+                progress_callback=progress_callback,
+                cancel_check=cancel_check,
             )
         else:
             result = await asyncio.to_thread(
                 sync_service.sync_playlist,
                 url,
                 job_id,
-                progress_callback,
-                cancel_check,
+                progress_callback=progress_callback,
+                cancel_check=cancel_check,
             )
 
         # Check if job was cancelled
@@ -112,7 +141,7 @@ async def run_sync_job(
             await job_store.update_job(
                 job_id,
                 status=JobStatus.COMPLETED,
-                progress=100.0,
+                progress=PROGRESS_COMPLETE,
                 album_info=result.album_info,
             )
             await job_store.add_log(job_id, "completed", complete_msg)
@@ -131,12 +160,8 @@ async def run_sync_job(
         await job_store.add_log(job_id, "failed", str(e))
 
     # Start next pending job if any (fire-and-forget, no blocking)
-    next_job = await job_store.pop_next_pending()
-    if next_job:
-        task = asyncio.create_task(
-            run_sync_job(next_job.id, next_job.url, job_store, sync_service)
-        )
-        del task  # Fire-and-forget
+    if next_job := await job_store.pop_next_pending():
+        _start_background_job(next_job, job_store, sync_service)
 
 
 async def _update_job_from_event(
@@ -232,12 +257,7 @@ async def cancel_job(
 
     Returns 404 if job not found, 409 if job already finished.
     """
-    job = await job_store.get_job(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {job_id} not found",
-        )
+    job = await _get_job_or_404(job_store, job_id)
 
     if job.status.is_finished:
         raise HTTPException(
@@ -253,12 +273,8 @@ async def cancel_job(
         )
 
     # Start next pending job if any
-    next_job = await job_store.pop_next_pending()
-    if next_job:
-        task = asyncio.create_task(
-            run_sync_job(next_job.id, next_job.url, job_store, sync_service)
-        )
-        del task  # Fire-and-forget
+    if next_job := await job_store.pop_next_pending():
+        _start_background_job(next_job, job_store, sync_service)
 
     return CancelJobResponse()
 
@@ -281,12 +297,7 @@ async def delete_job(job_id: str, job_store: JobStoreDep) -> None:
 
     Running jobs cannot be deleted (returns 409).
     """
-    job = await job_store.get_job(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {job_id} not found",
-        )
+    job = await _get_job_or_404(job_store, job_id)
 
     if not job.status.is_finished:
         raise HTTPException(

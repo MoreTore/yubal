@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from yubal.core.types import AudioFormat
+
 _PROJECT_ROOT = Path(__file__).parent.parent
 
 
@@ -41,7 +43,7 @@ class Settings(BaseSettings):
     )
 
     # Audio settings (opus = best quality/size, no transcoding when source matches)
-    audio_format: str = Field(default="opus", description="Audio format")
+    audio_format: AudioFormat = Field(default="opus", description="Audio format")
     audio_quality: str = Field(default="0", description="Audio quality (0 = best)")
 
     # Temp directory for job downloads (cleaned up on shutdown)
