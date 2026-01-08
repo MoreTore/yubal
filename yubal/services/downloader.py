@@ -1,6 +1,7 @@
 """YouTube Music downloader using yt-dlp Python API."""
 
-from collections.abc import Callable
+import re
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +70,9 @@ class YtdlpLogger:
 
 # Shared yt-dlp instance for template evaluation
 _ydl = yt_dlp.YoutubeDL({"quiet": True})
+
+# YouTube video ID pattern: 11 characters, alphanumeric + hyphen + underscore
+_VIDEO_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{11}$")
 
 
 def _eval(template: str, info: dict[str, Any]) -> str:
@@ -150,28 +154,40 @@ class Downloader:
 
         return None
 
-    def _create_progress_hook(
+    def _make_progress_hook(
         self,
-        progress_callback: ProgressCallback | None = None,
-        cancel_check: CancelCheck | None = None,
+        track_num: int,
+        total_tracks: int | None,
+        progress_callback: ProgressCallback | None,
+        cancel_check: CancelCheck | None,
     ) -> Callable[[dict[str, Any]], None]:
-        """Create a progress hook for download progress (percent, speed)."""
+        """Create a progress hook for download progress.
+
+        Args:
+            track_num: Current track number (1-based)
+            total_tracks: Total tracks if known, None for playlist downloads
+            progress_callback: Optional callback for progress updates
+            cancel_check: Function returning True if download should cancel
+        """
 
         def hook(d: dict[str, Any]) -> None:
-            # Check for cancellation before processing
             if cancel_check and cancel_check():
                 raise DownloadCancelled("Download cancelled by user")
 
-            # Get track index from playlist_index in info_dict.
-            # For single videos (not playlists), playlist_index is None,
-            # so we default to track 0.
-            info = d.get("info_dict", {})
-            track_idx = (info.get("playlist_index") or 1) - 1  # 0-based
+            # For playlist downloads, get track from info_dict; for single use param
+            if total_tracks is None:
+                info = d.get("info_dict", {})
+                current_track = info.get("playlist_index") or 1
+                track_label = f"Track {current_track}"
+            else:
+                current_track = track_num
+                track_label = f"Track {track_num}/{total_tracks}"
+
+            track_idx = current_track - 1  # 0-based for details
 
             if d["status"] == "downloading":
                 percent_str = d.get("_percent_str", "").strip()
                 speed = d.get("_speed_str", "").strip()
-                # Parse percentage for callback
                 percent_value: float | None = None
                 if percent_str:
                     try:
@@ -183,27 +199,39 @@ class Downloader:
                     progress_callback(
                         ProgressEvent(
                             step=ProgressStep.DOWNLOADING,
-                            message=f"Track {track_idx + 1}: {percent_str} at {speed}",
+                            message=f"{track_label}: {percent_str} at {speed}",
                             progress=percent_value,
                             details={"speed": speed, "track_index": track_idx},
                         )
                     )
                 elif percent_str:
-                    logger.debug(
-                        "Track {}: {} at {}", track_idx + 1, percent_str, speed
-                    )
+                    logger.debug("{}: {} at {}", track_label, percent_str, speed)
+
             elif d["status"] == "finished":
                 if progress_callback:
                     progress_callback(
                         ProgressEvent(
                             step=ProgressStep.DOWNLOADING,
-                            message=f"Track {track_idx + 1} download complete",
+                            message=f"{track_label} complete",
                             progress=100.0,
                             details={"track_index": track_idx},
                         )
                     )
 
         return hook
+
+    def _create_progress_hook(
+        self,
+        progress_callback: ProgressCallback | None = None,
+        cancel_check: CancelCheck | None = None,
+    ) -> Callable[[dict[str, Any]], None]:
+        """Create a progress hook for playlist/album downloads."""
+        return self._make_progress_hook(
+            track_num=1,
+            total_tracks=None,  # Will read from playlist_index
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
+        )
 
     def download_album(
         self,
@@ -275,6 +303,151 @@ class Downloader:
                 output_dir=str(output_dir),
                 error=f"Unexpected error: {e!s}",
             )
+
+    def download_tracks(
+        self,
+        video_ids: Sequence[str],
+        output_dir: Path,
+        progress_callback: ProgressCallback | None = None,
+        cancel_check: CancelCheck | None = None,
+    ) -> DownloadResult:
+        """Download specific tracks by video ID.
+
+        Downloads tracks individually to guarantee ordering matches the input
+        video_ids sequence. This is essential for playlists where ytmusicapi
+        metadata must align 1:1 with downloaded files.
+
+        Args:
+            video_ids: Video IDs to download, in order
+            output_dir: Directory to save downloaded files
+            progress_callback: Optional callback for progress updates
+            cancel_check: Function returning True if download should cancel
+
+        Returns:
+            DownloadResult with files in same order as video_ids.
+            success=True only if all tracks downloaded successfully.
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        downloaded_files: list[Path] = []
+        skipped_ids: list[str] = []
+        total_tracks = len(video_ids)
+
+        for track_num, video_id in enumerate(video_ids, start=1):
+            if cancel_check and cancel_check():
+                return DownloadResult(
+                    success=False,
+                    output_dir=str(output_dir),
+                    downloaded_files=[str(f) for f in downloaded_files],
+                    error="Download cancelled",
+                    cancelled=True,
+                )
+
+            # Validate video ID format
+            if not _VIDEO_ID_PATTERN.match(video_id):
+                logger.warning("Invalid video ID format, skipping: {}", video_id)
+                skipped_ids.append(video_id)
+                continue
+
+            url = f"https://www.youtube.com/watch?v={video_id}"
+            track_files: set[Path] = set()
+
+            progress_hook = self._make_progress_hook(
+                track_num=track_num,
+                total_tracks=total_tracks,
+                progress_callback=progress_callback,
+                cancel_check=cancel_check,
+            )
+
+            ydl_opts = self._get_track_ydl_opts(output_dir, track_num, progress_hook)
+
+            try:
+                file_collector = FileCollectorPP(collected_files=track_files)
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.add_post_processor(file_collector, when="post_process")
+                    ydl.extract_info(url, download=True)
+
+                # Handle collected files - expect exactly one per track
+                if len(track_files) == 0:
+                    logger.warning("No file collected for track {}", video_id)
+                    skipped_ids.append(video_id)
+                elif len(track_files) > 1:
+                    logger.warning(
+                        "Multiple files for track {}: {}, using first",
+                        video_id,
+                        [f.name for f in track_files],
+                    )
+                    # Sort to get deterministic ordering if multiple files
+                    downloaded_files.append(sorted(track_files)[0])
+                else:
+                    downloaded_files.append(next(iter(track_files)))
+
+            except DownloadCancelled:
+                return DownloadResult(
+                    success=False,
+                    output_dir=str(output_dir),
+                    downloaded_files=[str(f) for f in downloaded_files],
+                    error="Download cancelled",
+                    cancelled=True,
+                )
+            except yt_dlp.DownloadError as e:
+                logger.warning("Failed to download track {}: {}", video_id, e)
+                skipped_ids.append(video_id)
+                # Continue with other tracks (ignoreerrors behavior)
+
+        # Success only if all tracks downloaded
+        all_downloaded = len(downloaded_files) == total_tracks
+        if skipped_ids:
+            error_msg = f"Failed to download {len(skipped_ids)} tracks: {skipped_ids}"
+        else:
+            error_msg = None
+
+        return DownloadResult(
+            success=all_downloaded,
+            output_dir=str(output_dir),
+            downloaded_files=[str(f) for f in downloaded_files],
+            error=error_msg,
+        )
+
+    def _get_track_ydl_opts(
+        self,
+        output_dir: Path,
+        track_num: int,
+        progress_hook: Callable[[dict[str, Any]], None],
+    ) -> dict[str, Any]:
+        """Build yt-dlp options for single track download with explicit track number."""
+        postprocessors: list[dict[str, Any]] = []
+
+        if self.audio_format != "best":
+            postprocessors.append(
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": self.audio_format,
+                    "preferredquality": self.audio_quality,
+                }
+            )
+
+        postprocessors.extend(
+            [
+                {"key": "FFmpegMetadata", "add_metadata": True},
+                {"key": "EmbedThumbnail"},
+            ]
+        )
+
+        ydl_opts: dict[str, Any] = {
+            "format": "bestaudio/best",
+            # Use explicit track number instead of playlist_index
+            "outtmpl": str(output_dir / f"{track_num:02d} - %(title)s.%(ext)s"),
+            "postprocessors": postprocessors,
+            "writethumbnail": True,
+            "progress_hooks": [progress_hook],
+            "logger": YtdlpLogger(),
+        }
+
+        if self.cookies_file and self.cookies_file.exists():
+            ydl_opts["cookiefile"] = str(self.cookies_file)
+
+        return ydl_opts
 
     def _extract_audio_info(
         self, info: dict[str, Any]

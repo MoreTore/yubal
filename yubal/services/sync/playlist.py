@@ -1,5 +1,6 @@
 """Playlist sync service for downloading and organizing playlists."""
 
+import re
 import shutil
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -27,6 +28,9 @@ PLAYLIST_PROGRESS_PATCH_DONE = 70.0
 PLAYLIST_PROGRESS_ORGANIZE_DONE = 75.0
 PLAYLIST_PROGRESS_BEETS_DONE = 90.0
 PLAYLIST_PROGRESS_COMPLETE = 100.0
+
+# Pattern to extract track number from filename (e.g., "01 - Title.opus" -> 1)
+_TRACK_NUM_PATTERN = re.compile(r"^(\d+)\s*-")
 
 
 @dataclass
@@ -135,6 +139,10 @@ class PlaylistSyncService:
                     )
 
                 # Phase 2: Download via yt-dlp (10% -> 60%)
+                # Extract video IDs from ytmusicapi metadata - this ensures we only
+                # download tracks that ytmusicapi knows about, avoiding non-music videos
+                video_ids = [t.video_id for t in playlist_meta.tracks]
+
                 download_wrapper = progress.create_download_wrapper(
                     playlist_meta.track_count,
                     PLAYLIST_PROGRESS_FETCH_DONE,
@@ -143,12 +151,12 @@ class PlaylistSyncService:
 
                 progress.emit(
                     ProgressStep.DOWNLOADING,
-                    "Starting download...",
+                    f"Downloading {len(video_ids)} tracks...",
                     PLAYLIST_PROGRESS_FETCH_DONE,
                 )
 
-                download_result = self.downloader.download_album(
-                    url,
+                download_result = self.downloader.download_tracks(
+                    video_ids,
                     job_temp_dir,
                     progress_callback=download_wrapper,
                     cancel_check=cancel.is_cancelled,
@@ -160,13 +168,28 @@ class PlaylistSyncService:
                 ):
                     return failure
 
-                downloaded_files = sorted(
-                    [Path(f) for f in download_result.downloaded_files]
-                )
+                # Files are already in order (matching video_ids sequence)
+                downloaded_files = [Path(f) for f in download_result.downloaded_files]
+
+                # Filter metadata to match only successfully downloaded files
+                # Files are named "01 - Title.opus", track number = original index
+                track_indices = self._extract_track_indices(downloaded_files)
+                filtered_metadata = [
+                    playlist_meta.tracks[i]
+                    for i in track_indices
+                    if i < len(playlist_meta.tracks)
+                ]
+
+                if len(filtered_metadata) != len(downloaded_files):
+                    logger.warning(
+                        "Metadata count mismatch: {} files, {} metadata entries",
+                        len(downloaded_files),
+                        len(filtered_metadata),
+                    )
 
                 progress.emit(
                     ProgressStep.DOWNLOADING,
-                    f"Downloaded {len(downloaded_files)} tracks",
+                    f"Downloaded {len(downloaded_files)}/{len(video_ids)} tracks",
                     PLAYLIST_PROGRESS_DOWNLOAD_DONE,
                 )
 
@@ -179,7 +202,7 @@ class PlaylistSyncService:
 
                 self.patcher.patch_files(
                     file_paths=downloaded_files,
-                    track_metadata=playlist_meta.tracks,
+                    track_metadata=filtered_metadata,
                     playlist_name=playlist_meta.title,
                 )
 
@@ -268,9 +291,10 @@ class PlaylistSyncService:
         album_info: AlbumInfo | None,
         progress: ProgressEmitter,
     ) -> SyncResult | None:
-        """Check download result and return SyncResult if failed/cancelled.
+        """Check download result and return SyncResult if complete failure.
 
-        Returns None if download succeeded and processing should continue.
+        Returns None if processing should continue (full or partial success).
+        Partial downloads (some files downloaded) are allowed to continue.
         """
         if download_result.cancelled:
             return SyncResult(
@@ -280,7 +304,8 @@ class PlaylistSyncService:
                 error="Download cancelled",
             )
 
-        if not download_result.success:
+        # Allow partial downloads to continue if we have any files
+        if not download_result.downloaded_files:
             progress.fail(download_result.error or "Download failed")
             return SyncResult(
                 success=False,
@@ -290,3 +315,19 @@ class PlaylistSyncService:
             )
 
         return None
+
+    @staticmethod
+    def _extract_track_indices(files: list[Path]) -> list[int]:
+        """Extract 0-based track indices from filenames.
+
+        Files are named "01 - Title.opus", so track number 01 = index 0.
+        """
+        indices = []
+        for f in files:
+            match = _TRACK_NUM_PATTERN.match(f.name)
+            if match:
+                # Convert 1-based track number to 0-based index
+                indices.append(int(match.group(1)) - 1)
+            else:
+                logger.warning("Could not extract track number from: {}", f.name)
+        return indices
