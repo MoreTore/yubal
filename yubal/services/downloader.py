@@ -308,25 +308,19 @@ class Downloader:
 
         if "entries" in info:
             entries = list(info.get("entries", []))
+            first_entry = entries[0] if entries else None
 
             # For album artist: try playlist-level artists, then first entry's artist
             album_artist = _eval("%(artists.0,channel,uploader|)s", info)
-            if not album_artist and entries:
-                # Fall back to first track's artist
-                first_entry = entries[0]
-                if first_entry:
-                    album_artist = _eval(
-                        "%(artists.0,artist,uploader|Unknown)s", first_entry
-                    )
+            if not album_artist and first_entry:
+                album_artist = _eval(
+                    "%(artists.0,artist,uploader|Unknown)s", first_entry
+                )
             album_artist = album_artist or "Unknown"
 
             # For album title: try first track's album field, then playlist title
             # Note: correct album name will be read from file metadata after download
-            album_title = ""
-            if entries:
-                first_entry = entries[0]
-                if first_entry:
-                    album_title = _eval("%(album|)s", first_entry)
+            album_title = _eval("%(album|)s", first_entry) if first_entry else ""
             if not album_title:
                 album_title = _eval("%(title|Unknown Album)s", info)
 
@@ -335,10 +329,10 @@ class Downloader:
             thumbnail_url = None
             audio_codec = None
             audio_bitrate = None
-            if entries and entries[0]:
-                year = self._extract_year(entries[0])
-                thumbnail_url = self._extract_thumbnail(entries[0])
-                audio_codec, audio_bitrate = self._extract_audio_info(entries[0])
+            if first_entry:
+                year = self._extract_year(first_entry)
+                thumbnail_url = self._extract_thumbnail(first_entry)
+                audio_codec, audio_bitrate = self._extract_audio_info(first_entry)
             if not year:
                 year = self._extract_year(info)
             if not thumbnail_url:

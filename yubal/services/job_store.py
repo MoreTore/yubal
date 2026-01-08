@@ -31,6 +31,13 @@ class JobStore:
         self._cancellation_lock = threading.Lock()
         self._cancellation_requested: set[str] = set()
 
+    def _remove_job_internal(self, job_id: str) -> None:
+        """Remove a job and its associated data. Must be called with lock held."""
+        del self._jobs[job_id]
+        self._logs.pop(job_id, None)
+        with self._cancellation_lock:
+            self._cancellation_requested.discard(job_id)
+
     async def create_job(
         self, url: str, audio_format: AudioFormat = "opus"
     ) -> tuple[Job, bool] | None:
@@ -46,10 +53,7 @@ class JobStore:
                 if not pruneable:
                     return None  # Queue full, all jobs active/queued
                 oldest = min(pruneable, key=lambda j: j.created_at)
-                del self._jobs[oldest.id]
-                self._logs.pop(oldest.id, None)
-                with self._cancellation_lock:
-                    self._cancellation_requested.discard(oldest.id)
+                self._remove_job_internal(oldest.id)
 
             # Check if we should start immediately
             should_start = self._active_job_id is None
@@ -219,10 +223,7 @@ class JobStore:
             if not job.status.is_finished:
                 return False  # Cannot delete running job
 
-            del self._jobs[job_id]
-            self._logs.pop(job_id, None)
-            with self._cancellation_lock:
-                self._cancellation_requested.discard(job_id)
+            self._remove_job_internal(job_id)
             return True
 
     async def clear_completed(self) -> int:
@@ -236,10 +237,7 @@ class JobStore:
                 job_id for job_id, job in self._jobs.items() if job.status.is_finished
             ]
             for job_id in to_remove:
-                del self._jobs[job_id]
-                self._logs.pop(job_id, None)
-                with self._cancellation_lock:
-                    self._cancellation_requested.discard(job_id)
+                self._remove_job_internal(job_id)
             return len(to_remove)
 
     def _check_timeout(self, job: Job) -> bool:

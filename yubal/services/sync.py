@@ -62,6 +62,8 @@ class SyncService:
         playlists_dir: Path,
         downloader: Downloader,
         tagger: Tagger,
+        enricher: MetadataEnricher | None = None,
+        patcher: MetadataPatcher | None = None,
     ):
         """
         Initialize the sync service.
@@ -74,6 +76,8 @@ class SyncService:
             playlists_dir: Directory for playlist downloads (Playlists/{name}/)
             downloader: Downloader instance for fetching from YouTube
             tagger: Tagger instance for organizing with beets
+            enricher: MetadataEnricher instance (created lazily if not provided)
+            patcher: MetadataPatcher instance (created lazily if not provided)
         """
         self.library_dir = library_dir
         self.beets_config = beets_config
@@ -82,6 +86,20 @@ class SyncService:
         self.playlists_dir = playlists_dir
         self._downloader = downloader
         self._tagger = tagger
+        self._enricher = enricher
+        self._patcher = patcher
+
+    def _get_enricher(self) -> MetadataEnricher:
+        """Get or create the metadata enricher."""
+        if self._enricher is None:
+            self._enricher = MetadataEnricher()
+        return self._enricher
+
+    def _get_patcher(self) -> MetadataPatcher:
+        """Get or create the metadata patcher."""
+        if self._patcher is None:
+            self._patcher = MetadataPatcher()
+        return self._patcher
 
     def _emit_progress(
         self,
@@ -381,8 +399,7 @@ class SyncService:
                     )
 
                 try:
-                    enricher = MetadataEnricher()
-                    playlist_meta = enricher.get_playlist(playlist_id)
+                    playlist_meta = self._get_enricher().get_playlist(playlist_id)
                 except Exception as e:
                     logger.error("Failed to enrich playlist metadata: {}", e)
                     return SyncResult(
@@ -442,21 +459,10 @@ class SyncService:
                 )
 
                 # Check for failure/cancellation
-                if download_result.cancelled:
-                    return SyncResult(
-                        success=False,
-                        download_result=download_result,
-                        album_info=album_info,
-                        error="Download cancelled",
-                    )
-
-                if not download_result.success:
-                    return SyncResult(
-                        success=False,
-                        download_result=download_result,
-                        album_info=album_info,
-                        error=download_result.error or "Download failed",
-                    )
+                if failure := self._handle_download_result(
+                    download_result, album_info, progress_callback
+                ):
+                    return failure
 
                 downloaded_files = sorted(
                     [Path(f) for f in download_result.downloaded_files]
@@ -477,8 +483,7 @@ class SyncService:
                     PLAYLIST_PROGRESS_DOWNLOAD_DONE,
                 )
 
-                patcher = MetadataPatcher()
-                patcher.patch_files(
+                self._get_patcher().patch_files(
                     file_paths=downloaded_files,
                     track_metadata=playlist_meta.tracks,
                     playlist_name=playlist_meta.title,

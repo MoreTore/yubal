@@ -23,6 +23,29 @@ from yubal.services.metadata_enricher import TrackMetadata
 class MetadataPatcher:
     """Patches audio file metadata with enriched values."""
 
+    def __init__(self, http_timeout: float = 10.0):
+        """Initialize the patcher with an HTTP client for artwork downloads."""
+        self._http_client: httpx.Client | None = None
+        self._http_timeout = http_timeout
+
+    def _get_http_client(self) -> httpx.Client:
+        """Get or create the HTTP client for artwork downloads."""
+        if self._http_client is None:
+            self._http_client = httpx.Client(timeout=self._http_timeout)
+        return self._http_client
+
+    def close(self) -> None:
+        """Close the HTTP client. Call when done with the patcher."""
+        if self._http_client is not None:
+            self._http_client.close()
+            self._http_client = None
+
+    def __enter__(self) -> "MetadataPatcher":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
     def _detect_mime_type(self, data: bytes) -> str:
         """Detect image format from magic bytes."""
         if data[:3] == b"\xff\xd8\xff":
@@ -81,24 +104,24 @@ class MetadataPatcher:
     def _download_artwork(self, url: str) -> bytes | None:
         """Download artwork, requesting JPEG format from Google servers."""
         jpeg_url = self._force_jpeg_url(url)
+        client = self._get_http_client()
 
         try:
-            with httpx.Client(timeout=10) as client:
-                response = client.get(jpeg_url)
-                response.raise_for_status()
-                data = response.content
+            response = client.get(jpeg_url)
+            response.raise_for_status()
+            data = response.content
 
-                if self._detect_mime_type(data) == "image/jpeg":
-                    return data
+            if self._detect_mime_type(data) == "image/jpeg":
+                return data
 
-                # Fallback to original URL only if we modified it
-                if jpeg_url == url:
-                    return data
+            # Fallback to original URL only if we modified it
+            if jpeg_url == url:
+                return data
 
-                logger.debug("JPEG request failed, trying original URL")
-                response = client.get(url)
-                response.raise_for_status()
-                return response.content
+            logger.debug("JPEG request failed, trying original URL")
+            response = client.get(url)
+            response.raise_for_status()
+            return response.content
 
         except Exception as e:
             logger.debug("Failed to download artwork: {}", e)

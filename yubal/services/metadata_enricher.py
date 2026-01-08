@@ -60,6 +60,13 @@ class MetadataEnricher:
         self._request_delay = request_delay
         # Cache album thumbnails to avoid duplicate fetches
         self._album_thumbnail_cache: dict[str, str | None] = {}
+        self._request_count = 0
+
+    def _rate_limit(self) -> None:
+        """Apply rate limiting between API requests."""
+        if self._request_count > 0 and self._request_delay > 0:
+            time.sleep(self._request_delay)
+        self._request_count += 1
 
     def get_playlist(self, playlist_id: str) -> PlaylistMetadata:
         """Fetch playlist with enriched track metadata.
@@ -113,9 +120,7 @@ class MetadataEnricher:
 
             # If no album, search for album version
             if not album:
-                if search_count > 0 and self._request_delay > 0:
-                    time.sleep(self._request_delay)
-
+                self._rate_limit()
                 search_result = self._search_album(artist, title)
                 if search_result:
                     album = search_result["album"]
@@ -206,9 +211,7 @@ class MetadataEnricher:
         if album_id in self._album_thumbnail_cache:
             return self._album_thumbnail_cache[album_id]
 
-        # Rate limiting
-        if self._album_thumbnail_cache and self._request_delay > 0:
-            time.sleep(self._request_delay)
+        self._rate_limit()
 
         try:
             album_data = self._yt.get_album(album_id)

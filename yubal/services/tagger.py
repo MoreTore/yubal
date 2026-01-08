@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from loguru import logger
@@ -122,24 +123,16 @@ class Tagger:
             stderr="",
         )
 
-    def tag_album(
+    def _tag_common(
         self,
         audio_files: list[Path],
+        run_import: Callable[
+            [Path, ProgressCallback | None], subprocess.CompletedProcess[str]
+        ],
+        find_dest: Callable[[Path], Path | None],
         progress_callback: ProgressCallback | None = None,
     ) -> TagResult:
-        """
-        Tag and organize an album using beets.
-
-        Moves files to the organized library structure.
-        Import settings (quiet, move) are configured in beets config.yaml.
-
-        Args:
-            audio_files: List of audio file paths to import
-            progress_callback: Optional callback for progress updates
-
-        Returns:
-            TagResult with success status and final location
-        """
+        """Common logic for tag_album and tag_playlist."""
         if not audio_files:
             return TagResult(
                 success=False,
@@ -147,13 +140,10 @@ class Tagger:
                 error="No audio files provided",
             )
 
-        # All files should be in the same directory (temp dir from downloader)
         source_dir = audio_files[0].parent
 
         try:
-            result = self._run_beets_import(
-                source_dir, progress_callback=progress_callback
-            )
+            result = run_import(source_dir, progress_callback)
 
             if result.returncode != 0:
                 error_msg = f"Beets failed (code {result.returncode}): {result.stdout}"
@@ -164,15 +154,12 @@ class Tagger:
                     error=error_msg,
                 )
 
-            # Find where the album was imported
-            dest_dir = self._find_imported_album(source_dir)
-            track_count = len(audio_files)
-
+            dest_dir = find_dest(source_dir)
             return TagResult(
                 success=True,
                 source_dir=str(source_dir),
                 dest_dir=str(dest_dir) if dest_dir else None,
-                track_count=track_count,
+                track_count=len(audio_files),
             )
 
         except subprocess.TimeoutExpired:
@@ -193,6 +180,31 @@ class Tagger:
                 source_dir=str(source_dir),
                 error=f"Unexpected error during tagging: {e!s}",
             )
+
+    def tag_album(
+        self,
+        audio_files: list[Path],
+        progress_callback: ProgressCallback | None = None,
+    ) -> TagResult:
+        """
+        Tag and organize an album using beets.
+
+        Moves files to the organized library structure.
+        Import settings (quiet, move) are configured in beets config.yaml.
+
+        Args:
+            audio_files: List of audio file paths to import
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            TagResult with success status and final location
+        """
+        return self._tag_common(
+            audio_files,
+            run_import=self._run_beets_import,
+            find_dest=self._find_imported_album,
+            progress_callback=progress_callback,
+        )
 
     def _run_beets_import(
         self,
@@ -257,55 +269,12 @@ class Tagger:
         Returns:
             TagResult with success status (dest_dir = source_dir)
         """
-        if not audio_files:
-            return TagResult(
-                success=False,
-                source_dir="",
-                error="No audio files provided",
-            )
-
-        source_dir = audio_files[0].parent
-
-        try:
-            result = self._run_beets_import_in_place(
-                source_dir, progress_callback=progress_callback
-            )
-
-            if result.returncode != 0:
-                error_msg = f"Beets failed (code {result.returncode}): {result.stdout}"
-                logger.error(error_msg)
-                return TagResult(
-                    success=False,
-                    source_dir=str(source_dir),
-                    error=error_msg,
-                )
-
-            # For playlists, files stay in place - dest = source
-            return TagResult(
-                success=True,
-                source_dir=str(source_dir),
-                dest_dir=str(source_dir),
-                track_count=len(audio_files),
-            )
-
-        except subprocess.TimeoutExpired:
-            return TagResult(
-                success=False,
-                source_dir=str(source_dir),
-                error=f"Beets timed out after {_BEETS_TIMEOUT_SECONDS // 60} minutes",
-            )
-        except FileNotFoundError as e:
-            return TagResult(
-                success=False,
-                source_dir=str(source_dir),
-                error=f"Beets module not found. Error: {e}",
-            )
-        except Exception as e:
-            return TagResult(
-                success=False,
-                source_dir=str(source_dir),
-                error=f"Unexpected error during tagging: {e!s}",
-            )
+        return self._tag_common(
+            audio_files,
+            run_import=self._run_beets_import_in_place,
+            find_dest=lambda source_dir: source_dir,  # Keep in place
+            progress_callback=progress_callback,
+        )
 
     def _run_beets_import_in_place(
         self,
