@@ -77,6 +77,11 @@ class Settings(BaseSettings):
     def cookies_file(self) -> Path:
         return self.ytdlp_dir / "cookies.txt"
 
+    @property
+    def playlists_dir(self) -> Path:
+        """Directory for playlist downloads (Playlists/{name}/)."""
+        return self.data_dir / "Playlists"
+
 
 @lru_cache
 def get_settings() -> Settings:

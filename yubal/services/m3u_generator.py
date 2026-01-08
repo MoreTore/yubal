@@ -1,0 +1,65 @@
+"""M3U playlist file generator.
+
+Creates M3U playlist files with relative paths for easy playback
+in music players.
+"""
+
+from pathlib import Path
+
+from loguru import logger
+
+from yubal.services.metadata_enricher import TrackMetadata
+
+
+def sanitize_filename(name: str) -> str:
+    """Remove invalid filename characters.
+
+    Args:
+        name: Raw string to sanitize
+
+    Returns:
+        Safe filename string
+    """
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        name = name.replace(char, "")
+    return name.strip()[:100]
+
+
+def generate_m3u(
+    playlist_name: str,
+    track_files: list[Path],
+    track_metadata: list[TrackMetadata],
+    output_dir: Path,
+) -> Path:
+    """Generate M3U playlist file.
+
+    Args:
+        playlist_name: Name for the playlist (used as filename)
+        track_files: Ordered list of track file paths
+        track_metadata: Corresponding track metadata for EXTINF
+        output_dir: Directory to write the M3U file
+
+    Returns:
+        Path to the generated M3U file
+    """
+    safe_name = sanitize_filename(playlist_name)
+    m3u_path = output_dir / f"{safe_name}.m3u"
+
+    lines = [
+        "#EXTM3U",
+        f"#PLAYLIST:{playlist_name}",
+    ]
+
+    for track_file, metadata in zip(track_files, track_metadata, strict=False):
+        # EXTINF format: #EXTINF:duration,artist - title
+        # Duration -1 means unknown
+        lines.append(f"#EXTINF:-1,{metadata.artist} - {metadata.title}")
+        # Use relative path (just filename since M3U is in same dir)
+        lines.append(track_file.name)
+
+    m3u_content = "\n".join(lines) + "\n"
+    m3u_path.write_text(m3u_content, encoding="utf-8")
+
+    logger.info("Generated M3U playlist: {}", m3u_path)
+    return m3u_path

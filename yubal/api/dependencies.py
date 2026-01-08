@@ -48,6 +48,7 @@ def get_sync_service() -> SyncService:
         beets_config=settings.beets_config,
         audio_format=settings.audio_format,
         temp_dir=settings.temp_dir,
+        playlists_dir=settings.playlists_dir,
         downloader=Downloader(
             audio_format=settings.audio_format,
             cookies_file=settings.cookies_file,

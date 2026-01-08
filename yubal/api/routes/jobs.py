@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from yubal.api.dependencies import AudioFormatDep, JobStoreDep, SyncServiceDep
 from yubal.core.callbacks import ProgressEvent
-from yubal.core.enums import JobStatus
+from yubal.core.enums import ImportType, JobStatus, detect_import_type
 from yubal.core.models import AlbumInfo
 from yubal.schemas.jobs import (
     CancelJobResponse,
@@ -74,13 +74,25 @@ async def run_sync_job(
         )
 
     try:
-        result = await asyncio.to_thread(
-            sync_service.sync_album,
-            url,
-            job_id,
-            progress_callback,
-            cancel_check,
-        )
+        # Detect import type and route to appropriate sync method
+        import_type = detect_import_type(url)
+
+        if import_type == ImportType.ALBUM:
+            result = await asyncio.to_thread(
+                sync_service.sync_album,
+                url,
+                job_id,
+                progress_callback,
+                cancel_check,
+            )
+        else:
+            result = await asyncio.to_thread(
+                sync_service.sync_playlist,
+                url,
+                job_id,
+                progress_callback,
+                cancel_check,
+            )
 
         # Check if job was cancelled
         if job_store.is_cancelled(job_id):

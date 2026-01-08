@@ -223,3 +223,159 @@ class Tagger:
                     newest_dir = album_dir
 
         return newest_dir
+
+    def tag_playlist(
+        self,
+        audio_files: list[Path],
+        progress_callback: ProgressCallback | None = None,
+    ) -> TagResult:
+        """
+        Tag playlist files in place without moving them.
+
+        Unlike tag_album which moves files to Artist/Album/ structure,
+        this keeps files in their current location (Playlists/{name}/)
+        and just enriches metadata via beets.
+
+        Args:
+            audio_files: List of audio file paths to import
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            TagResult with success status (dest_dir = source_dir)
+        """
+        if not audio_files:
+            return TagResult(
+                success=False,
+                source_dir="",
+                error="No audio files provided",
+            )
+
+        source_dir = audio_files[0].parent
+
+        try:
+            result = self._run_beets_import_in_place(
+                source_dir, progress_callback=progress_callback
+            )
+
+            if result.returncode != 0:
+                error_msg = f"Beets failed (code {result.returncode}): {result.stdout}"
+                logger.error(error_msg)
+                return TagResult(
+                    success=False,
+                    source_dir=str(source_dir),
+                    error=error_msg,
+                )
+
+            # For playlists, files stay in place - dest = source
+            return TagResult(
+                success=True,
+                source_dir=str(source_dir),
+                dest_dir=str(source_dir),
+                track_count=len(audio_files),
+            )
+
+        except subprocess.TimeoutExpired:
+            return TagResult(
+                success=False,
+                source_dir=str(source_dir),
+                error="Beets import timed out after 5 minutes",
+            )
+        except FileNotFoundError as e:
+            return TagResult(
+                success=False,
+                source_dir=str(source_dir),
+                error=f"Beets module not found. Error: {e}",
+            )
+        except Exception as e:
+            return TagResult(
+                success=False,
+                source_dir=str(source_dir),
+                error=f"Unexpected error during tagging: {e!s}",
+            )
+
+    def _run_beets_import_in_place(
+        self,
+        source_dir: Path,
+        progress_callback: ProgressCallback | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        """
+        Execute beets import with --move=no --copy=no to keep files in place.
+
+        Used for playlists where we want metadata enrichment but not
+        file reorganization.
+        """
+        # Ensure directories exist
+        self.library_dir.mkdir(parents=True, exist_ok=True)
+        self.beets_db.parent.mkdir(parents=True, exist_ok=True)
+
+        cmd = [
+            *self._get_beet_command(),
+            "--config",
+            str(self.beets_config),
+            "import",
+            "-q",  # Quiet mode - non-interactive
+            "--noautotag",  # Skip auto-tagging (we already have good metadata)
+            str(source_dir),
+        ]
+
+        msg = f"Running beets (in-place): {' '.join(cmd)}"
+        logger.info(msg)
+        if progress_callback:
+            progress_callback(
+                ProgressEvent(
+                    step=ProgressStep.IMPORTING,
+                    message=msg,
+                )
+            )
+
+        # Use Popen to stream output
+        process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=self._get_beets_env(),
+            cwd=str(self.beets_config.parent.parent),
+        )
+        if process.stdin is None or process.stdout is None:
+            raise RuntimeError("Process pipes not available")
+
+        process.stdin.write("\n" * 10)
+        process.stdin.close()
+
+        stdout_lines = []
+        for line in process.stdout:
+            line = line.rstrip()
+            if "error" in line.lower():
+                logger.error("[beets] {}", line)
+            else:
+                logger.info("[beets] {}", line)
+            if progress_callback:
+                progress_callback(
+                    ProgressEvent(
+                        step=ProgressStep.IMPORTING,
+                        message=f"[beets] {line}",
+                    )
+                )
+            stdout_lines.append(line)
+
+        process.wait(timeout=300)
+
+        msg = f"Beets returncode: {process.returncode}"
+        logger.info(msg)
+        if progress_callback:
+            progress_callback(
+                ProgressEvent(
+                    step=ProgressStep.IMPORTING,
+                    message=msg,
+                    details={"returncode": process.returncode},
+                )
+            )
+
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=process.returncode,
+            stdout="\n".join(stdout_lines),
+            stderr="",
+        )
