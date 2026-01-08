@@ -8,7 +8,7 @@ from yubal.core.callbacks import ProgressCallback, ProgressEvent
 from yubal.core.enums import ImportType, JobStatus
 from yubal.core.models import AlbumInfo, Job, SyncResult
 from yubal.core.utils import detect_import_type
-from yubal.services.job_store import JobStore
+from yubal.services.protocols import JobExecutionStore
 from yubal.services.sync import (
     AlbumSyncService,
     CallbackProgressEmitter,
@@ -27,11 +27,14 @@ class JobExecutor:
     - Cancel token registry
     - Job queue continuation
     - Progress callback wiring
+
+    Uses JobExecutionStore protocol for persistence (narrow interface).
+    CancelToken is the single source of truth for cancellation signaling.
     """
 
     def __init__(
         self,
-        job_store: JobStore,
+        job_store: JobExecutionStore,
         album_sync_service: AlbumSyncService,
         playlist_sync_service: PlaylistSyncService,
     ) -> None:
@@ -65,17 +68,15 @@ class JobExecutor:
         self._cancel_tokens[job_id] = cancel_token
 
         try:
-            if self._job_store.is_cancelled(job_id):
-                cancel_token.cancel()
+            # Check cancellation before starting (CancelToken is single source of truth)
+            if cancel_token.is_cancelled():
                 return
 
-            await self._job_store.update_job(
+            await self._job_store.transition_job(
                 job_id,
-                status=JobStatus.FETCHING_INFO,
+                JobStatus.FETCHING_INFO,
+                f"Starting sync from: {url}",
                 started_at=datetime.now(UTC),
-            )
-            await self._job_store.add_log(
-                job_id, "fetching_info", f"Starting sync from: {url}"
             )
 
             progress_callback = self._create_progress_callback(job_id, cancel_token)
@@ -96,17 +97,16 @@ class JobExecutor:
                 cancel_token,
             )
 
-            if self._job_store.is_cancelled(job_id) or cancel_token.is_cancelled():
-                await self._job_store.add_log(
-                    job_id, "cancelled", "Job cancelled by user"
+            if cancel_token.is_cancelled():
+                await self._job_store.transition_job(
+                    job_id, JobStatus.CANCELLED, "Job cancelled by user"
                 )
                 return
 
             await self._finalize_job(job_id, result)
 
         except Exception as e:
-            await self._job_store.update_job(job_id, status=JobStatus.FAILED)
-            await self._job_store.add_log(job_id, "failed", str(e))
+            await self._job_store.transition_job(job_id, JobStatus.FAILED, str(e))
 
         finally:
             self._cancel_tokens.pop(job_id, None)
@@ -119,13 +119,14 @@ class JobExecutor:
         loop = asyncio.get_running_loop()
 
         def callback(event: ProgressEvent) -> None:
-            if self._job_store.is_cancelled(job_id) or cancel_token.is_cancelled():
+            # CancelToken is single source of truth for cancellation
+            if cancel_token.is_cancelled():
                 return
 
             new_status = self._map_event_to_status(event)
             loop.call_soon_threadsafe(
                 lambda: asyncio.create_task(
-                    self._update_job_from_event(job_id, new_status, event)
+                    self._update_job_from_event(job_id, new_status, event, cancel_token)
                 )
             )
 
@@ -144,10 +145,14 @@ class JobExecutor:
         return status_map.get(event.step.value, JobStatus.DOWNLOADING)
 
     async def _update_job_from_event(
-        self, job_id: str, new_status: JobStatus, event: ProgressEvent
+        self,
+        job_id: str,
+        new_status: JobStatus,
+        event: ProgressEvent,
+        cancel_token: CancelToken,
     ) -> None:
         """Update job state from progress event."""
-        if self._job_store.is_cancelled(job_id):
+        if cancel_token.is_cancelled():
             return
 
         # Skip completed/failed from callback - final result handles those
@@ -156,13 +161,13 @@ class JobExecutor:
 
         album_info = self._parse_album_info(event)
 
-        await self._job_store.update_job(
+        await self._job_store.transition_job(
             job_id,
-            status=new_status,
+            new_status,
+            event.message,
             progress=event.progress if event.progress is not None else None,
             album_info=album_info,
         )
-        await self._job_store.add_log(job_id, event.step.value, event.message)
 
     @staticmethod
     def _parse_album_info(event: ProgressEvent) -> AlbumInfo | None:
@@ -186,17 +191,16 @@ class JobExecutor:
             else:
                 complete_msg = "Sync complete"
 
-            await self._job_store.update_job(
+            await self._job_store.transition_job(
                 job_id,
-                status=JobStatus.COMPLETED,
+                JobStatus.COMPLETED,
+                complete_msg,
                 progress=PROGRESS_COMPLETE,
                 album_info=result.album_info,
             )
-            await self._job_store.add_log(job_id, "completed", complete_msg)
         else:
-            await self._job_store.update_job(job_id, status=JobStatus.FAILED)
-            await self._job_store.add_log(
-                job_id, "failed", result.error or "Sync failed"
+            await self._job_store.transition_job(
+                job_id, JobStatus.FAILED, result.error or "Sync failed"
             )
 
     async def _start_next_pending(self) -> None:

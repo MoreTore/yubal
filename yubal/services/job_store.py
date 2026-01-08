@@ -1,5 +1,4 @@
 import asyncio
-import threading
 from collections import OrderedDict, defaultdict
 from datetime import datetime
 
@@ -9,7 +8,11 @@ from yubal.core.types import AudioFormat, Clock, IdGenerator, LogStatus
 
 
 class JobStore:
-    """Thread-safe in-memory job store with capacity limit."""
+    """In-memory job store with capacity limit.
+
+    This is a dumb persistence layer. State transitions are managed by JobExecutor.
+    Cancellation signaling uses CancelToken; this store only persists the final status.
+    """
 
     MAX_JOBS = 20
     MAX_LOGS_PER_JOB = 50
@@ -27,16 +30,11 @@ class JobStore:
         self._logs: defaultdict[str, list[LogEntry]] = defaultdict(list)
         self._lock = asyncio.Lock()
         self._active_job_id: str | None = None
-        # Thread-safe cancellation tracking (accessed from both async and sync contexts)
-        self._cancellation_lock = threading.Lock()
-        self._cancellation_requested: set[str] = set()
 
     def _remove_job_internal(self, job_id: str) -> None:
         """Remove a job and its associated data. Must be called with lock held."""
         del self._jobs[job_id]
         self._logs.pop(job_id, None)
-        with self._cancellation_lock:
-            self._cancellation_requested.discard(job_id)
 
     async def create_job(
         self, url: str, audio_format: AudioFormat = "opus"
@@ -106,32 +104,23 @@ class JobStore:
         Cancel a running job.
 
         Returns False if job doesn't exist or is already finished.
+        Cancellation signaling is handled by CancelToken in JobExecutor.
         """
         async with self._lock:
             job = self._jobs.get(job_id)
             if not job:
                 return False
 
-            # Cannot cancel already finished jobs
             if job.status.is_finished:
                 return False
 
-            # Mark as cancelled (thread-safe)
-            with self._cancellation_lock:
-                self._cancellation_requested.add(job_id)
             job.status = JobStatus.CANCELLED
             job.completed_at = self._clock()
 
-            # Clear active job if it matches
             if self._active_job_id == job_id:
                 self._active_job_id = None
 
             return True
-
-    def is_cancelled(self, job_id: str) -> bool:
-        """Check if cancellation was requested for a job (thread-safe)."""
-        with self._cancellation_lock:
-            return job_id in self._cancellation_requested
 
     async def update_job(
         self,
@@ -142,15 +131,11 @@ class JobStore:
         started_at: datetime | None = None,
         completed_at: datetime | None = None,
     ) -> Job | None:
-        """Update job fields. Cancelled jobs cannot be updated."""
+        """Update job fields. Caller is responsible for checking job state first."""
         async with self._lock:
             job = self._jobs.get(job_id)
             if not job:
                 return None
-
-            # Don't update cancelled jobs (prevents race conditions)
-            if job.status == JobStatus.CANCELLED:
-                return job
 
             if status is not None:
                 job.status = status
@@ -177,14 +162,9 @@ class JobStore:
         status: LogStatus,
         message: str,
     ) -> None:
-        """Add a log entry for a job."""
+        """Add a log entry for a job. Caller is responsible for checking job state."""
         async with self._lock:
-            job = self._jobs.get(job_id)
-            if not job:
-                return
-
-            # Don't add logs to cancelled jobs (prevents stale updates)
-            if job.status == JobStatus.CANCELLED:
+            if job_id not in self._jobs:
                 return
 
             entry = LogEntry(
@@ -197,6 +177,53 @@ class JobStore:
             # Trim logs per job if exceeded
             if len(self._logs[job_id]) > self.MAX_LOGS_PER_JOB:
                 self._logs[job_id] = self._logs[job_id][-self.MAX_LOGS_PER_JOB :]
+
+    async def transition_job(
+        self,
+        job_id: str,
+        status: JobStatus,
+        message: str,
+        progress: float | None = None,
+        album_info: AlbumInfo | None = None,
+        started_at: datetime | None = None,
+    ) -> Job | None:
+        """Atomically update job status and add log entry.
+
+        This is the preferred method for job state transitions as it combines
+        update_job() and add_log() into a single atomic operation.
+        """
+        async with self._lock:
+            job = self._jobs.get(job_id)
+            if not job:
+                return None
+
+            # Update job fields
+            job.status = status
+            if progress is not None:
+                job.progress = progress
+            if album_info is not None:
+                job.album_info = album_info
+            if started_at is not None:
+                job.started_at = started_at
+
+            # Clear active job if finished
+            if job.status.is_finished:
+                job.completed_at = self._clock()
+                if self._active_job_id == job_id:
+                    self._active_job_id = None
+
+            # Add log entry
+            entry = LogEntry(
+                timestamp=self._clock(),
+                status=status.value,
+                message=message,
+            )
+            self._logs[job_id].append(entry)
+
+            if len(self._logs[job_id]) > self.MAX_LOGS_PER_JOB:
+                self._logs[job_id] = self._logs[job_id][-self.MAX_LOGS_PER_JOB :]
+
+            return job
 
     async def get_all_logs(self) -> list[LogEntry]:
         """Get all logs from all jobs, sorted chronologically."""
