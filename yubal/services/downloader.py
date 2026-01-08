@@ -35,7 +35,7 @@ class FileCollectorPP(PostProcessor):
         super().__init__(downloader)
         self.collected_files = collected_files if collected_files is not None else set()
 
-    def run(self, info: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
+    def run(self, info):  # type: ignore[override]
         """Capture the final filepath after all postprocessing."""
         filepath = info.get("filepath")
         if filepath:
@@ -427,6 +427,7 @@ class Downloader:
             "format": "bestaudio/best",
             "outtmpl": str(output_dir / "%(playlist_index|0)02d - %(title)s.%(ext)s"),
             "postprocessors": postprocessors,
+            "writethumbnail": True,  # Download thumbnail for EmbedThumbnail PP
             "progress_hooks": [progress_hook],
             "ignoreerrors": True,  # Continue on individual track errors
             "logger": YtdlpLogger(),

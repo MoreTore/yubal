@@ -326,6 +326,7 @@ class Tagger:
             str(self.library_dir),
             "import",
             "-C",  # Don't copy files (keep in place)
+            "-s",  # Singletons mode - match individual tracks, not albums
             str(source_dir),
         ]
 

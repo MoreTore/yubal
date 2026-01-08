@@ -498,27 +498,12 @@ class SyncService:
                     progress_callback,
                 )
 
-                # Phase 5: Beets import in place (75% → 90%)
+                # Phase 5: Skip beets for playlists (metadata already patched)
+                # TODO: Consider adding MusicBrainz enrichment without beets import
                 self._emit_progress(
                     progress_callback,
                     ProgressStep.IMPORTING,
-                    "Running beets enrichment...",
-                    PLAYLIST_PROGRESS_ORGANIZE_DONE,
-                )
-
-                tag_result = self._tagger.tag_playlist(
-                    final_files, progress_callback=progress_callback
-                )
-
-                if not tag_result.success:
-                    logger.warning(
-                        "Beets enrichment failed (non-fatal): {}", tag_result.error
-                    )
-
-                self._emit_progress(
-                    progress_callback,
-                    ProgressStep.IMPORTING,
-                    "Beets enrichment complete",
+                    "Metadata ready",
                     PLAYLIST_PROGRESS_BEETS_DONE,
                 )
 
@@ -548,7 +533,6 @@ class SyncService:
                 return SyncResult(
                     success=True,
                     download_result=download_result,
-                    tag_result=tag_result,
                     album_info=album_info,
                     destination=str(playlist_dir),
                 )

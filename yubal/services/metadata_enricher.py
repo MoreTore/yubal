@@ -58,6 +58,8 @@ class MetadataEnricher:
         # No auth needed for public playlist metadata
         self._yt = YTMusic()
         self._request_delay = request_delay
+        # Cache album thumbnails to avoid duplicate fetches
+        self._album_thumbnail_cache: dict[str, str | None] = {}
 
     def get_playlist(self, playlist_id: str) -> PlaylistMetadata:
         """Fetch playlist with enriched track metadata.
@@ -97,10 +99,17 @@ class MetadataEnricher:
             # Extract album info (None for music videos)
             album_data = item.get("album")
             album = album_data["name"] if album_data else None
+            album_id = album_data["id"] if album_data else None
 
-            # Get best thumbnail (largest is last in array)
-            thumbnails = item.get("thumbnails", [])
-            thumbnail_url = thumbnails[-1]["url"] if thumbnails else None
+            # Get thumbnail - prefer album art (544x544) over video thumbnail (120x120)
+            thumbnail_url = None
+            if album_id:
+                thumbnail_url = self._get_album_thumbnail(album_id)
+
+            # Fallback to track thumbnail if no album art
+            if not thumbnail_url:
+                thumbnails = item.get("thumbnails", [])
+                thumbnail_url = thumbnails[-1]["url"] if thumbnails else None
 
             # If no album, search for album version
             if not album:
@@ -179,4 +188,38 @@ class MetadataEnricher:
 
         except Exception as e:
             logger.warning("Search failed for '{}': {}", title, e)
+            return None
+
+    def _get_album_thumbnail(self, album_id: str) -> str | None:
+        """Fetch high-resolution album thumbnail.
+
+        Album thumbnails are 544x544, much larger than video thumbnails (120x120).
+        Results are cached to avoid duplicate API calls.
+
+        Args:
+            album_id: YouTube Music album ID
+
+        Returns:
+            URL of largest album thumbnail, or None if unavailable
+        """
+        # Check cache first
+        if album_id in self._album_thumbnail_cache:
+            return self._album_thumbnail_cache[album_id]
+
+        # Rate limiting
+        if self._album_thumbnail_cache and self._request_delay > 0:
+            time.sleep(self._request_delay)
+
+        try:
+            album_data = self._yt.get_album(album_id)
+            thumbnails = album_data.get("thumbnails", [])
+            # Last thumbnail is largest (544x544)
+            thumbnail_url = thumbnails[-1]["url"] if thumbnails else None
+            self._album_thumbnail_cache[album_id] = thumbnail_url
+            if thumbnail_url:
+                logger.debug("Fetched album art for {}", album_id)
+            return thumbnail_url
+        except Exception as e:
+            logger.debug("Failed to fetch album {}: {}", album_id, e)
+            self._album_thumbnail_cache[album_id] = None
             return None
