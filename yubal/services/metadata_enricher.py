@@ -19,27 +19,27 @@ class AlbumSearchResult(TypedDict):
     thumbnail_url: str | None
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class TrackMetadata:
     """Enriched metadata for a single track."""
 
     video_id: str
     title: str
     artist: str
-    album: str | None
-    thumbnail_url: str | None
     track_number: int
     is_available: bool
+    album: str | None = None
+    thumbnail_url: str | None = None
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class PlaylistMetadata:
     """Enriched metadata for a playlist."""
 
     playlist_id: str
     title: str
     track_count: int
-    tracks: list[TrackMetadata]
+    tracks: tuple[TrackMetadata, ...]
 
 
 class MetadataEnricher:
@@ -137,7 +137,7 @@ class MetadataEnricher:
             playlist_id=playlist_id,
             title=playlist_title,
             track_count=len(tracks),
-            tracks=tracks,
+            tracks=tuple(tracks),
         )
 
     def _search_album(self, artist: str, title: str) -> AlbumSearchResult | None:

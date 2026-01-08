@@ -2,7 +2,13 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 
-class JobConflictError(Exception):
+class YubalError(Exception):
+    """Base exception for Yubal application."""
+
+    pass
+
+
+class JobConflictError(YubalError):
     """Raised when a job operation conflicts with existing state."""
 
     def __init__(self, message: str, active_job_id: str | None = None):
@@ -11,12 +17,24 @@ class JobConflictError(Exception):
         super().__init__(message)
 
 
-class JobNotFoundError(Exception):
+class JobNotFoundError(YubalError):
     """Raised when a job is not found."""
 
     def __init__(self, job_id: str):
         self.job_id = job_id
         super().__init__(f"Job {job_id} not found")
+
+
+class DownloadError(YubalError):
+    """Raised when a download operation fails."""
+
+    pass
+
+
+class ImportError(YubalError):
+    """Raised when a beets import operation fails."""
+
+    pass
 
 
 def register_exception_handlers(app: FastAPI) -> None:

@@ -4,6 +4,7 @@ Patches downloaded audio files with enriched metadata from ytmusicapi,
 overwriting the raw metadata that yt-dlp embeds.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from loguru import logger
@@ -55,8 +56,8 @@ class MetadataPatcher:
 
     def patch_files(
         self,
-        file_paths: list[Path],
-        track_metadata: list[TrackMetadata],
+        file_paths: Sequence[Path],
+        track_metadata: Sequence[TrackMetadata],
         playlist_name: str,
     ) -> int:
         """Patch multiple files with corresponding metadata.

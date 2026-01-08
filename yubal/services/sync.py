@@ -1,15 +1,18 @@
 import shutil
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from loguru import logger
 from mutagen import File as MutagenFile
 
 from yubal.core.callbacks import CancelCheck, ProgressCallback, ProgressEvent
-from yubal.core.enums import ProgressStep, extract_playlist_id
-from yubal.core.models import AlbumInfo, SyncResult
+from yubal.core.enums import ProgressStep
+from yubal.core.models import AlbumInfo, DownloadResult, SyncResult
+from yubal.core.utils import extract_playlist_id
 from yubal.services.downloader import Downloader
 from yubal.services.m3u_generator import generate_m3u, sanitize_filename
-from yubal.services.metadata_enricher import MetadataEnricher
+from yubal.services.metadata_enricher import MetadataEnricher, PlaylistMetadata
 from yubal.services.metadata_patcher import MetadataPatcher
 from yubal.services.tagger import Tagger
 
@@ -100,6 +103,85 @@ class SyncService:
                 event_kwargs["details"] = details
             callback(ProgressEvent(**event_kwargs))  # type: ignore[arg-type]
 
+    @contextmanager
+    def _job_temp_dir(self, job_id: str) -> Iterator[Path]:
+        """Context manager for job temporary directory with automatic cleanup."""
+        job_temp_dir = self.temp_dir / job_id
+        job_temp_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            yield job_temp_dir
+        finally:
+            if job_temp_dir.exists():
+                shutil.rmtree(job_temp_dir, ignore_errors=True)
+
+    def _create_download_progress_wrapper(
+        self,
+        progress_callback: ProgressCallback | None,
+        total_tracks: int,
+        fetch_done_progress: float,
+        download_done_progress: float,
+    ) -> ProgressCallback | None:
+        """Create a progress wrapper that maps track progress to overall progress."""
+        if not progress_callback:
+            return None
+
+        download_range = download_done_progress - fetch_done_progress
+
+        def wrapper(event: ProgressEvent) -> None:
+            if event.progress is None:
+                progress_callback(event)
+                return
+
+            track_idx = event.details.get("track_index", 0) if event.details else 0
+            track_progress = event.progress
+
+            overall = (
+                fetch_done_progress
+                + ((track_idx + track_progress / 100) / total_tracks) * download_range
+            )
+            progress_callback(
+                ProgressEvent(
+                    step=ProgressStep.DOWNLOADING,
+                    message=event.message,
+                    progress=overall,
+                )
+            )
+
+        return wrapper
+
+    def _handle_download_result(
+        self,
+        download_result: DownloadResult,
+        album_info: AlbumInfo | None,
+        progress_callback: ProgressCallback | None,
+    ) -> SyncResult | None:
+        """Check download result and return SyncResult if failed/cancelled.
+
+        Returns None if download succeeded and processing should continue.
+        """
+        if download_result.cancelled:
+            return SyncResult(
+                success=False,
+                download_result=download_result,
+                album_info=album_info,
+                error="Download cancelled",
+            )
+
+        if not download_result.success:
+            self._emit_progress(
+                progress_callback,
+                ProgressStep.FAILED,
+                download_result.error or "Download failed",
+            )
+            return SyncResult(
+                success=False,
+                download_result=download_result,
+                album_info=album_info,
+                error=download_result.error or "Download failed",
+            )
+
+        return None
+
     def sync_album(
         self,
         url: str,
@@ -124,187 +206,133 @@ class SyncService:
         Returns:
             SyncResult with success status and details
         """
-        # Create temp subfolder per job for easier cleanup/debugging
-        job_temp_dir = self.temp_dir / job_id
-        job_temp_dir.mkdir(parents=True, exist_ok=True)
         album_info: AlbumInfo | None = None
 
-        try:
-            # Phase 1: Extract album info (0% → 10%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.FETCHING_INFO,
-                "Fetching album info...",
-                ALBUM_PROGRESS_START,
-            )
-
-            downloader = self._downloader
-
+        with self._job_temp_dir(job_id) as job_temp_dir:
             try:
-                album_info = downloader.extract_info(url)
-                total_tracks = album_info.track_count or 1  # Fallback to 1
-            except Exception as e:
+                # Phase 1: Extract album info (0% → 10%)
                 self._emit_progress(
                     progress_callback,
-                    ProgressStep.FAILED,
-                    f"Failed to fetch album info: {e}",
-                )
-                return SyncResult(
-                    success=False,
-                    error=f"Failed to fetch album info: {e}",
+                    ProgressStep.FETCHING_INFO,
+                    "Fetching album info...",
+                    ALBUM_PROGRESS_START,
                 )
 
-            # Notify with album info - fetching complete at 10%
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.FETCHING_INFO,
-                f"Found {total_tracks} tracks: {album_info.title}",
-                ALBUM_PROGRESS_FETCH_DONE,
-                {"album_info": album_info.model_dump()},
-            )
-
-            # Phase 2: Download (10% → 90%)
-            download_range = ALBUM_PROGRESS_DOWNLOAD_DONE - ALBUM_PROGRESS_FETCH_DONE
-
-            def download_progress_wrapper(event: ProgressEvent) -> None:
-                """Wrapper that calculates album-wide progress for download phase."""
-                if not progress_callback:
-                    return
-
-                # If no progress info, pass through as-is
-                if event.progress is None:
-                    progress_callback(event)
-                    return
-
-                # Get track index from details (0-based)
-                track_idx = event.details.get("track_index", 0) if event.details else 0
-                track_progress = event.progress
-
-                # Calculate album-wide progress within the download range
-                album_progress = (
-                    ALBUM_PROGRESS_FETCH_DONE
-                    + ((track_idx + track_progress / 100) / total_tracks)
-                    * download_range
-                )
-
-                progress_callback(
-                    ProgressEvent(
-                        step=ProgressStep.DOWNLOADING,
-                        message=event.message,
-                        progress=album_progress,
+                try:
+                    album_info = self._downloader.extract_info(url)
+                    total_tracks = album_info.track_count or 1
+                except Exception as e:
+                    self._emit_progress(
+                        progress_callback,
+                        ProgressStep.FAILED,
+                        f"Failed to fetch album info: {e}",
                     )
-                )
+                    return SyncResult(
+                        success=False,
+                        error=f"Failed to fetch album info: {e}",
+                    )
 
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.DOWNLOADING,
-                "Starting download...",
-                ALBUM_PROGRESS_FETCH_DONE,
-            )
-
-            download_result = downloader.download_album(
-                url,
-                job_temp_dir,
-                progress_callback=download_progress_wrapper,
-                cancel_check=cancel_check,
-            )
-
-            # Check if cancelled
-            if download_result.cancelled:
-                return SyncResult(
-                    success=False,
-                    download_result=download_result,
-                    album_info=album_info,
-                    error="Download cancelled",
-                )
-
-            if not download_result.success:
                 self._emit_progress(
                     progress_callback,
-                    ProgressStep.FAILED,
-                    download_result.error or "Download failed",
-                )
-                return SyncResult(
-                    success=False,
-                    download_result=download_result,
-                    album_info=album_info,
-                    error=download_result.error or "Download failed",
+                    ProgressStep.FETCHING_INFO,
+                    f"Found {total_tracks} tracks: {album_info.title}",
+                    ALBUM_PROGRESS_FETCH_DONE,
+                    {"album_info": album_info.model_dump()},
                 )
 
-            # Download complete - progress at 90%
-            track_count = len(download_result.downloaded_files)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.DOWNLOADING,
-                f"Downloaded {track_count} tracks",
-                ALBUM_PROGRESS_DOWNLOAD_DONE,
-            )
-
-            # Get real bitrate from downloaded file
-            if download_result.downloaded_files and album_info:
-                real_bitrate = _get_file_bitrate(
-                    Path(download_result.downloaded_files[0])
+                # Phase 2: Download (10% → 90%)
+                download_wrapper = self._create_download_progress_wrapper(
+                    progress_callback,
+                    total_tracks,
+                    ALBUM_PROGRESS_FETCH_DONE,
+                    ALBUM_PROGRESS_DOWNLOAD_DONE,
                 )
-                if real_bitrate:
-                    album_info.audio_bitrate = real_bitrate
 
-            # Phase 3: Import/Tag (90% → 100%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Starting import...",
-                ALBUM_PROGRESS_DOWNLOAD_DONE,
-            )
-
-            tagger = self._tagger
-            audio_files = [Path(f) for f in download_result.downloaded_files]
-            tag_result = tagger.tag_album(
-                audio_files, progress_callback=progress_callback
-            )
-
-            if not tag_result.success:
                 self._emit_progress(
                     progress_callback,
-                    ProgressStep.FAILED,
-                    tag_result.error or "Import failed",
+                    ProgressStep.DOWNLOADING,
+                    "Starting download...",
+                    ALBUM_PROGRESS_FETCH_DONE,
                 )
+
+                download_result = self._downloader.download_album(
+                    url,
+                    job_temp_dir,
+                    progress_callback=download_wrapper,
+                    cancel_check=cancel_check,
+                )
+
+                # Check for failure/cancellation
+                if failure := self._handle_download_result(
+                    download_result, album_info, progress_callback
+                ):
+                    return failure
+
+                track_count = len(download_result.downloaded_files)
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.DOWNLOADING,
+                    f"Downloaded {track_count} tracks",
+                    ALBUM_PROGRESS_DOWNLOAD_DONE,
+                )
+
+                # Update bitrate from actual file
+                if download_result.downloaded_files and album_info:
+                    real_bitrate = _get_file_bitrate(
+                        Path(download_result.downloaded_files[0])
+                    )
+                    if real_bitrate:
+                        album_info.audio_bitrate = real_bitrate
+
+                # Phase 3: Import/Tag (90% → 100%)
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.IMPORTING,
+                    "Starting import...",
+                    ALBUM_PROGRESS_DOWNLOAD_DONE,
+                )
+
+                audio_files = [Path(f) for f in download_result.downloaded_files]
+                tag_result = self._tagger.tag_album(
+                    audio_files, progress_callback=progress_callback
+                )
+
+                if not tag_result.success:
+                    self._emit_progress(
+                        progress_callback,
+                        ProgressStep.FAILED,
+                        tag_result.error or "Import failed",
+                    )
+                    return SyncResult(
+                        success=False,
+                        download_result=download_result,
+                        tag_result=tag_result,
+                        album_info=album_info,
+                        error=tag_result.error or "Import failed",
+                    )
+
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.COMPLETED,
+                    f"Sync complete: {tag_result.dest_dir}",
+                    ALBUM_PROGRESS_COMPLETE,
+                )
+
                 return SyncResult(
-                    success=False,
+                    success=True,
                     download_result=download_result,
                     tag_result=tag_result,
                     album_info=album_info,
-                    error=tag_result.error or "Import failed",
+                    destination=tag_result.dest_dir,
                 )
 
-            # Success - progress at 100%
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.COMPLETED,
-                f"Sync complete: {tag_result.dest_dir}",
-                ALBUM_PROGRESS_COMPLETE,
-            )
-
-            return SyncResult(
-                success=True,
-                download_result=download_result,
-                tag_result=tag_result,
-                album_info=album_info,
-                destination=tag_result.dest_dir,
-            )
-
-        except Exception as e:
-            # Cleanup on any unexpected failure
-            self._emit_progress(progress_callback, ProgressStep.FAILED, str(e))
-            return SyncResult(
-                success=False,
-                album_info=album_info,
-                error=str(e),
-            )
-
-        finally:
-            # Cleanup temp directory
-            if job_temp_dir.exists():
-                shutil.rmtree(job_temp_dir, ignore_errors=True)
+            except Exception as e:
+                self._emit_progress(progress_callback, ProgressStep.FAILED, str(e))
+                return SyncResult(
+                    success=False,
+                    album_info=album_info,
+                    error=str(e),
+                )
 
     def sync_playlist(
         self,
@@ -333,271 +361,254 @@ class SyncService:
         Returns:
             SyncResult with success status and details
         """
-        job_temp_dir = self.temp_dir / job_id
-        job_temp_dir.mkdir(parents=True, exist_ok=True)
         album_info: AlbumInfo | None = None
 
-        try:
-            # Phase 1: Enrich metadata via ytmusicapi (0% → 10%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.FETCHING_INFO,
-                "Enriching playlist metadata...",
-                PLAYLIST_PROGRESS_START,
-            )
-
-            playlist_id = extract_playlist_id(url)
-            if not playlist_id:
-                return SyncResult(
-                    success=False,
-                    error="Could not extract playlist ID from URL",
-                )
-
+        with self._job_temp_dir(job_id) as job_temp_dir:
             try:
-                enricher = MetadataEnricher()
-                playlist_meta = enricher.get_playlist(playlist_id)
-            except Exception as e:
-                logger.error("Failed to enrich playlist metadata: {}", e)
-                return SyncResult(
-                    success=False,
-                    error=f"Failed to fetch playlist metadata: {e}",
+                # Phase 1: Enrich metadata via ytmusicapi (0% → 10%)
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.FETCHING_INFO,
+                    "Enriching playlist metadata...",
+                    PLAYLIST_PROGRESS_START,
                 )
 
-            if not playlist_meta.tracks:
-                return SyncResult(
-                    success=False,
-                    error="No available tracks in playlist",
-                )
-
-            # Create AlbumInfo for progress updates (reuse existing model)
-            album_info = AlbumInfo(
-                title=playlist_meta.title,
-                artist="Various Artists",
-                track_count=playlist_meta.track_count,
-                playlist_id=playlist_id,
-                url=url,
-            )
-
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.FETCHING_INFO,
-                f"Found {playlist_meta.track_count} tracks: {playlist_meta.title}",
-                PLAYLIST_PROGRESS_FETCH_DONE,
-                {"album_info": album_info.model_dump()},
-            )
-
-            # Check cancellation
-            if cancel_check and cancel_check():
-                return SyncResult(
-                    success=False,
-                    album_info=album_info,
-                    error="Cancelled",
-                )
-
-            # Phase 2: Download via yt-dlp (10% → 60%)
-            total_tracks = playlist_meta.track_count
-            download_range = (
-                PLAYLIST_PROGRESS_DOWNLOAD_DONE - PLAYLIST_PROGRESS_FETCH_DONE
-            )
-
-            def download_progress_wrapper(event: ProgressEvent) -> None:
-                if not progress_callback:
-                    return
-                if event.progress is None:
-                    progress_callback(event)
-                    return
-
-                track_idx = event.details.get("track_index", 0) if event.details else 0
-                track_progress = event.progress
-                # Map to 10-60% range
-                overall = (
-                    PLAYLIST_PROGRESS_FETCH_DONE
-                    + ((track_idx + track_progress / 100) / total_tracks)
-                    * download_range
-                )
-                progress_callback(
-                    ProgressEvent(
-                        step=ProgressStep.DOWNLOADING,
-                        message=event.message,
-                        progress=overall,
+                playlist_id = extract_playlist_id(url)
+                if not playlist_id:
+                    return SyncResult(
+                        success=False,
+                        error="Could not extract playlist ID from URL",
                     )
+
+                try:
+                    enricher = MetadataEnricher()
+                    playlist_meta = enricher.get_playlist(playlist_id)
+                except Exception as e:
+                    logger.error("Failed to enrich playlist metadata: {}", e)
+                    return SyncResult(
+                        success=False,
+                        error=f"Failed to fetch playlist metadata: {e}",
+                    )
+
+                if not playlist_meta.tracks:
+                    return SyncResult(
+                        success=False,
+                        error="No available tracks in playlist",
+                    )
+
+                album_info = AlbumInfo(
+                    title=playlist_meta.title,
+                    artist="Various Artists",
+                    track_count=playlist_meta.track_count,
+                    playlist_id=playlist_id,
+                    url=url,
                 )
 
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.DOWNLOADING,
-                "Starting download...",
-                PLAYLIST_PROGRESS_FETCH_DONE,
-            )
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.FETCHING_INFO,
+                    f"Found {playlist_meta.track_count} tracks: {playlist_meta.title}",
+                    PLAYLIST_PROGRESS_FETCH_DONE,
+                    {"album_info": album_info.model_dump()},
+                )
 
-            download_result = self._downloader.download_album(
-                url,
-                job_temp_dir,
-                progress_callback=download_progress_wrapper,
-                cancel_check=cancel_check,
-            )
+                if cancel_check and cancel_check():
+                    return SyncResult(
+                        success=False,
+                        album_info=album_info,
+                        error="Cancelled",
+                    )
 
-            if download_result.cancelled:
+                # Phase 2: Download via yt-dlp (10% → 60%)
+                download_wrapper = self._create_download_progress_wrapper(
+                    progress_callback,
+                    playlist_meta.track_count,
+                    PLAYLIST_PROGRESS_FETCH_DONE,
+                    PLAYLIST_PROGRESS_DOWNLOAD_DONE,
+                )
+
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.DOWNLOADING,
+                    "Starting download...",
+                    PLAYLIST_PROGRESS_FETCH_DONE,
+                )
+
+                download_result = self._downloader.download_album(
+                    url,
+                    job_temp_dir,
+                    progress_callback=download_wrapper,
+                    cancel_check=cancel_check,
+                )
+
+                # Check for failure/cancellation
+                if download_result.cancelled:
+                    return SyncResult(
+                        success=False,
+                        download_result=download_result,
+                        album_info=album_info,
+                        error="Download cancelled",
+                    )
+
+                if not download_result.success:
+                    return SyncResult(
+                        success=False,
+                        download_result=download_result,
+                        album_info=album_info,
+                        error=download_result.error or "Download failed",
+                    )
+
+                downloaded_files = sorted(
+                    [Path(f) for f in download_result.downloaded_files]
+                )
+
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.DOWNLOADING,
+                    f"Downloaded {len(downloaded_files)} tracks",
+                    PLAYLIST_PROGRESS_DOWNLOAD_DONE,
+                )
+
+                # Phase 3: Patch metadata (60% → 70%)
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.IMPORTING,
+                    "Patching track metadata...",
+                    PLAYLIST_PROGRESS_DOWNLOAD_DONE,
+                )
+
+                patcher = MetadataPatcher()
+                patcher.patch_files(
+                    file_paths=downloaded_files,
+                    track_metadata=playlist_meta.tracks,
+                    playlist_name=playlist_meta.title,
+                )
+
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.IMPORTING,
+                    "Metadata patched",
+                    PLAYLIST_PROGRESS_PATCH_DONE,
+                )
+
+                # Phase 4: Organize files to Playlists/{name}/ (70% → 75%)
+                final_files = self._organize_playlist_files(
+                    downloaded_files,
+                    playlist_meta,
+                    progress_callback,
+                )
+
+                # Phase 5: Beets import in place (75% → 90%)
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.IMPORTING,
+                    "Running beets enrichment...",
+                    PLAYLIST_PROGRESS_ORGANIZE_DONE,
+                )
+
+                tag_result = self._tagger.tag_playlist(
+                    final_files, progress_callback=progress_callback
+                )
+
+                if not tag_result.success:
+                    logger.warning(
+                        "Beets enrichment failed (non-fatal): {}", tag_result.error
+                    )
+
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.IMPORTING,
+                    "Beets enrichment complete",
+                    PLAYLIST_PROGRESS_BEETS_DONE,
+                )
+
+                # Phase 6: Generate M3U (90% → 100%)
+                playlist_dir = final_files[0].parent
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.IMPORTING,
+                    "Generating playlist file...",
+                    PLAYLIST_PROGRESS_BEETS_DONE,
+                )
+
+                generate_m3u(
+                    playlist_name=playlist_meta.title,
+                    track_files=final_files,
+                    track_metadata=playlist_meta.tracks,
+                    output_dir=playlist_dir,
+                )
+
+                self._emit_progress(
+                    progress_callback,
+                    ProgressStep.COMPLETED,
+                    f"Sync complete: {playlist_dir}",
+                    PLAYLIST_PROGRESS_COMPLETE,
+                )
+
+                return SyncResult(
+                    success=True,
+                    download_result=download_result,
+                    tag_result=tag_result,
+                    album_info=album_info,
+                    destination=str(playlist_dir),
+                )
+
+            except Exception as e:
+                logger.exception("Playlist sync failed")
+                self._emit_progress(progress_callback, ProgressStep.FAILED, str(e))
                 return SyncResult(
                     success=False,
-                    download_result=download_result,
                     album_info=album_info,
-                    error="Download cancelled",
+                    error=str(e),
                 )
 
-            if not download_result.success:
-                return SyncResult(
-                    success=False,
-                    download_result=download_result,
-                    album_info=album_info,
-                    error=download_result.error or "Download failed",
-                )
+    def _organize_playlist_files(
+        self,
+        downloaded_files: list[Path],
+        playlist_meta: PlaylistMetadata,
+        progress_callback: ProgressCallback | None,
+    ) -> list[Path]:
+        """Organize downloaded files into playlist directory with proper naming."""
+        self._emit_progress(
+            progress_callback,
+            ProgressStep.IMPORTING,
+            "Organizing files...",
+            PLAYLIST_PROGRESS_PATCH_DONE,
+        )
 
-            downloaded_files = sorted(
-                [Path(f) for f in download_result.downloaded_files]
+        playlist_dir = self.playlists_dir / sanitize_filename(playlist_meta.title)
+        playlist_dir.mkdir(parents=True, exist_ok=True)
+
+        if len(downloaded_files) != len(playlist_meta.tracks):
+            raise ValueError(
+                f"Downloaded file count ({len(downloaded_files)}) doesn't match "
+                f"track metadata count ({len(playlist_meta.tracks)})"
             )
 
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.DOWNLOADING,
-                f"Downloaded {len(downloaded_files)} tracks",
-                PLAYLIST_PROGRESS_DOWNLOAD_DONE,
+        final_files: list[Path] = []
+        for downloaded_file, track in zip(
+            downloaded_files, playlist_meta.tracks, strict=True
+        ):
+            safe_artist = sanitize_filename(track.artist)
+            safe_title = sanitize_filename(track.title)
+            new_name = (
+                f"{track.track_number:02d} - {safe_artist} - "
+                f"{safe_title}{downloaded_file.suffix}"
             )
+            dest = playlist_dir / new_name
 
-            # Phase 3: Patch metadata (60% → 70%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Patching track metadata...",
-                PLAYLIST_PROGRESS_DOWNLOAD_DONE,
-            )
+            if dest.exists():
+                logger.info("Overwriting existing file: {}", dest)
+                dest.unlink()
 
-            patcher = MetadataPatcher()
-            patcher.patch_files(
-                file_paths=downloaded_files,
-                track_metadata=playlist_meta.tracks,
-                playlist_name=playlist_meta.title,
-            )
+            shutil.move(str(downloaded_file), str(dest))
+            final_files.append(dest)
 
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Metadata patched",
-                PLAYLIST_PROGRESS_PATCH_DONE,
-            )
+        self._emit_progress(
+            progress_callback,
+            ProgressStep.IMPORTING,
+            f"Files organized to {playlist_dir.name}/",
+            PLAYLIST_PROGRESS_ORGANIZE_DONE,
+        )
 
-            # Phase 4: Organize files to Playlists/{name}/ (70% → 75%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Organizing files...",
-                PLAYLIST_PROGRESS_PATCH_DONE,
-            )
-
-            playlist_dir = self.playlists_dir / sanitize_filename(playlist_meta.title)
-            playlist_dir.mkdir(parents=True, exist_ok=True)
-
-            # Validate file/metadata count match
-            if len(downloaded_files) != len(playlist_meta.tracks):
-                raise ValueError(
-                    f"Downloaded file count ({len(downloaded_files)}) doesn't match "
-                    f"track metadata count ({len(playlist_meta.tracks)})"
-                )
-
-            final_files: list[Path] = []
-            for downloaded_file, track in zip(
-                downloaded_files, playlist_meta.tracks, strict=True
-            ):
-                # New filename: "01 - Artist - Title.opus"
-                safe_artist = sanitize_filename(track.artist)
-                safe_title = sanitize_filename(track.title)
-                new_name = (
-                    f"{track.track_number:02d} - {safe_artist} - "
-                    f"{safe_title}{downloaded_file.suffix}"
-                )
-                dest = playlist_dir / new_name
-
-                # Handle re-sync: remove existing file if present
-                if dest.exists():
-                    logger.info("Overwriting existing file: {}", dest)
-                    dest.unlink()
-
-                shutil.move(str(downloaded_file), str(dest))
-                final_files.append(dest)
-
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                f"Files organized to {playlist_dir.name}/",
-                PLAYLIST_PROGRESS_ORGANIZE_DONE,
-            )
-
-            # Phase 5: Beets import in place (75% → 90%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Running beets enrichment...",
-                PLAYLIST_PROGRESS_ORGANIZE_DONE,
-            )
-
-            tag_result = self._tagger.tag_playlist(
-                final_files, progress_callback=progress_callback
-            )
-
-            # Beets failure is non-fatal for playlists (metadata already patched)
-            if not tag_result.success:
-                logger.warning(
-                    "Beets enrichment failed (non-fatal): {}", tag_result.error
-                )
-
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Beets enrichment complete",
-                PLAYLIST_PROGRESS_BEETS_DONE,
-            )
-
-            # Phase 6: Generate M3U (90% → 100%)
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.IMPORTING,
-                "Generating playlist file...",
-                PLAYLIST_PROGRESS_BEETS_DONE,
-            )
-
-            generate_m3u(
-                playlist_name=playlist_meta.title,
-                track_files=final_files,
-                track_metadata=playlist_meta.tracks,
-                output_dir=playlist_dir,
-            )
-
-            # Success
-            self._emit_progress(
-                progress_callback,
-                ProgressStep.COMPLETED,
-                f"Sync complete: {playlist_dir}",
-                PLAYLIST_PROGRESS_COMPLETE,
-            )
-
-            return SyncResult(
-                success=True,
-                download_result=download_result,
-                tag_result=tag_result,
-                album_info=album_info,
-                destination=str(playlist_dir),
-            )
-
-        except Exception as e:
-            logger.exception("Playlist sync failed")
-            self._emit_progress(progress_callback, ProgressStep.FAILED, str(e))
-            return SyncResult(
-                success=False,
-                album_info=album_info,
-                error=str(e),
-            )
-
-        finally:
-            # Cleanup temp directory
-            if job_temp_dir.exists():
-                shutil.rmtree(job_temp_dir, ignore_errors=True)
+        return final_files

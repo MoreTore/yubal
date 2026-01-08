@@ -8,13 +8,14 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from yubal.api.dependencies import AudioFormatDep, JobStoreDep, SyncServiceDep
 from yubal.core.callbacks import ProgressEvent
-from yubal.core.enums import ImportType, JobStatus, detect_import_type
+from yubal.core.enums import ImportType, JobStatus
 from yubal.core.models import AlbumInfo, Job
+from yubal.core.utils import detect_import_type
 from yubal.schemas.jobs import (
     CancelJobResponse,
     ClearJobsResponse,
     CreateJobRequest,
-    JobConflictError,
+    JobConflictErrorResponse,
     JobCreatedResponse,
     JobListResponse,
 )
@@ -199,7 +200,9 @@ async def _update_job_from_event(
     "/jobs",
     response_model=JobCreatedResponse,
     status_code=status.HTTP_201_CREATED,
-    responses={409: {"model": JobConflictError, "description": "Queue is full"}},
+    responses={
+        409: {"model": JobConflictErrorResponse, "description": "Queue is full"}
+    },
 )
 async def create_job(
     request: CreateJobRequest,

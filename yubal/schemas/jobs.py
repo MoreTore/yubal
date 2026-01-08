@@ -29,7 +29,7 @@ class JobCreatedResponse(BaseModel):
     message: Literal["Job created"] = "Job created"
 
 
-class JobConflictError(BaseModel):
+class JobConflictErrorResponse(BaseModel):
     """Error response when job creation is rejected."""
 
     error: Literal["A job is already running", "Queue is full"]

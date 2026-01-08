@@ -4,6 +4,7 @@ Creates M3U playlist files with relative paths for easy playback
 in music players.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from loguru import logger
@@ -39,8 +40,8 @@ def sanitize_filename(name: str) -> str:
 
 def generate_m3u(
     playlist_name: str,
-    track_files: list[Path],
-    track_metadata: list[TrackMetadata],
+    track_files: Sequence[Path],
+    track_metadata: Sequence[TrackMetadata],
     output_dir: Path,
 ) -> Path:
     """Generate M3U playlist file.

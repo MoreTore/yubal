@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from functools import cache
 from pathlib import Path
 from typing import Annotated
 
@@ -12,18 +13,15 @@ from yubal.services.sync import SyncService
 from yubal.services.tagger import Tagger
 from yubal.settings import get_settings
 
-# Get settings for timezone configuration
-_settings = get_settings()
 
-# Global singleton instance
-job_store = JobStore(
-    clock=lambda: datetime.now(_settings.timezone),
-    id_generator=lambda: str(uuid.uuid4()),
-)
-
-
+@cache
 def get_job_store() -> JobStore:
-    return job_store
+    """Get cached job store instance (created on first call)."""
+    settings = get_settings()
+    return JobStore(
+        clock=lambda: datetime.now(settings.timezone),
+        id_generator=lambda: str(uuid.uuid4()),
+    )
 
 
 def get_audio_format() -> AudioFormat:

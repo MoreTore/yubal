@@ -1,5 +1,7 @@
 """Cookies management endpoints."""
 
+import asyncio
+
 from fastapi import APIRouter, HTTPException, status
 
 from yubal.api.dependencies import CookiesFileDep, YtdlpDirDep
@@ -15,7 +17,8 @@ router = APIRouter(prefix="/cookies", tags=["cookies"])
 @router.get("/status", response_model=CookiesStatusResponse)
 async def cookies_status(cookies_file: CookiesFileDep) -> CookiesStatusResponse:
     """Check if cookies file is configured."""
-    return CookiesStatusResponse(configured=cookies_file.exists())
+    exists = await asyncio.to_thread(cookies_file.exists)
+    return CookiesStatusResponse(configured=exists)
 
 
 @router.post("", response_model=CookiesUploadResponse)
@@ -35,14 +38,14 @@ async def upload_cookies(
             "Invalid cookie file format (expected Netscape format)",
         )
 
-    ytdlp_dir.mkdir(parents=True, exist_ok=True)
-    cookies_file.write_text(body.content)
+    await asyncio.to_thread(ytdlp_dir.mkdir, parents=True, exist_ok=True)
+    await asyncio.to_thread(cookies_file.write_text, body.content)
     return CookiesUploadResponse(status="ok")
 
 
 @router.delete("", response_model=CookiesUploadResponse)
 async def delete_cookies(cookies_file: CookiesFileDep) -> CookiesUploadResponse:
     """Delete cookies file."""
-    if cookies_file.exists():
-        cookies_file.unlink()
+    if await asyncio.to_thread(cookies_file.exists):
+        await asyncio.to_thread(cookies_file.unlink)
     return CookiesUploadResponse(status="ok")

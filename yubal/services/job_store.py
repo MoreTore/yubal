@@ -1,25 +1,25 @@
 import asyncio
+import threading
 from collections import OrderedDict, defaultdict
-from collections.abc import Callable
 from datetime import datetime
 
 from yubal.core.enums import JobStatus
 from yubal.core.models import AlbumInfo, Job, LogEntry
-from yubal.core.types import AudioFormat, LogStatus
+from yubal.core.types import AudioFormat, Clock, IdGenerator, LogStatus
 
 
 class JobStore:
     """Thread-safe in-memory job store with capacity limit."""
 
-    MAX_JOBS = 50
-    MAX_LOGS_PER_JOB = 100
-    MAX_TOTAL_LOGS = 500
+    MAX_JOBS = 20
+    MAX_LOGS_PER_JOB = 50
+    MAX_TOTAL_LOGS = 200
     TIMEOUT_SECONDS = 30 * 60  # 30 minutes
 
     def __init__(
         self,
-        clock: Callable[[], datetime],
-        id_generator: Callable[[], str],
+        clock: Clock,
+        id_generator: IdGenerator,
     ) -> None:
         self._clock = clock
         self._id_generator = id_generator
@@ -27,6 +27,8 @@ class JobStore:
         self._logs: defaultdict[str, list[LogEntry]] = defaultdict(list)
         self._lock = asyncio.Lock()
         self._active_job_id: str | None = None
+        # Thread-safe cancellation tracking (accessed from both async and sync contexts)
+        self._cancellation_lock = threading.Lock()
         self._cancellation_requested: set[str] = set()
 
     async def create_job(
@@ -46,7 +48,8 @@ class JobStore:
                 oldest = min(pruneable, key=lambda j: j.created_at)
                 del self._jobs[oldest.id]
                 self._logs.pop(oldest.id, None)
-                self._cancellation_requested.discard(oldest.id)
+                with self._cancellation_lock:
+                    self._cancellation_requested.discard(oldest.id)
 
             # Check if we should start immediately
             should_start = self._active_job_id is None
@@ -109,8 +112,9 @@ class JobStore:
             if job.status.is_finished:
                 return False
 
-            # Mark as cancelled
-            self._cancellation_requested.add(job_id)
+            # Mark as cancelled (thread-safe)
+            with self._cancellation_lock:
+                self._cancellation_requested.add(job_id)
             job.status = JobStatus.CANCELLED
             job.completed_at = self._clock()
 
@@ -121,8 +125,9 @@ class JobStore:
             return True
 
     def is_cancelled(self, job_id: str) -> bool:
-        """Check if cancellation was requested for a job."""
-        return job_id in self._cancellation_requested
+        """Check if cancellation was requested for a job (thread-safe)."""
+        with self._cancellation_lock:
+            return job_id in self._cancellation_requested
 
     async def update_job(
         self,
@@ -216,7 +221,8 @@ class JobStore:
 
             del self._jobs[job_id]
             self._logs.pop(job_id, None)
-            self._cancellation_requested.discard(job_id)
+            with self._cancellation_lock:
+                self._cancellation_requested.discard(job_id)
             return True
 
     async def clear_completed(self) -> int:
@@ -232,7 +238,8 @@ class JobStore:
             for job_id in to_remove:
                 del self._jobs[job_id]
                 self._logs.pop(job_id, None)
-                self._cancellation_requested.discard(job_id)
+                with self._cancellation_lock:
+                    self._cancellation_requested.discard(job_id)
             return len(to_remove)
 
     def _check_timeout(self, job: Job) -> bool:

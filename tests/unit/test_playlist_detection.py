@@ -2,7 +2,8 @@
 
 import pytest
 
-from yubal.core.enums import ImportType, detect_import_type, extract_playlist_id
+from yubal.core.enums import ImportType
+from yubal.core.utils import detect_import_type, extract_playlist_id
 
 
 class TestExtractPlaylistId:

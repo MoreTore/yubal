@@ -17,8 +17,6 @@ class ProgressEvent(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
-ProgressCallback = Callable[[ProgressEvent], None]
-"""Type alias for progress callback functions."""
-
-CancelCheck = Callable[[], bool]
-"""Type alias for cancellation check functions."""
+# Callable type aliases for callbacks
+type ProgressCallback = Callable[[ProgressEvent], None]
+type CancelCheck = Callable[[], bool]
