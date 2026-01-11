@@ -22,11 +22,11 @@ class TrackedYTMusic:
 
     def __init__(self) -> None:
         self._ytm = YTMusic()
-        self.tracker = RequestTracker()
+        self._tracker = RequestTracker()
 
     @property
     def responses(self) -> list[dict]:
-        return self.tracker.responses
+        return self._tracker.responses
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._ytm, name)
@@ -41,7 +41,7 @@ class TrackedYTMusic:
             call_args = dict(zip(param_names, args, strict=False))
             call_args.update(kwargs)
             response = attr(*args, **kwargs)
-            self.tracker.record(name, call_args, response)
+            self._tracker.record(name, call_args, response)
             return response
 
         return wrapper
