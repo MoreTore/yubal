@@ -107,10 +107,30 @@ def meta_cmd(url: str, as_json: bool) -> None:
     PLAYLIST_URL should be a full YouTube Music playlist URL like:
     https://music.youtube.com/playlist?list=PLxxxxxxxx
     """
+    console = Console()
+
     try:
         client = YTMusicClient()
         service = MetadataExtractorService(client)
-        tracks = service.extract_all(url)
+
+        tracks: list[TrackMetadata] = []
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Extracting metadata", total=None)
+
+            for extract_progress in service.extract(url):
+                progress.update(
+                    task,
+                    completed=extract_progress.current,
+                    total=extract_progress.total,
+                )
+                tracks.append(extract_progress.track)
 
         if as_json:
             data = [t.model_dump() for t in tracks]
