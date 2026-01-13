@@ -69,14 +69,16 @@ class MockDownloader:
         self.downloads: list[tuple[str, Path]] = []
         self.should_fail = should_fail
 
-    def download(self, video_id: str, output_path: Path) -> None:
-        """Mock download that records calls."""
+    def download(self, video_id: str, output_path: Path) -> Path:
+        """Mock download that records calls and returns actual path."""
         self.downloads.append((video_id, output_path))
         if self.should_fail:
             raise DownloadError(f"Mock download failed for {video_id}")
         # Create an empty file to simulate download
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.with_suffix(".opus").touch()
+        actual_path = output_path.with_suffix(".opus")
+        actual_path.touch()
+        return actual_path
 
 
 class TestDownloadService:
@@ -267,12 +269,14 @@ class TestDownloadService:
             def __init__(self) -> None:
                 self.downloads: list[str] = []
 
-            def download(self, video_id: str, output_path: Path) -> None:
+            def download(self, video_id: str, output_path: Path) -> Path:
                 self.downloads.append(video_id)
                 if video_id == "atv456":
                     raise DownloadError(f"Failed: {video_id}")
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.with_suffix(".opus").touch()
+                actual_path = output_path.with_suffix(".opus")
+                actual_path.touch()
+                return actual_path
 
         downloader = SelectiveFailDownloader()
         service = DownloadService(download_config, downloader)

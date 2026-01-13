@@ -31,8 +31,12 @@ class DownloaderProtocol(Protocol):
     Implement this protocol to create mock downloaders for testing.
     """
 
-    def download(self, video_id: str, output_path: Path) -> None:
-        """Download a track to the specified path."""
+    def download(self, video_id: str, output_path: Path) -> Path:
+        """Download a track to the specified path.
+
+        Returns:
+            Actual path where file was saved (with extension).
+        """
         ...
 
 
@@ -77,12 +81,15 @@ class YTDLPDownloader:
             "noprogress": self._config.quiet,
         }
 
-    def download(self, video_id: str, output_path: Path) -> None:
+    def download(self, video_id: str, output_path: Path) -> Path:
         """Download a track to the specified path.
 
         Args:
             video_id: YouTube video ID.
             output_path: Target path for the downloaded file (without extension).
+
+        Returns:
+            Actual path where file was saved (with extension).
 
         Raises:
             DownloadError: If download fails.
@@ -93,6 +100,18 @@ class YTDLPDownloader:
 
         logger.debug("Downloading %s to %s", video_id, output_path)
 
+        actual_path: Path | None = None
+
+        def postprocessor_hook(d: dict[str, Any]) -> None:
+            nonlocal actual_path
+            # Capture filepath after FFmpeg postprocessor completes
+            if d["status"] == "finished":
+                filepath = d.get("info_dict", {}).get("filepath")
+                if filepath:
+                    actual_path = Path(filepath)
+
+        opts["postprocessor_hooks"] = [postprocessor_hook]
+
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 ydl.download([url])
@@ -101,6 +120,18 @@ class YTDLPDownloader:
         except Exception as e:
             logger.error("Failed to download %s: %s", video_id, e)
             raise DownloadError(f"Failed to download {video_id}: {e}") from e
+
+        # Return actual path, fallback to expected if hook didn't capture it
+        if actual_path and actual_path.exists():
+            return actual_path
+
+        # Fallback to expected path with codec extension
+        # (use string concat - with_suffix breaks on dots in filename)
+        expected = Path(f"{output_path}.{self._config.codec.value}")
+        if expected.exists():
+            return expected
+
+        return output_path
 
 
 class DownloadService:
@@ -177,28 +208,6 @@ class DownloadService:
             title=track.title,
         )
 
-    def _get_expected_output_file(self, output_path: Path) -> Path | None:
-        """Find the expected output file with extension.
-
-        Args:
-            output_path: Base output path without extension.
-
-        Returns:
-            Path to existing file if found, None otherwise.
-        """
-        # Check for file with the expected codec extension
-        expected = output_path.with_suffix(f".{self._config.codec.value}")
-        if expected.exists():
-            return expected
-
-        # Also check common alternatives (yt-dlp may choose different format)
-        for ext in [".opus", ".mp3", ".m4a", ".flac", ".ogg", ".webm"]:
-            alt_path = output_path.with_suffix(ext)
-            if alt_path.exists():
-                return alt_path
-
-        return None
-
     def download_track(
         self,
         track: TrackMetadata,
@@ -224,21 +233,19 @@ class DownloadService:
                 error=str(e),
             )
 
-        # Always skip existing files
-        existing = self._get_expected_output_file(output_path)
-        if existing:
-            logger.debug("Skipping existing file: %s", existing)
+        # Skip existing files (use string concat - with_suffix breaks on dots in filename)
+        expected = Path(f"{output_path}.{self._config.codec.value}")
+        if expected.exists():
+            logger.debug("Skipping existing file: %s", expected)
             return DownloadResult(
                 track=track,
                 status=DownloadStatus.SKIPPED,
-                output_path=existing,
+                output_path=expected,
                 video_id_used=video_id,
             )
 
         try:
-            self._downloader.download(video_id, output_path)
-            # Find the actual output file (yt-dlp adds extension)
-            actual_path = self._get_expected_output_file(output_path) or output_path
+            actual_path = self._downloader.download(video_id, output_path)
 
             # Tag the downloaded file
             self._tag_file(actual_path, track)
