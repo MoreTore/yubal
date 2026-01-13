@@ -61,19 +61,23 @@ def print_table(tracks: list[TrackMetadata]) -> None:
     table.add_column("Title")
     table.add_column("Artist")
     table.add_column("Album")
-    table.add_column("Year")
+    table.add_column("Album Artist")
     table.add_column("#", justify="right")
+    table.add_column("Year")
+    table.add_column("Cover URL")
     table.add_column("Type")
 
     for t in tracks:
         table.add_row(
-            t.omv_video_id,
+            t.omv_video_id or "",
             t.atv_video_id or "",
             t.title,
             t.artist,
             t.album,
-            t.year or "",
+            t.albumartist,
             str(t.tracknumber) if t.tracknumber else "",
+            t.year or "",
+            t.cover_url or "",
             t.video_type,
         )
 
