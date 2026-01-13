@@ -3,8 +3,8 @@
 from datetime import datetime
 from typing import Protocol
 
-from yubal.core.enums import JobStatus
-from yubal.core.models import AlbumInfo, Job
+from yubal_api.core.enums import JobStatus
+from yubal_api.core.models import AlbumInfo, Job
 
 
 class JobExecutionStore(Protocol):

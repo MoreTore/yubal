@@ -4,8 +4,8 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, status
 
-from yubal.api.dependencies import CookiesFileDep, YtdlpDirDep
-from yubal.schemas.cookies import (
+from yubal_api.api.dependencies import CookiesFileDep, YtdlpDirDep
+from yubal_api.schemas.cookies import (
     CookiesStatusResponse,
     CookiesUploadRequest,
     CookiesUploadResponse,

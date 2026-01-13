@@ -1,7 +1,6 @@
 """Test fixtures and configuration."""
 
 import pytest
-
 from yubal.models.ytmusic import (
     Album,
     AlbumRef,
@@ -146,7 +145,7 @@ def sample_playlist(sample_playlist_track: PlaylistTrack) -> Playlist:
                     ],
                     "duration_seconds": sample_playlist_track.duration_seconds,
                 }
-            ]
+            ],
         }
     )
 

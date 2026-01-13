@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from yubal.core.enums import ProgressStep
+from yubal_api.core.enums import ProgressStep
 
 
 class ProgressEvent(BaseModel):

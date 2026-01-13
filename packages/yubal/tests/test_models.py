@@ -2,7 +2,6 @@
 
 import pytest
 from pydantic import ValidationError
-
 from yubal.models.domain import TrackMetadata, VideoType
 from yubal.models.ytmusic import (
     Album,
@@ -36,7 +35,9 @@ class TestVideoType:
         """All video types should have correct values."""
         assert VideoType.ATV == "MUSIC_VIDEO_TYPE_ATV"
         assert VideoType.OMV == "MUSIC_VIDEO_TYPE_OMV"
-        assert VideoType.OFFICIAL_SOURCE_MUSIC == "MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC"
+        assert (
+            VideoType.OFFICIAL_SOURCE_MUSIC == "MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC"
+        )
         assert VideoType.UGC == "MUSIC_VIDEO_TYPE_UGC"
 
     def test_parse_from_api_string(self) -> None:

@@ -4,11 +4,11 @@ import logging
 
 import pytest
 from pydantic import ValidationError
-
-from tests.conftest import MockYTMusicClient
 from yubal.models.domain import VideoType
 from yubal.models.ytmusic import Album, Playlist, SearchResult
 from yubal.services import MetadataExtractorService
+
+from tests.conftest import MockYTMusicClient
 
 
 class TestMetadataExtractorService:
@@ -94,7 +94,7 @@ class TestMetadataExtractorService:
         )
 
         with pytest.raises(ValidationError):
-            progress_list[0].current = 999  # type: ignore
+            progress_list[0].current = 999
 
     def test_extract_handles_missing_album(
         self,
@@ -770,7 +770,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # Track should be skipped due to missing video type
         assert len(tracks) == 0
@@ -867,7 +869,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # Should match but with warning
         assert tracks[0].track_number == 5
@@ -917,7 +921,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # Should NOT have matched - track_number should be None
         assert tracks[0].track_number is None
@@ -1168,7 +1174,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # UGC track should be skipped
         assert len(tracks) == 0
@@ -1200,7 +1208,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # OFFICIAL_SOURCE_MUSIC track should be skipped
         assert len(tracks) == 0
@@ -1232,7 +1242,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # Unknown type track should be skipped
         assert len(tracks) == 0
@@ -1303,7 +1315,9 @@ class TestMetadataExtractorService:
         service = MetadataExtractorService(mock)
 
         with caplog.at_level(logging.WARNING):
-            tracks = service.extract_all("https://music.youtube.com/playlist?list=PLtest")
+            tracks = service.extract_all(
+                "https://music.youtube.com/playlist?list=PLtest"
+            )
 
         # Should have 2 tracks (ATV and OMV), UGC skipped
         assert len(tracks) == 2

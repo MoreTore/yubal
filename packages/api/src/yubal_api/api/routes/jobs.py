@@ -2,13 +2,13 @@
 
 from fastapi import APIRouter, HTTPException, status
 
-from yubal.api.dependencies import (
+from yubal_api.api.dependencies import (
     AudioFormatDep,
     JobExecutorDep,
     JobStoreDep,
 )
-from yubal.core.models import Job
-from yubal.schemas.jobs import (
+from yubal_api.core.models import Job
+from yubal_api.schemas.jobs import (
     CancelJobResponse,
     ClearJobsResponse,
     CreateJobRequest,
@@ -16,7 +16,7 @@ from yubal.schemas.jobs import (
     JobCreatedResponse,
     JobListResponse,
 )
-from yubal.services.job_store import JobStore
+from yubal_api.services.job_store import JobStore
 
 router = APIRouter()
 

@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-
 from yubal.config import AudioCodec, DownloadConfig
 from yubal.exceptions import DownloadError
 from yubal.models.domain import TrackMetadata, VideoType
@@ -253,7 +252,7 @@ class TestDownloadService:
         progress_list = list(service.download_tracks([sample_track]))
 
         with pytest.raises(ValidationError):
-            progress_list[0].current = 999  # type: ignore
+            progress_list[0].current = 999
 
     def test_download_tracks_continues_on_failure(
         self,
@@ -368,7 +367,7 @@ class TestDownloadResult:
         )
 
         with pytest.raises(ValidationError):
-            result.status = DownloadStatus.FAILED  # type: ignore
+            result.status = DownloadStatus.FAILED
 
 
 class TestDownloadConfig:

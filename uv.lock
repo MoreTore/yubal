@@ -1016,6 +1016,7 @@ source = { editable = "packages/api" }
 dependencies = [
     { name = "fastapi" },
     { name = "loguru" },
+    { name = "mutagen" },
     { name = "pydantic-settings" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "yubal" },
@@ -1025,6 +1026,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.127.1" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "mutagen", specifier = ">=1.47.0" },
     { name = "pydantic-settings", specifier = ">=2.12.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.40.0" },
     { name = "yubal", editable = "packages/yubal" },

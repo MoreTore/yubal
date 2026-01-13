@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from yubal.core.types import AudioFormat
+from yubal_api.core.types import AudioFormat
 
 _PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -32,10 +32,6 @@ class Settings(BaseSettings):
     data_dir: Path = Field(
         default=_PROJECT_ROOT / "data",
         description="Music library directory",
-    )
-    beets_dir: Path = Field(
-        default=_PROJECT_ROOT / "beets",
-        description="Beets directory",
     )
     ytdlp_dir: Path = Field(
         default=_PROJECT_ROOT / "ytdlp",
@@ -62,14 +58,6 @@ class Settings(BaseSettings):
     def timezone(self) -> tzinfo:
         """Get timezone object from tz string."""
         return ZoneInfo(self.tz)
-
-    @property
-    def beets_config(self) -> Path:
-        return self.beets_dir / "config.yaml"
-
-    @property
-    def beets_db(self) -> Path:
-        return self.beets_dir / "beets.db"
 
     @property
     def library_dir(self) -> Path:

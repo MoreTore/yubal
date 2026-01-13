@@ -1,7 +1,6 @@
 """Tests for utility functions."""
 
 import pytest
-
 from yubal.exceptions import PlaylistParseError
 from yubal.models.ytmusic import Artist, Thumbnail
 from yubal.utils import format_artists, get_square_thumbnail, parse_playlist_id

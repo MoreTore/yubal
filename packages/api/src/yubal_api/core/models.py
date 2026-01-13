@@ -1,9 +1,11 @@
+"""Core domain models for the API."""
+
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from yubal.core.enums import JobStatus
-from yubal.core.types import AudioFormat, LogStatus
+from yubal_api.core.enums import JobStatus
+from yubal_api.core.types import AudioFormat, LogStatus
 
 
 class AlbumInfo(BaseModel):
@@ -18,40 +20,6 @@ class AlbumInfo(BaseModel):
     thumbnail_url: str | None = None
     audio_codec: str | None = None  # e.g. "opus", "mp3"
     audio_bitrate: int | None = None  # kbps, e.g. 128
-
-
-class DownloadResult(BaseModel):
-    """Result of a download operation."""
-
-    success: bool
-    album_info: AlbumInfo | None = None
-    output_dir: str
-    downloaded_files: list[str] = []
-    error: str | None = None
-    cancelled: bool = False
-
-
-class TagResult(BaseModel):
-    """Result of a tagging operation."""
-
-    success: bool
-    source_dir: str
-    dest_dir: str | None = None
-    album_name: str | None = None
-    artist_name: str | None = None
-    track_count: int = 0
-    error: str | None = None
-
-
-class SyncResult(BaseModel):
-    """Result of a sync operation."""
-
-    success: bool
-    download_result: DownloadResult | None = None
-    tag_result: TagResult | None = None
-    album_info: AlbumInfo | None = None
-    destination: str | None = None
-    error: str | None = None
 
 
 class LogEntry(BaseModel):

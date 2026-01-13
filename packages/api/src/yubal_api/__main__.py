@@ -1,15 +1,15 @@
-"""Entry point for running yubal as a module: python -m yubal."""
+"""Entry point for running yubal-api as a module: python -m yubal_api."""
 
 import uvicorn
 
-from yubal.settings import get_settings
+from yubal_api.settings import get_settings
 
 
 def main() -> None:
     """Start the FastAPI server."""
     settings = get_settings()
     uvicorn.run(
-        "yubal.api.app:app",
+        "yubal_api.api.app:app",
         host=settings.host,
         port=settings.port,
         reload=settings.reload,

@@ -4,8 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from yubal.core.models import Job, LogEntry
-from yubal.core.types import AudioFormat
+from yubal_api.core.models import Job, LogEntry
+from yubal_api.core.types import AudioFormat
 
 
 class CreateJobRequest(BaseModel):

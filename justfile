@@ -16,7 +16,7 @@ dev:
     just dev-api & just dev-web & wait
 
 dev-api:
-    uv run uvicorn yubal_api.main:app --reload
+    uv run uvicorn yubal_api.api.app:app --reload
 
 dev-web:
     cd web && bun run dev
@@ -24,10 +24,16 @@ dev-web:
 lint:
     uv run ruff check packages
 
+lint-fix:
+    uv run ruff check packages --fix
+
 format:
     uv run ruff format packages
+
+typecheck:
+    uv run ty check packages
 
 test *args:
     uv run pytest {{ args }}
 
-check: lint test
+check: lint typecheck test

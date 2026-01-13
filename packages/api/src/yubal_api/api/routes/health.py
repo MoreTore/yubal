@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from yubal.schemas.health import HealthResponse
+from yubal_api.schemas.health import HealthResponse
 
 router = APIRouter()
 

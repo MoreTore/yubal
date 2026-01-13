@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from yubal.utils.cover import clear_cover_cache, fetch_cover, get_cover_cache_size
 
 
@@ -83,11 +82,12 @@ class TestFetchCover:
 
     def test_handles_http_error(self) -> None:
         """Should return None on HTTP error."""
+        from email.message import Message
         from urllib.error import HTTPError
 
         with patch("yubal.utils.cover.urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = HTTPError(
-                "https://example.com/cover.jpg", 404, "Not Found", {}, None
+                "https://example.com/cover.jpg", 404, "Not Found", Message(), None
             )
             result = fetch_cover("https://example.com/cover.jpg")
 

@@ -4,9 +4,9 @@ import threading
 from collections import OrderedDict, defaultdict
 from datetime import datetime
 
-from yubal.core.enums import JobStatus
-from yubal.core.models import AlbumInfo, Job, LogEntry
-from yubal.core.types import AudioFormat, Clock, IdGenerator, LogStatus
+from yubal_api.core.enums import JobStatus
+from yubal_api.core.models import AlbumInfo, Job, LogEntry
+from yubal_api.core.types import AudioFormat, Clock, IdGenerator, LogStatus
 
 
 class JobStore:

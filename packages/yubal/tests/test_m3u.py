@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from yubal.models.domain import TrackMetadata, VideoType
 from yubal.utils.m3u import generate_m3u, write_m3u
 
@@ -88,9 +87,7 @@ class TestGenerateM3U:
         tmp_path: Path,
     ) -> None:
         """Should handle multiple tracks in correct order."""
-        track1_path = (
-            tmp_path / "Radiohead" / "1997 - OK Computer" / "01 - Airbag.opus"
-        )
+        track1_path = tmp_path / "Radiohead" / "1997 - OK Computer" / "01 - Airbag.opus"
         track2_path = tmp_path / "Coldplay" / "2000 - Parachutes" / "03 - Sparks.opus"
         m3u_path = tmp_path / "Playlists" / "My Playlist.m3u"
 
@@ -156,9 +153,7 @@ class TestWriteM3U:
         assert (tmp_path / "Playlists").exists()
         assert (tmp_path / "Playlists").is_dir()
 
-    def test_writes_m3u_file(
-        self, sample_track: TrackMetadata, tmp_path: Path
-    ) -> None:
+    def test_writes_m3u_file(self, sample_track: TrackMetadata, tmp_path: Path) -> None:
         """Should write M3U file with correct content."""
         track_path = tmp_path / "Radiohead" / "1997 - OK Computer" / "01 - Airbag.opus"
 

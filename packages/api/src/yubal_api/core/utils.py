@@ -2,7 +2,7 @@
 
 import re
 
-from yubal.core.enums import ImportType
+from yubal_api.core.enums import ImportType
 
 # Album playlist IDs start with this prefix
 _ALBUM_PREFIX = "OLAK5uy_"
