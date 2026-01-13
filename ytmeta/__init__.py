@@ -39,7 +39,9 @@ from ytmeta.services import (
     DownloadStatus,
     MetadataExtractorService,
     YTDLPDownloader,
+    tag_track,
 )
+from ytmeta.utils import clear_cover_cache, fetch_cover
 
 __version__ = "0.1.0"
 
@@ -112,6 +114,9 @@ __all__ = [
     "YTMetaError",
     "YTMusicClient",
     "YTMusicProtocol",
+    "clear_cover_cache",
     "create_downloader",
     "create_extractor",
+    "fetch_cover",
+    "tag_track",
 ]

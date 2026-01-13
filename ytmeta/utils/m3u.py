@@ -1,4 +1,8 @@
-"""M3U playlist file generation utilities."""
+"""M3U playlist file generation utilities.
+
+M3U files are written with UTF-8 encoding, which is the modern standard
+supported by most media players.
+"""
 
 import os
 from pathlib import Path
@@ -43,7 +47,10 @@ def generate_m3u(tracks: list[tuple[TrackMetadata, Path]], m3u_path: Path) -> st
         lines.append(f"#EXTINF:{duration},{display_title}")
 
         # Relative path from M3U file location to track file
-        relative_path = os.path.relpath(file_path, m3u_path.parent)
+        try:
+            relative_path = os.path.relpath(file_path, m3u_path.parent)
+        except ValueError:
+            relative_path = str(file_path)  # Fall back to absolute
         lines.append(relative_path)
 
     # Ensure trailing newline
@@ -81,7 +88,7 @@ def write_m3u(
 
     # Sanitize playlist name for safe filename
     safe_name = clean_filename(playlist_name)
-    if not safe_name:
+    if not safe_name or not safe_name.strip():
         safe_name = "Untitled Playlist"
 
     # Build M3U file path

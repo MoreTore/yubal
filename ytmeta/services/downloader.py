@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import yt_dlp
 
@@ -17,6 +17,8 @@ from ytmeta.models.domain import (
     DownloadStatus,
     TrackMetadata,
 )
+from ytmeta.services.tagger import tag_track
+from ytmeta.utils.cover import fetch_cover
 from ytmeta.utils.filename import build_track_path
 
 logger = logging.getLogger(__name__)
@@ -51,7 +53,7 @@ class YTDLPDownloader:
         """
         self._config = config
 
-    def _build_opts(self, output_path: Path) -> dict:
+    def _build_opts(self, output_path: Path) -> dict[str, Any]:
         """Build yt-dlp options for a download.
 
         Args:
@@ -94,6 +96,8 @@ class YTDLPDownloader:
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 ydl.download([url])
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except Exception as e:
             logger.error("Failed to download %s: %s", video_id, e)
             raise DownloadError(f"Failed to download {video_id}: {e}") from e
@@ -210,7 +214,15 @@ class DownloadService:
             DownloadResult with status, path, and any error information.
         """
         output_path = self._build_output_path(track)
-        video_id = self._get_video_id(track)
+
+        try:
+            video_id = self._get_video_id(track)
+        except DownloadError as e:
+            return DownloadResult(
+                track=track,
+                status=DownloadStatus.FAILED,
+                error=str(e),
+            )
 
         # Always skip existing files
         existing = self._get_expected_output_file(output_path)
@@ -227,6 +239,10 @@ class DownloadService:
             self._downloader.download(video_id, output_path)
             # Find the actual output file (yt-dlp adds extension)
             actual_path = self._get_expected_output_file(output_path) or output_path
+
+            # Tag the downloaded file
+            self._tag_file(actual_path, track)
+
             return DownloadResult(
                 track=track,
                 status=DownloadStatus.SUCCESS,
@@ -240,6 +256,22 @@ class DownloadService:
                 error=str(e),
                 video_id_used=video_id,
             )
+
+    def _tag_file(self, path: Path, track: TrackMetadata) -> None:
+        """Tag an audio file with track metadata.
+
+        Fetches cover art and applies all metadata tags.
+        Errors are logged but don't fail the download.
+
+        Args:
+            path: Path to the audio file.
+            track: Track metadata.
+        """
+        try:
+            cover = fetch_cover(track.cover_url)
+            tag_track(path, track, cover)
+        except Exception as e:
+            logger.warning("Failed to tag %s: %s", path, e)
 
     def download_tracks(
         self,

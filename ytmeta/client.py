@@ -52,6 +52,7 @@ class YTMusicClient:
         """
         self._ytm = ytmusic or YTMusic()
         self._config = config or APIConfig()
+        self._album_cache: dict[str, Album] = {}
 
     def get_playlist(self, playlist_id: str) -> Playlist:
         """Fetch a playlist by ID.
@@ -63,9 +64,13 @@ class YTMusicClient:
             Parsed Playlist model.
 
         Raises:
+            ValueError: If playlist_id is empty.
             PlaylistNotFoundError: If playlist doesn't exist or is inaccessible.
             APIError: If API request fails.
         """
+        if not playlist_id or not playlist_id.strip():
+            raise ValueError("playlist_id cannot be empty")
+
         logger.debug("Fetching playlist: %s", playlist_id)
         try:
             data = self._ytm.get_playlist(playlist_id, limit=None)
@@ -88,6 +93,8 @@ class YTMusicClient:
     def get_album(self, album_id: str) -> Album:
         """Fetch an album by ID.
 
+        Results are cached for the lifetime of the client instance.
+
         Args:
             album_id: YouTube Music album ID.
 
@@ -97,6 +104,10 @@ class YTMusicClient:
         Raises:
             APIError: If API request fails.
         """
+        if album_id in self._album_cache:
+            logger.debug("Album cache hit: %s", album_id)
+            return self._album_cache[album_id]
+
         logger.debug("Fetching album: %s", album_id)
         try:
             data = self._ytm.get_album(album_id)
@@ -104,7 +115,9 @@ class YTMusicClient:
             logger.error("Failed to fetch album %s: %s", album_id, e)
             raise APIError(f"Failed to fetch album: {e}") from e
 
-        return Album.model_validate(data)
+        album = Album.model_validate(data)
+        self._album_cache[album_id] = album
+        return album
 
     def search_songs(self, query: str) -> list[SearchResult]:
         """Search for songs.
@@ -131,3 +144,16 @@ class YTMusicClient:
             raise APIError(f"Search failed: {e}") from e
 
         return [SearchResult.model_validate(r) for r in data]
+
+    def clear_album_cache(self) -> None:
+        """Clear the album cache."""
+        self._album_cache.clear()
+        logger.debug("Album cache cleared")
+
+    def get_album_cache_size(self) -> int:
+        """Get the number of cached albums.
+
+        Returns:
+            Number of album IDs currently cached.
+        """
+        return len(self._album_cache)

@@ -2,6 +2,7 @@
 
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -286,6 +287,66 @@ class TestDownloadService:
         assert progress_list[1].result is not None
         assert progress_list[1].result.status == DownloadStatus.SUCCESS
         assert len(downloader.downloads) == 2  # Both were attempted
+
+    def test_tagging_error_does_not_fail_download(
+        self,
+        sample_track: TrackMetadata,
+        download_config: DownloadConfig,
+    ) -> None:
+        """Tagging errors should not cause download to fail."""
+        mock_downloader = MockDownloader()
+        service = DownloadService(download_config, mock_downloader)
+
+        with patch(
+            "ytmeta.services.downloader.tag_track",
+            side_effect=Exception("Tagging failed"),
+        ):
+            result = service.download_track(sample_track)
+
+        # Download should still succeed despite tagging error
+        assert result.status == DownloadStatus.SUCCESS
+        assert result.output_path is not None
+
+    def test_skipped_files_not_tagged(
+        self,
+        sample_track: TrackMetadata,
+        download_config: DownloadConfig,
+    ) -> None:
+        """Skipped files should not be tagged."""
+        mock_downloader = MockDownloader()
+        service = DownloadService(download_config, mock_downloader)
+
+        # First download
+        service.download_track(sample_track)
+
+        with patch("ytmeta.services.downloader.tag_track") as mock_tag:
+            # Second call should skip - no tagging
+            result = service.download_track(sample_track)
+
+        assert result.status == DownloadStatus.SKIPPED
+        mock_tag.assert_not_called()
+
+    def test_tagging_called_on_success(
+        self,
+        sample_track: TrackMetadata,
+        download_config: DownloadConfig,
+    ) -> None:
+        """Tagging should be called after successful download."""
+        mock_downloader = MockDownloader()
+        service = DownloadService(download_config, mock_downloader)
+
+        with patch("ytmeta.services.downloader.tag_track") as mock_tag:
+            with patch(
+                "ytmeta.services.downloader.fetch_cover", return_value=b"cover data"
+            ):
+                result = service.download_track(sample_track)
+
+        assert result.status == DownloadStatus.SUCCESS
+        mock_tag.assert_called_once()
+        # Verify cover was passed to tag_track
+        call_args = mock_tag.call_args[0]
+        assert call_args[1] == sample_track  # track metadata
+        assert call_args[2] == b"cover data"  # cover bytes
 
 
 class TestDownloadResult:

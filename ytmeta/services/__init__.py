@@ -13,6 +13,7 @@ from ytmeta.services.downloader import (
     YTDLPDownloader,
 )
 from ytmeta.services.extractor import MetadataExtractorService
+from ytmeta.services.tagger import tag_track
 
 __all__ = [
     "DownloadProgress",
@@ -24,4 +25,5 @@ __all__ = [
     "MetadataExtractorService",
     "PlaylistInfo",
     "YTDLPDownloader",
+    "tag_track",
 ]
