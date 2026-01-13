@@ -1,5 +1,7 @@
 """Tests for services."""
 
+import logging
+
 import pytest
 
 from tests.conftest import MockYTMusicClient
@@ -762,6 +764,253 @@ class TestMetadataExtractorService:
 
         # Should default to OMV
         assert tracks[0].video_type == VideoType.OMV
+
+    def test_extract_fuzzy_match_high_confidence(
+        self,
+    ) -> None:
+        """Should match track by fuzzy title with high confidence (>80%)."""
+        playlist = Playlist.model_validate(
+            {
+                "tracks": [
+                    {
+                        "videoId": "v1",
+                        "videoType": "MUSIC_VIDEO_TYPE_OMV",
+                        "title": "Song Title (Remaster)",  # Similar but not exact
+                        "artists": [{"name": "Artist"}],
+                        "album": {"id": "alb1", "name": "Album"},
+                        "thumbnails": [
+                            {"url": "https://t.jpg", "width": 120, "height": 90}
+                        ],
+                        "duration_seconds": 999,  # Different duration
+                    }
+                ]
+            }
+        )
+
+        album = Album.model_validate(
+            {
+                "title": "Album",
+                "artists": [{"name": "Artist"}],
+                "thumbnails": [{"url": "https://t.jpg", "width": 544, "height": 544}],
+                "tracks": [
+                    {
+                        "videoId": "album_v1",
+                        "title": "Song Title (Remastered)",  # Very similar
+                        "artists": [{"name": "Artist"}],
+                        "trackNumber": 3,
+                        "duration_seconds": 180,
+                    }
+                ],
+            }
+        )
+
+        mock = MockYTMusicClient(playlist=playlist, album=album, search_results=[])
+        service = MetadataExtractorService(mock)
+        tracks = service.extract("https://music.youtube.com/playlist?list=PLtest")
+
+        # Should have matched via fuzzy matching
+        assert tracks[0].track_number == 3
+        assert tracks[0].omv_video_id == "album_v1"
+
+    def test_extract_fuzzy_match_medium_confidence_with_warning(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Should match with warning for medium confidence (50-80%)."""
+        playlist = Playlist.model_validate(
+            {
+                "tracks": [
+                    {
+                        "videoId": "v1",
+                        "videoType": "MUSIC_VIDEO_TYPE_OMV",
+                        "title": "My Song - Radio Edit",  # Moderately similar
+                        "artists": [{"name": "Artist"}],
+                        "album": {"id": "alb1", "name": "Album"},
+                        "thumbnails": [
+                            {"url": "https://t.jpg", "width": 120, "height": 90}
+                        ],
+                        "duration_seconds": 999,
+                    }
+                ]
+            }
+        )
+
+        album = Album.model_validate(
+            {
+                "title": "Album",
+                "artists": [{"name": "Artist"}],
+                "thumbnails": [{"url": "https://t.jpg", "width": 544, "height": 544}],
+                "tracks": [
+                    {
+                        "videoId": "album_v1",
+                        "title": "My Song (Extended Mix)",  # Different version
+                        "artists": [{"name": "Artist"}],
+                        "trackNumber": 5,
+                        "duration_seconds": 300,
+                    }
+                ],
+            }
+        )
+
+        mock = MockYTMusicClient(playlist=playlist, album=album, search_results=[])
+        service = MetadataExtractorService(mock)
+
+        with caplog.at_level(logging.WARNING):
+            tracks = service.extract("https://music.youtube.com/playlist?list=PLtest")
+
+        # Should match but with warning
+        assert tracks[0].track_number == 5
+        assert "Fuzzy match" in caplog.text
+
+    def test_extract_fuzzy_match_low_confidence_rejected(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Should reject fuzzy match with low confidence (<50%)."""
+        playlist = Playlist.model_validate(
+            {
+                "tracks": [
+                    {
+                        "videoId": "v1",
+                        "videoType": "MUSIC_VIDEO_TYPE_OMV",
+                        "title": "Completely Different Title",  # Very different
+                        "artists": [{"name": "Artist"}],
+                        "album": {"id": "alb1", "name": "Album"},
+                        "thumbnails": [
+                            {"url": "https://t.jpg", "width": 120, "height": 90}
+                        ],
+                        "duration_seconds": 999,
+                    }
+                ]
+            }
+        )
+
+        album = Album.model_validate(
+            {
+                "title": "Album",
+                "artists": [{"name": "Artist"}],
+                "thumbnails": [{"url": "https://t.jpg", "width": 544, "height": 544}],
+                "tracks": [
+                    {
+                        "videoId": "album_v1",
+                        "title": "Another Song Entirely",
+                        "artists": [{"name": "Artist"}],
+                        "trackNumber": 1,
+                        "duration_seconds": 180,
+                    }
+                ],
+            }
+        )
+
+        mock = MockYTMusicClient(playlist=playlist, album=album, search_results=[])
+        service = MetadataExtractorService(mock)
+
+        with caplog.at_level(logging.WARNING):
+            tracks = service.extract("https://music.youtube.com/playlist?list=PLtest")
+
+        # Should NOT have matched - track_number should be None
+        assert tracks[0].track_number is None
+        assert "No confident match" in caplog.text
+
+    def test_extract_fuzzy_match_selects_best_match(
+        self,
+    ) -> None:
+        """Should select the track with highest similarity score."""
+        playlist = Playlist.model_validate(
+            {
+                "tracks": [
+                    {
+                        "videoId": "v1",
+                        "videoType": "MUSIC_VIDEO_TYPE_OMV",
+                        "title": "Love Song",
+                        "artists": [{"name": "Artist"}],
+                        "album": {"id": "alb1", "name": "Album"},
+                        "thumbnails": [
+                            {"url": "https://t.jpg", "width": 120, "height": 90}
+                        ],
+                        "duration_seconds": 999,
+                    }
+                ]
+            }
+        )
+
+        album = Album.model_validate(
+            {
+                "title": "Album",
+                "artists": [{"name": "Artist"}],
+                "thumbnails": [{"url": "https://t.jpg", "width": 544, "height": 544}],
+                "tracks": [
+                    {
+                        "videoId": "album_v1",
+                        "title": "Hate Song",  # Less similar
+                        "artists": [{"name": "Artist"}],
+                        "trackNumber": 1,
+                        "duration_seconds": 180,
+                    },
+                    {
+                        "videoId": "album_v2",
+                        "title": "Love Song (Live)",  # More similar
+                        "artists": [{"name": "Artist"}],
+                        "trackNumber": 2,
+                        "duration_seconds": 200,
+                    },
+                    {
+                        "videoId": "album_v3",
+                        "title": "Other Track",  # Not similar
+                        "artists": [{"name": "Artist"}],
+                        "trackNumber": 3,
+                        "duration_seconds": 220,
+                    },
+                ],
+            }
+        )
+
+        mock = MockYTMusicClient(playlist=playlist, album=album, search_results=[])
+        service = MetadataExtractorService(mock)
+        tracks = service.extract("https://music.youtube.com/playlist?list=PLtest")
+
+        # Should have selected "Love Song (Live)" as best match
+        assert tracks[0].track_number == 2
+        assert tracks[0].omv_video_id == "album_v2"
+
+    def test_extract_fuzzy_match_empty_album_tracks(
+        self,
+    ) -> None:
+        """Should handle empty album tracks list gracefully."""
+        playlist = Playlist.model_validate(
+            {
+                "tracks": [
+                    {
+                        "videoId": "v1",
+                        "videoType": "MUSIC_VIDEO_TYPE_OMV",
+                        "title": "Test Song",
+                        "artists": [{"name": "Artist"}],
+                        "album": {"id": "alb1", "name": "Album"},
+                        "thumbnails": [
+                            {"url": "https://t.jpg", "width": 120, "height": 90}
+                        ],
+                        "duration_seconds": 180,
+                    }
+                ]
+            }
+        )
+
+        album = Album.model_validate(
+            {
+                "title": "Album",
+                "artists": [{"name": "Artist"}],
+                "thumbnails": [{"url": "https://t.jpg", "width": 544, "height": 544}],
+                "tracks": [],  # Empty tracks list
+            }
+        )
+
+        mock = MockYTMusicClient(playlist=playlist, album=album, search_results=[])
+        service = MetadataExtractorService(mock)
+        tracks = service.extract("https://music.youtube.com/playlist?list=PLtest")
+
+        # Should fall back to original track info
+        assert tracks[0].track_number is None
+        assert tracks[0].omv_video_id == "v1"
 
     def test_extract_album_fetch_failure_uses_fallback(
         self,

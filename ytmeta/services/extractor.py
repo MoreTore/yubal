@@ -4,6 +4,8 @@ import asyncio
 import logging
 from collections.abc import Callable
 
+from rapidfuzz import process
+
 from ytmeta.client import YTMusicProtocol
 from ytmeta.models.domain import TrackMetadata, VideoType
 from ytmeta.models.ytmusic import Album, AlbumTrack, PlaylistTrack
@@ -156,7 +158,7 @@ class MetadataExtractorService:
     def _find_track_in_album(
         self, album: Album, track: PlaylistTrack
     ) -> AlbumTrack | None:
-        """Find a track in album by video_id, title, or duration.
+        """Find a track in album by video_id, title, duration, or fuzzy title match.
 
         Args:
             album: Album to search in.
@@ -174,7 +176,7 @@ class MetadataExtractorService:
             if album_track.video_id == target_video_id:
                 return album_track
 
-        # Second try: match by title
+        # Second try: match by title (exact, case-insensitive)
         for album_track in album.tracks:
             if album_track.title.lower().strip() == target_title:
                 return album_track
@@ -185,7 +187,58 @@ class MetadataExtractorService:
             if len(matches) == 1:
                 return matches[0]
 
-        return None
+        # Fourth try: fuzzy title match using rapidfuzz
+        return self._find_track_by_fuzzy_title(album, track.title)
+
+    def _find_track_by_fuzzy_title(
+        self, album: Album, title: str
+    ) -> AlbumTrack | None:
+        """Find a track using fuzzy/similarity title matching.
+
+        Uses rapidfuzz to find the best matching track title.
+        Returns the match if similarity is above 50%, with a warning for
+        scores between 50-80%.
+
+        Args:
+            album: Album to search in.
+            title: Title to match against.
+
+        Returns:
+            Best matching album track or None if no confident match.
+        """
+        if not album.tracks:
+            return None
+
+        # Build a mapping from title to track for lookup
+        candidates: dict[str, AlbumTrack] = {t.title: t for t in album.tracks}
+
+        result = process.extractOne(title, candidates.keys())
+        if not result:
+            return None
+
+        matched_title, score, _ = result
+
+        if score > 80:
+            # High confidence - auto-accept
+            return candidates[matched_title]
+        elif score > 50:
+            # Medium confidence - warn but use it
+            logger.warning(
+                "Fuzzy match: '%s' -> '%s' (%.0f%%)",
+                title,
+                matched_title,
+                score,
+            )
+            return candidates[matched_title]
+        else:
+            # Low confidence - too risky
+            logger.warning(
+                "No confident match for '%s' (best: '%s' @ %.0f%%)",
+                title,
+                matched_title,
+                score,
+            )
+            return None
 
     def _build_metadata_from_album(
         self,
