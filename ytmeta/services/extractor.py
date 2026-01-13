@@ -1,12 +1,12 @@
 """Metadata extraction service."""
 
 import logging
-from collections.abc import Callable
+from collections.abc import Iterator
 
 from rapidfuzz import process
 
 from ytmeta.client import YTMusicProtocol
-from ytmeta.models.domain import TrackMetadata, VideoType
+from ytmeta.models.domain import ExtractProgress, TrackMetadata, VideoType
 from ytmeta.models.ytmusic import Album, AlbumTrack, PlaylistTrack
 from ytmeta.utils import format_artists, get_square_thumbnail, parse_playlist_id
 
@@ -33,16 +33,58 @@ class MetadataExtractorService:
         """
         self._client = client
 
-    def extract(
-        self,
-        url: str,
-        on_progress: Callable[[int, int], None] | None = None,
-    ) -> list[TrackMetadata]:
+    def extract(self, url: str) -> Iterator[ExtractProgress]:
         """Extract metadata for all tracks in a playlist.
+
+        Yields progress updates as each track is processed. Use extract_all()
+        for a simpler interface that returns all results at once.
 
         Args:
             url: YouTube Music playlist URL.
-            on_progress: Optional callback for progress updates (current, total).
+
+        Yields:
+            ExtractProgress with current/total counts and the extracted track.
+            The track field may be a fallback if extraction failed for that track.
+
+        Raises:
+            PlaylistParseError: If URL is invalid.
+            PlaylistNotFoundError: If playlist doesn't exist.
+            APIError: If API requests fail.
+
+        Example:
+            >>> for progress in extractor.extract(url):
+            ...     print(f"[{progress.current}/{progress.total}]")
+        """
+        playlist_id = parse_playlist_id(url)
+        logger.info("Extracting metadata for playlist: %s", playlist_id)
+
+        playlist = self._client.get_playlist(playlist_id)
+        total = len(playlist.tracks)
+        logger.info("Found %d tracks in playlist", total)
+
+        for i, track in enumerate(playlist.tracks):
+            try:
+                metadata = self._extract_track(track)
+            except Exception as e:
+                logger.warning(
+                    "Failed to extract track '%s': %s",
+                    track.title,
+                    e,
+                )
+                # Continue with partial results instead of failing entirely
+                metadata = self._create_fallback_metadata(track)
+
+            yield ExtractProgress(current=i + 1, total=total, track=metadata)
+
+        logger.info("Extracted metadata for %d tracks", total)
+
+    def extract_all(self, url: str) -> list[TrackMetadata]:
+        """Extract metadata for all tracks in a playlist.
+
+        Convenience method that collects all results from extract().
+
+        Args:
+            url: YouTube Music playlist URL.
 
         Returns:
             List of extracted track metadata.
@@ -52,33 +94,7 @@ class MetadataExtractorService:
             PlaylistNotFoundError: If playlist doesn't exist.
             APIError: If API requests fail.
         """
-        playlist_id = parse_playlist_id(url)
-        logger.info("Extracting metadata for playlist: %s", playlist_id)
-
-        playlist = self._client.get_playlist(playlist_id)
-        total = len(playlist.tracks)
-        logger.info("Found %d tracks in playlist", total)
-
-        results: list[TrackMetadata] = []
-
-        for i, track in enumerate(playlist.tracks):
-            if on_progress:
-                on_progress(i + 1, total)
-
-            try:
-                metadata = self._extract_track(track)
-                results.append(metadata)
-            except Exception as e:
-                logger.warning(
-                    "Failed to extract track '%s': %s",
-                    track.title,
-                    e,
-                )
-                # Continue with partial results instead of failing entirely
-                results.append(self._create_fallback_metadata(track))
-
-        logger.info("Extracted metadata for %d tracks", len(results))
-        return results
+        return [p.track for p in self.extract(url) if p.track is not None]
 
     def _extract_track(self, track: PlaylistTrack) -> TrackMetadata:
         """Extract metadata for a single track.

@@ -4,6 +4,7 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from ytmeta.config import AudioCodec, DownloadConfig
 from ytmeta.exceptions import DownloadError
@@ -188,36 +189,68 @@ class TestDownloadService:
         mock_downloader = MockDownloader()
         service = DownloadService(download_config, mock_downloader)
 
-        results = service.download_tracks([sample_track, sample_track_no_atv])
+        progress_list = list(
+            service.download_tracks([sample_track, sample_track_no_atv])
+        )
 
-        assert len(results) == 2
-        assert all(r.status == DownloadStatus.SUCCESS for r in results)
+        assert len(progress_list) == 2
+        assert all(
+            p.result is not None and p.result.status == DownloadStatus.SUCCESS
+            for p in progress_list
+        )
         assert len(mock_downloader.downloads) == 2
 
-    def test_download_tracks_with_progress_callback(
+    def test_download_tracks_all_convenience_method(
         self,
         sample_track: TrackMetadata,
         sample_track_no_atv: TrackMetadata,
         download_config: DownloadConfig,
     ) -> None:
-        """Should call progress callback for each track."""
+        """Should download all tracks using convenience method."""
         mock_downloader = MockDownloader()
         service = DownloadService(download_config, mock_downloader)
 
-        progress_calls: list[tuple[int, int, DownloadResult]] = []
+        results = service.download_tracks_all([sample_track, sample_track_no_atv])
 
-        def on_progress(current: int, total: int, result: DownloadResult) -> None:
-            progress_calls.append((current, total, result))
+        assert len(results) == 2
+        assert all(r.status == DownloadStatus.SUCCESS for r in results)
+        assert len(mock_downloader.downloads) == 2
 
-        service.download_tracks(
-            [sample_track, sample_track_no_atv],
-            on_progress=on_progress,
+    def test_download_tracks_yields_progress(
+        self,
+        sample_track: TrackMetadata,
+        sample_track_no_atv: TrackMetadata,
+        download_config: DownloadConfig,
+    ) -> None:
+        """Should yield progress updates for each track."""
+        mock_downloader = MockDownloader()
+        service = DownloadService(download_config, mock_downloader)
+
+        progress_list = list(
+            service.download_tracks([sample_track, sample_track_no_atv])
         )
 
-        assert len(progress_calls) == 2
-        assert progress_calls[0][0] == 1  # current
-        assert progress_calls[0][1] == 2  # total
-        assert progress_calls[1][0] == 2
+        assert len(progress_list) == 2
+        assert progress_list[0].current == 1
+        assert progress_list[0].total == 2
+        assert progress_list[1].current == 2
+        assert progress_list[1].total == 2
+        assert progress_list[0].result is not None
+        assert progress_list[1].result is not None
+
+    def test_download_progress_model_is_frozen(
+        self,
+        sample_track: TrackMetadata,
+        download_config: DownloadConfig,
+    ) -> None:
+        """DownloadProgress should be immutable."""
+        mock_downloader = MockDownloader()
+        service = DownloadService(download_config, mock_downloader)
+
+        progress_list = list(service.download_tracks([sample_track]))
+
+        with pytest.raises(ValidationError):
+            progress_list[0].current = 999  # type: ignore
 
     def test_download_tracks_continues_on_failure(
         self,
@@ -243,11 +276,15 @@ class TestDownloadService:
         downloader = SelectiveFailDownloader()
         service = DownloadService(download_config, downloader)
 
-        results = service.download_tracks([sample_track, sample_track_no_atv])
+        progress_list = list(
+            service.download_tracks([sample_track, sample_track_no_atv])
+        )
 
-        assert len(results) == 2
-        assert results[0].status == DownloadStatus.FAILED
-        assert results[1].status == DownloadStatus.SUCCESS
+        assert len(progress_list) == 2
+        assert progress_list[0].result is not None
+        assert progress_list[0].result.status == DownloadStatus.FAILED
+        assert progress_list[1].result is not None
+        assert progress_list[1].result.status == DownloadStatus.SUCCESS
         assert len(downloader.downloads) == 2  # Both were attempted
 
 

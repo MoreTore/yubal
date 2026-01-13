@@ -30,9 +30,10 @@ from ytmeta.exceptions import (
     PlaylistParseError,
     YTMetaError,
 )
-from ytmeta.models.domain import TrackMetadata, VideoType
+from ytmeta.models.domain import ExtractProgress, TrackMetadata, VideoType
 from ytmeta.services import (
     DownloaderProtocol,
+    DownloadProgress,
     DownloadResult,
     DownloadService,
     DownloadStatus,
@@ -96,10 +97,12 @@ __all__ = [
     "AudioCodec",
     "DownloadConfig",
     "DownloadError",
+    "DownloadProgress",
     "DownloadResult",
     "DownloadService",
     "DownloadStatus",
     "DownloaderProtocol",
+    "ExtractProgress",
     "MetadataExtractorService",
     "PlaylistNotFoundError",
     "PlaylistParseError",

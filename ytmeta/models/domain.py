@@ -3,9 +3,11 @@
 These are the public models that represent the output of the library.
 """
 
+from __future__ import annotations
+
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class VideoType(StrEnum):
@@ -44,3 +46,21 @@ class TrackMetadata(BaseModel):
     def primary_album_artist(self) -> str:
         """First album artist for path construction."""
         return self.album_artists[0] if self.album_artists else "Unknown Artist"
+
+
+class ExtractProgress(BaseModel):
+    """Progress update during metadata extraction.
+
+    Yielded by MetadataExtractorService.extract() to report progress.
+
+    Attributes:
+        current: Number of tracks processed so far (1-indexed).
+        total: Total number of tracks in the playlist.
+        track: Extracted track metadata, or None if extraction failed for this track.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    current: int
+    total: int
+    track: TrackMetadata | None = None

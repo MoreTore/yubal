@@ -28,7 +28,6 @@ from ytmeta.config import DownloadConfig
 from ytmeta.exceptions import YTMetaError
 from ytmeta.models.domain import TrackMetadata
 from ytmeta.services import (
-    DownloadResult,
     DownloadService,
     DownloadStatus,
     MetadataExtractorService,
@@ -111,7 +110,7 @@ def meta_cmd(url: str, as_json: bool) -> None:
     try:
         client = YTMusicClient()
         service = MetadataExtractorService(client)
-        tracks = service.extract(url)
+        tracks = service.extract_all(url)
 
         if as_json:
             data = [t.model_dump() for t in tracks]
@@ -171,6 +170,7 @@ def download_cmd(
         client = YTMusicClient()
         extractor = MetadataExtractorService(client)
 
+        tracks: list[TrackMetadata] = []
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -181,10 +181,14 @@ def download_cmd(
         ) as progress:
             task = progress.add_task("Extracting metadata", total=None)
 
-            def on_extract_progress(current: int, total: int) -> None:
-                progress.update(task, completed=current, total=total)
-
-            tracks = extractor.extract(url, on_progress=on_extract_progress)
+            for extract_progress in extractor.extract(url):
+                progress.update(
+                    task,
+                    completed=extract_progress.current,
+                    total=extract_progress.total,
+                )
+                if extract_progress.track:
+                    tracks.append(extract_progress.track)
 
         console.print(f"[green]Found {len(tracks)} tracks[/green]\n")
 
@@ -214,6 +218,7 @@ def download_cmd(
         )
         downloader = DownloadService(config)
 
+        results = []
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -224,19 +229,22 @@ def download_cmd(
         ) as progress:
             overall_task = progress.add_task("Downloading", total=len(tracks))
 
-            def on_progress(current: int, total: int, result: DownloadResult) -> None:
-                status_icon = {
-                    DownloadStatus.SUCCESS: "[green]OK[/green]",
-                    DownloadStatus.SKIPPED: "[yellow]SKIP[/yellow]",
-                    DownloadStatus.FAILED: "[red]FAIL[/red]",
-                }
-                progress.update(overall_task, completed=current)
-                console.print(
-                    f"  [{current}/{total}] {result.track.artist} - "
-                    f"{result.track.title}: {status_icon[result.status]}"
-                )
+            status_icon = {
+                DownloadStatus.SUCCESS: "[green]OK[/green]",
+                DownloadStatus.SKIPPED: "[yellow]SKIP[/yellow]",
+                DownloadStatus.FAILED: "[red]FAIL[/red]",
+            }
 
-            results = downloader.download_tracks(tracks, on_progress=on_progress)
+            for download_progress in downloader.download_tracks(tracks):
+                result = download_progress.result
+                if result:
+                    results.append(result)
+                    progress.update(overall_task, completed=download_progress.current)
+                    console.print(
+                        f"  [{download_progress.current}/{download_progress.total}] "
+                        f"{result.track.artist} - {result.track.title}: "
+                        f"{status_icon[result.status]}"
+                    )
 
         # Step 3: Show results summary
         console.print()

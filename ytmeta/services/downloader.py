@@ -1,13 +1,16 @@
 """Download service for YouTube Music tracks using yt-dlp."""
 
+from __future__ import annotations
+
 import logging
-from collections.abc import Callable
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
 import yt_dlp
+from pydantic import BaseModel, ConfigDict
 
 from ytmeta.config import DownloadConfig
 from ytmeta.exceptions import DownloadError
@@ -42,6 +45,24 @@ class DownloadResult:
     output_path: Path | None = None
     error: str | None = None
     video_id_used: str | None = None
+
+
+class DownloadProgress(BaseModel):
+    """Progress update during track download.
+
+    Yielded by DownloadService.download_tracks() to report progress.
+
+    Attributes:
+        current: Number of tracks processed so far (1-indexed).
+        total: Total number of tracks to download.
+        result: Download result for the current track.
+    """
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    current: int
+    total: int
+    result: DownloadResult | None = None
 
 
 class DownloaderProtocol(Protocol):
@@ -266,19 +287,22 @@ class DownloadService:
     def download_tracks(
         self,
         tracks: list[TrackMetadata],
-        on_progress: Callable[[int, int, DownloadResult], None] | None = None,
-    ) -> list[DownloadResult]:
+    ) -> Iterator[DownloadProgress]:
         """Download multiple tracks.
+
+        Yields progress updates as each track is downloaded. Use download_tracks_all()
+        for a simpler interface that returns all results at once.
 
         Args:
             tracks: List of track metadata to download.
-            on_progress: Optional callback for progress updates
-                (current, total, result).
 
-        Returns:
-            List of DownloadResults.
+        Yields:
+            DownloadProgress with current/total counts and the download result.
+
+        Example:
+            >>> for progress in downloader.download_tracks(tracks):
+            ...     print(f"[{progress.current}/{progress.total}]")
         """
-        results: list[DownloadResult] = []
         total = len(tracks)
 
         for i, track in enumerate(tracks):
@@ -291,10 +315,28 @@ class DownloadService:
             )
 
             result = self.download_track(track)
-            results.append(result)
+            yield DownloadProgress(current=i + 1, total=total, result=result)
 
-            if on_progress:
-                on_progress(i + 1, total, result)
+        # Log summary (need to iterate to count, but we've already yielded)
+        # Summary logging is now the caller's responsibility
+
+    def download_tracks_all(
+        self,
+        tracks: list[TrackMetadata],
+    ) -> list[DownloadResult]:
+        """Download multiple tracks and return all results.
+
+        Convenience method that collects all results from download_tracks().
+
+        Args:
+            tracks: List of track metadata to download.
+
+        Returns:
+            List of DownloadResults.
+        """
+        results = [
+            p.result for p in self.download_tracks(tracks) if p.result is not None
+        ]
 
         # Log summary
         success = sum(1 for r in results if r.status == DownloadStatus.SUCCESS)
