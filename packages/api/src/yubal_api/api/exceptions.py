@@ -9,7 +9,7 @@ class YubalError(Exception):
 class JobConflictError(YubalError):
     """Raised when a job operation conflicts with existing state."""
 
-    def __init__(self, message: str, active_job_id: str | None = None):
+    def __init__(self, message: str, active_job_id: str | None = None) -> None:
         self.message = message
         self.active_job_id = active_job_id
         super().__init__(message)
@@ -18,7 +18,7 @@ class JobConflictError(YubalError):
 class JobNotFoundError(YubalError):
     """Raised when a job is not found."""
 
-    def __init__(self, job_id: str):
+    def __init__(self, job_id: str) -> None:
         self.job_id = job_id
         super().__init__(f"Job {job_id} not found")
 

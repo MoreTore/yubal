@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from mutagen import File as MutagenFile
 from yubal import (
@@ -81,7 +82,8 @@ class SyncService:
         self,
         url: str,
         progress_callback: (
-            Callable[[ProgressStep, str, float | None, dict | None], None] | None
+            Callable[[ProgressStep, str, float | None, dict[str, Any] | None], None]
+            | None
         ),
         cancel_token: CancelToken,
     ) -> SyncResult:
@@ -105,7 +107,7 @@ class SyncService:
             step: ProgressStep,
             msg: str,
             pct: float | None = None,
-            details: dict | None = None,
+            details: dict[str, Any] | None = None,
         ) -> None:
             if progress_callback:
                 progress_callback(step, msg, pct, details)

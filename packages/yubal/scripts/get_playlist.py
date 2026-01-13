@@ -14,7 +14,7 @@ def parse_playlist_id(url: str) -> str:
     return match.group(1) if match else url
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python debug_playlist.py <playlist_url_or_id>")
         sys.exit(1)

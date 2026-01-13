@@ -81,7 +81,7 @@ class JobExecutor:
                 step: ProgressStep,
                 message: str,
                 progress: float | None,
-                details: dict | None,
+                details: dict[str, Any] | None,
             ) -> None:
                 if cancel_token.is_cancelled():
                     return
@@ -148,7 +148,7 @@ class JobExecutor:
         }.get(step, JobStatus.DOWNLOADING)
 
     @staticmethod
-    def _parse_album_info(details: dict) -> AlbumInfo | None:
+    def _parse_album_info(details: dict[str, Any]) -> AlbumInfo | None:
         """Extract album info from details dict."""
         if data := details.get("album_info"):
             try:

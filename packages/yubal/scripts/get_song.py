@@ -22,7 +22,7 @@ def parse_video_id(url: str) -> str:
     return url
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python debug_song.py <video_url_or_id>")
         sys.exit(1)
