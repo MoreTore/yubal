@@ -213,7 +213,9 @@ class SyncService:
             # Generate M3U for playlists (not albums)
             if playlist_info.title and not is_album_playlist(playlist_info.playlist_id):
                 emit(ProgressStep.IMPORTING, "Generating playlist file...", 95.0)
-                tracks_for_m3u = [(r.track, r.output_path) for r in downloaded]
+                tracks_for_m3u = [
+                    (r.track, r.output_path) for r in downloaded if r.output_path
+                ]
                 m3u_path = write_m3u(
                     self._base_path, playlist_info.title, tracks_for_m3u
                 )

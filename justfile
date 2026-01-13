@@ -7,7 +7,7 @@ default:
     @just --list
 
 install:
-    uv sync
+    uv sync --all-packages
     cd web && bun install
 
 cli *args:
