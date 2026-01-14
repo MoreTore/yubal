@@ -1,4 +1,5 @@
 /data/
+/ytdlp/
 .env
 .env.docker
 *.tsbuildinfo

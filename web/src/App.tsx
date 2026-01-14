@@ -42,7 +42,7 @@ export default function App() {
             </div>
             <Badge
               color="secondary"
-              content="beta"
+              content="new"
               size="sm"
               isInvisible={urlType != UrlType.PLAYLIST}
             >

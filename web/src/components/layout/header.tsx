@@ -211,7 +211,7 @@ export function Header() {
                   aria-label="Cookie options"
                   isLoading={isDeleting}
                 >
-                  <Cookie className="text-success h-5 w-5" />
+                  <Cookie className="text-amber-500 dark:text-orange-300 h-5 w-5" />
                 </Button>
               </DropdownTrigger>
               <DropdownMenu

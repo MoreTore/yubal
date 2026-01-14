@@ -25,7 +25,7 @@ export function DownloadsPanel({
         badge={
           jobs.length > 0 && (
             <span className="text-foreground-400 font-mono text-xs">
-              {jobs.length}
+              ({jobs.length})
             </span>
           )
         }

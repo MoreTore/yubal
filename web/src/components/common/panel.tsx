@@ -11,7 +11,7 @@ export const Panel = forwardRef<HTMLElement, PanelProps>(
     return (
       <section
         ref={ref}
-        className={`border-divider bg-content1 rounded-large border-small flex flex-col overflow-hidden ${className}`}
+        className={`bg-content1 rounded-large flex flex-col overflow-hidden ${className}`}
         {...props}
       >
         {children}
@@ -39,16 +39,16 @@ export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
         className={`shrink-0 px-4 py-3 ${className}`}
         {...props}
       >
-        <div className={`flex items-center gap-2 ${className}`} {...props}>
+        <div className={`flex items-center gap-2 text-foreground-500 ${className}`} {...props}>
           {leadingIcon && (
-            <span className="text-foreground-500">{leadingIcon}</span>
+            <span>{leadingIcon}</span>
           )}
-          <span className="text-foreground-500 font-mono text-xs tracking-widest uppercase">
+          <span className="text-xs tracking-wider uppercase">
             {children}
           </span>
           {badge}
           {trailingIcon && (
-            <span className="text-foreground-500 ml-auto">{trailingIcon}</span>
+            <span className="ml-auto">{trailingIcon}</span>
           )}
         </div>
       </header>
@@ -65,15 +65,13 @@ export interface PanelContentProps extends HTMLAttributes<HTMLDivElement> {
 export const PanelContent = forwardRef<HTMLDivElement, PanelContentProps>(
   ({ children, className = "", height = "h-72", ...props }, ref) => {
     return (
-      <div className="border-divider border-t-small">
-        <ScrollShadow
-          ref={ref}
-          className={`${height} p-3 ${className}`}
-          {...props}
-        >
-          {children}
-        </ScrollShadow>
-      </div>
+      <ScrollShadow
+        ref={ref}
+        className={`${height} p-3 ${className}`}
+        {...props}
+      >
+        {children}
+      </ScrollShadow>
     );
   },
 );
