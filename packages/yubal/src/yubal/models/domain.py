@@ -90,7 +90,7 @@ class DownloadResult(BaseModel):
             from mediafile import MediaFile
 
             audio = MediaFile(self.output_path)
-            return audio.bitrate
+            return audio.bitrate // 1000 if audio.bitrate else None
         except Exception:
             return None
 

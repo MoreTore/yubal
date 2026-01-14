@@ -43,7 +43,7 @@ export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
           {leadingIcon && (
             <span className="text-foreground-500">{leadingIcon}</span>
           )}
-          <span className="text-foreground-500 font-mono text-xs tracking-wider uppercase">
+          <span className="text-foreground-500 font-mono text-xs tracking-widest uppercase">
             {children}
           </span>
           {badge}
