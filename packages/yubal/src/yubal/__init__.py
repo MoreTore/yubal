@@ -21,13 +21,17 @@ For downloading tracks:
     >>> results = downloader.download_tracks(tracks)
 """
 
+from pathlib import Path
+
 from yubal.client import YTMusicClient, YTMusicProtocol
 from yubal.config import APIConfig, AudioCodec, DownloadConfig
 from yubal.exceptions import (
     APIError,
+    AuthenticationRequiredError,
     DownloadError,
     PlaylistNotFoundError,
     PlaylistParseError,
+    UnsupportedPlaylistError,
     YTMetaError,
 )
 from yubal.models.domain import ExtractProgress, TrackMetadata, VideoType
@@ -46,7 +50,10 @@ from yubal.utils import clear_cover_cache, fetch_cover
 __version__ = "0.1.0"
 
 
-def create_extractor(config: APIConfig | None = None) -> MetadataExtractorService:
+def create_extractor(
+    config: APIConfig | None = None,
+    cookies_path: Path | None = None,
+) -> MetadataExtractorService:
     """Create a configured metadata extractor.
 
     This is the recommended way to create an extractor for library usage.
@@ -54,6 +61,8 @@ def create_extractor(config: APIConfig | None = None) -> MetadataExtractorServic
 
     Args:
         config: Optional API configuration. Uses defaults if not provided.
+        cookies_path: Optional path to cookies.txt for YouTube Music authentication.
+                     Enables access to private playlists when provided.
 
     Returns:
         A configured MetadataExtractorService instance.
@@ -65,8 +74,11 @@ def create_extractor(config: APIConfig | None = None) -> MetadataExtractorServic
         # With custom config
         >>> config = APIConfig(search_limit=3)
         >>> extractor = create_extractor(config)
+
+        # With authentication
+        >>> extractor = create_extractor(cookies_path=Path("cookies.txt"))
     """
-    client = YTMusicClient(config=config)
+    client = YTMusicClient(config=config, cookies_path=cookies_path)
     return MetadataExtractorService(client)
 
 
@@ -97,6 +109,7 @@ __all__ = [
     "APIConfig",
     "APIError",
     "AudioCodec",
+    "AuthenticationRequiredError",
     "DownloadConfig",
     "DownloadError",
     "DownloadProgress",
@@ -109,6 +122,7 @@ __all__ = [
     "PlaylistNotFoundError",
     "PlaylistParseError",
     "TrackMetadata",
+    "UnsupportedPlaylistError",
     "VideoType",
     "YTDLPDownloader",
     "YTMetaError",

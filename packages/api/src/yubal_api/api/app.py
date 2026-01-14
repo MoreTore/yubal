@@ -40,6 +40,7 @@ def create_services() -> Services:
         job_store=job_store,
         base_path=settings.library_dir,
         audio_format=settings.audio_format,
+        cookies_path=settings.cookies_file,
     )
 
     return Services(

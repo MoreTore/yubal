@@ -32,10 +32,12 @@ class JobExecutor:
         job_store: JobExecutionStore,
         base_path: Path,
         audio_format: str = "opus",
+        cookies_path: Path | None = None,
     ) -> None:
         self._job_store = job_store
         self._base_path = base_path
         self._audio_format = audio_format
+        self._cookies_path = cookies_path
 
         # Internal state
         self._background_tasks: set[asyncio.Task[Any]] = set()
@@ -103,7 +105,9 @@ class JobExecutor:
                 )
 
             # Run sync in thread pool
-            sync_service = SyncService(self._base_path, self._audio_format)
+            sync_service = SyncService(
+                self._base_path, self._audio_format, self._cookies_path
+            )
             result = await asyncio.to_thread(
                 sync_service.execute,
                 url,

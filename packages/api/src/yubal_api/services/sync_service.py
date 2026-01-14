@@ -21,6 +21,10 @@ from yubal_api.core.enums import ProgressStep
 from yubal_api.core.models import AlbumInfo
 from yubal_api.services.sync.cancel import CancelToken
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class SyncResult:
@@ -67,16 +71,23 @@ class SyncService:
     Provides progress callbacks compatible with the job system.
     """
 
-    def __init__(self, base_path: Path, audio_format: str = "opus") -> None:
+    def __init__(
+        self,
+        base_path: Path,
+        audio_format: str = "opus",
+        cookies_path: Path | None = None,
+    ) -> None:
         """Initialize the sync service.
 
         Args:
             base_path: Base directory for downloads.
             audio_format: Audio format (opus, mp3, m4a).
+            cookies_path: Optional path to cookies.txt for YouTube Music auth.
         """
         self._base_path = base_path
         self._audio_format = audio_format
         self._codec = AudioCodec(audio_format)
+        self._cookies_path = cookies_path
 
     def execute(
         self,
@@ -120,7 +131,9 @@ class SyncService:
             # Phase 1: Extract metadata (0% -> 10%)
             emit(ProgressStep.FETCHING_INFO, "Extracting metadata...", 0.0)
 
-            extractor = create_extractor()
+            if self._cookies_path and self._cookies_path.exists():
+                logger.info("Using authenticated extractor with cookies")
+            extractor = create_extractor(cookies_path=self._cookies_path)
 
             for progress in extractor.extract(url):
                 if cancel_token.is_cancelled():
