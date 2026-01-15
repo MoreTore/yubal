@@ -100,7 +100,10 @@ def print_table(
 
     if is_limited:
         # Show "X of Y tracks" when limit is applied
-        msg = f"\nDownloading [cyan]{track_count}[/cyan] of [cyan]{playlist_total}[/cyan] tracks"
+        msg = (
+            f"\nDownloading [cyan]{track_count}[/cyan] "
+            f"of [cyan]{playlist_total}[/cyan] tracks"
+        )
     else:
         msg = f"\nExtracted {track_count} track(s)"
 
