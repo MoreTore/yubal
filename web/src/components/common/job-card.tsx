@@ -50,7 +50,7 @@ function StatusIcon({ status }: { status: JobStatus }) {
 
 function MetadataChip({ children }: { children: React.ReactNode }) {
   return (
-    <Chip size="sm" variant="faded" className="text-foreground-500">
+    <Chip size="sm" variant="flat" className="text-foreground-500">
       {children}
     </Chip>
   );
@@ -129,9 +129,8 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
 
   return (
     <div
-      className={`bg-content2 rounded-large px-3 py-2.5 transition-colors ${
-        job.status === "cancelled" ? "opacity-50" : ""
-      }`}
+      className={`bg-content2 shadow-small rounded-large px-3 py-2.5 transition-colors ${job.status === "cancelled" ? "opacity-50" : ""
+        }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

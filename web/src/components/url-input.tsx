@@ -14,9 +14,7 @@ export function UrlInput({ value, onChange, disabled }: UrlInputProps) {
   return (
     <Input
       isClearable
-      classNames={{
-        input: "text-foreground",
-      }}
+      variant="faded"
       type="url"
       placeholder="Album or playlist URL"
       value={value}
