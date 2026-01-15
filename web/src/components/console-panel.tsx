@@ -2,37 +2,12 @@ import { AnsiUp } from "ansi_up";
 import { ChevronDown, Terminal } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef } from "react";
-import type { Job } from "../hooks/use-jobs";
 import { useLocalStorage } from "../hooks/use-local-storage";
 import { useLogs } from "../hooks/use-logs";
-import { isActive } from "../lib/job-status";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
-interface ConsolePanelProps {
-  jobs: Job[];
-}
-
-function StatusIndicator({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: "bg-foreground-500",
-    fetching_info: "bg-foreground",
-    downloading: "bg-primary",
-    importing: "bg-secondary",
-    completed: "bg-success",
-    failed: "bg-danger",
-    cancelled: "bg-warning",
-  };
-  const color = colors[status] ?? "bg-foreground-500";
-  return (
-    <span
-      className={`inline-flex h-2 w-2 animate-pulse rounded-full ${color}`}
-    />
-  );
-}
-
-export function ConsolePanel({ jobs }: ConsolePanelProps) {
+export function ConsolePanel() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const currentJob = jobs.find((j) => isActive(j.status));
   const { lines, isConnected } = useLogs();
   const [isExpanded, setIsExpanded] = useLocalStorage(
     "yubal-console-expanded",
@@ -59,12 +34,9 @@ export function ConsolePanel({ jobs }: ConsolePanelProps) {
       onClick={() => setIsExpanded(!isExpanded)}
       leadingIcon={<Terminal size={18} />}
       badge={
-        <>
-          {currentJob && <StatusIndicator status={currentJob.status} />}
-          {!isConnected && (
-            <span className="text-warning text-xs">disconnected</span>
-          )}
-        </>
+        !isConnected && (
+          <span className="text-warning text-xs">disconnected</span>
+        )
       }
       trailingIcon={
         <motion.div

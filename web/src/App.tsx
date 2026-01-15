@@ -99,7 +99,7 @@ export default function App() {
               onCancel={cancelJob}
               onDelete={handleDelete}
             />
-            <ConsolePanel jobs={jobs} />
+            <ConsolePanel />
           </section>
         </BlurFade>
       </main>
