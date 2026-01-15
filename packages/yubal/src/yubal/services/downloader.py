@@ -251,6 +251,8 @@ class DownloadService:
             # Tag the downloaded file
             self._tag_file(actual_path, track)
 
+            logger.info("Downloaded: '%s'", actual_path)
+
             return DownloadResult(
                 track=track,
                 status=DownloadStatus.SUCCESS,

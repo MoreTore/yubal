@@ -336,11 +336,14 @@ def download_cmd(
                     dp = p.download_progress
                     progress.update(download_task, completed=dp.current, total=dp.total)
                     result = dp.result
-                    console.print(
+                    status_line = (
                         f"  [{dp.current}/{dp.total}] "
                         f"{result.track.artist} - {result.track.title}: "
                         f"{status_icon[result.status]}"
                     )
+                    if result.output_path:
+                        status_line += f" [dim]→ {result.output_path}[/dim]"
+                    console.print(status_line)
 
         # Get final result
         result = service.get_result()

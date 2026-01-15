@@ -84,7 +84,7 @@ class MetadataExtractorService:
             if max_items < len(playlist.tracks):
                 logger.info("Limiting to %d of %d tracks", max_items, playlist_total)
                 tracks = tracks[:max_items]
-                # Don't report unavailable count when actually truncating (outside scope)
+                # Don't report unavailable count when truncating (outside scope)
                 unavailable_count = 0
             limited = True
 
