@@ -44,9 +44,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     YUBAL_HOST=0.0.0.0 \
     YUBAL_PORT=8000 \
-    YUBAL_DATA_DIR=/app/data \
-    YUBAL_BEETS_DIR=/app/beets \
-    YUBAL_YTDLP_DIR=/app/ytdlp
+    YUBAL_LIBRARY=/app/library \
+    YUBAL_CONFIG=/app/config
 
 EXPOSE 8000
 

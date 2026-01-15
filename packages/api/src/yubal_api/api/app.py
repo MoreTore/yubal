@@ -38,7 +38,7 @@ def create_services() -> Services:
 
     job_executor = JobExecutor(
         job_store=job_store,
-        base_path=settings.library_dir,
+        base_path=settings.library,
         audio_format=settings.audio_format,
         cookies_path=settings.cookies_file,
     )
@@ -66,10 +66,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     services.close()
     clear_services()
 
-    temp_dir = get_settings().temp_dir
-    if temp_dir.exists():
-        logger.info("Cleaning up temp directory: %s", temp_dir)
-        shutil.rmtree(temp_dir, ignore_errors=True)
+    temp = get_settings().temp
+    if temp.exists():
+        logger.info("Cleaning up temp directory: %s", temp)
+        shutil.rmtree(temp, ignore_errors=True)
 
     logger.info("Shutdown complete")
 

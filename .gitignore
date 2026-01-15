@@ -1,4 +1,4 @@
-/data/
+/library/
 /ytdlp/
 .env
 .env.docker

@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     root: Path = Field(description="Project root directory")
 
     # Path settings (default to root-relative paths)
-    library_dir: Path = Field(description="Music library")
-    ytdlp_dir: Path = Field(description="yt-dlp config dir")
+    library: Path = Field(description="Music library")
+    config: Path = Field(description="Config directory")
 
     # Server settings
     host: str = Field(default="127.0.0.1", description="Server host")
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     audio_quality: str = Field(default="0", description="Audio quality (0 = best)")
 
     # Temp directory
-    temp_dir: Path = Field(
+    temp: Path = Field(
         default_factory=lambda: Path(tempfile.gettempdir()) / "yubal",
         description="Temp directory for downloads",
     )
@@ -60,10 +60,10 @@ class Settings(BaseSettings):
         root = data.get("root")
         if root:
             root = Path(root) if isinstance(root, str) else root
-            if not data.get("library_dir"):
-                data["library_dir"] = root / "data"
-            if not data.get("ytdlp_dir"):
-                data["ytdlp_dir"] = root / "ytdlp"
+            if not data.get("library"):
+                data["library"] = root / "library"
+            if not data.get("config"):
+                data["config"] = root / "config"
         return data
 
     @property
@@ -71,12 +71,16 @@ class Settings(BaseSettings):
         return ZoneInfo(self.tz)
 
     @property
+    def ytdlp_dir(self) -> Path:
+        return self.config / "ytdlp"
+
+    @property
     def cookies_file(self) -> Path:
         return self.ytdlp_dir / "cookies.txt"
 
     @property
     def playlists_dir(self) -> Path:
-        return self.library_dir / "Playlists"
+        return self.library / "Playlists"
 
 
 @lru_cache

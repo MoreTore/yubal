@@ -114,9 +114,8 @@ yubal is configured via Environment Variables.
 | --------------------- | ---------------------------------------- | ---------------- |
 | `YUBAL_HOST`          | Server bind address                      | `0.0.0.0`        |
 | `YUBAL_PORT`          | Server listening port                    | `8000`           |
-| `YUBAL_DATA_DIR`      | Destination for tagged music             | `/app/data`      |
-| `YUBAL_BEETS_DIR`     | Location of beets db and config          | `/app/beets`     |
-| `YUBAL_YTDLP_DIR`     | Location of cookies.txt                  | `/app/ytdlp`     |
+| `YUBAL_LIBRARY`       | Destination for tagged music             | `/app/library`   |
+| `YUBAL_CONFIG`        | Config directory (cookies in `ytdlp/`)   | `/app/config`    |
 | `YUBAL_AUDIO_FORMAT`  | Output audio codec (e.g., `opus`, `mp3`) | `opus`           |
 | `YUBAL_AUDIO_QUALITY` | Transcoding quality (VBR scale 0-10)     | `0` (Best)       |
 | `YUBAL_TZ`            | Timezone (IANA format)                   | `UTC`            |
