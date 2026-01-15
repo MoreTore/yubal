@@ -11,7 +11,7 @@ export const Panel = forwardRef<HTMLElement, PanelProps>(
     return (
       <section
         ref={ref}
-        className={`bg-content1 rounded-large flex flex-col overflow-hidden ${className}`}
+        className={`shadow-sm bg-content2 dark:bg-content2 rounded-large flex flex-col overflow-hidden ${className}`}
         {...props}
       >
         {children}

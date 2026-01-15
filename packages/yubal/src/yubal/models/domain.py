@@ -159,7 +159,8 @@ class ExtractProgress(BaseModel):
 
     Attributes:
         current: Number of tracks successfully extracted so far (1-indexed).
-        total: Total number of tracks in the original playlist.
+        total: Total number of tracks to process (after limit applied).
+        playlist_total: Total number of tracks in the original playlist (before limit).
         skipped: Number of tracks skipped so far (unsupported video types).
         unavailable: Number of tracks without videoId (not available/not music).
         track: Extracted track metadata.
@@ -170,6 +171,7 @@ class ExtractProgress(BaseModel):
 
     current: int
     total: int
+    playlist_total: int
     skipped: int
     unavailable: int
     track: TrackMetadata

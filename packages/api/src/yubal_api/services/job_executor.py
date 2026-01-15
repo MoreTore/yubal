@@ -45,7 +45,7 @@ class JobExecutor:
 
     def start_job(self, job: Job) -> None:
         """Start a job as a background task with proper cleanup."""
-        task = asyncio.create_task(self._run_job(job.id, job.url))
+        task = asyncio.create_task(self._run_job(job.id, job.url, job.max_items))
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
@@ -59,7 +59,9 @@ class JobExecutor:
             return True
         return False
 
-    async def _run_job(self, job_id: str, url: str) -> None:
+    async def _run_job(
+        self, job_id: str, url: str, max_items: int | None = None
+    ) -> None:
         """Background task that runs the sync operation."""
         cancel_token = CancelToken()
         self._cancel_tokens[job_id] = cancel_token
@@ -113,6 +115,7 @@ class JobExecutor:
                 url,
                 on_progress,
                 cancel_token,
+                max_items,
             )
 
             # Handle result

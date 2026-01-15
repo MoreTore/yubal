@@ -17,7 +17,7 @@ export interface UseJobsResult {
   logs: JobLog[];
 
   // Actions
-  startJob: (url: string, audioFormat?: string) => Promise<void>;
+  startJob: (url: string, maxItems?: number) => Promise<void>;
   cancelJob: (jobId: string) => Promise<void>;
   deleteJob: (jobId: string) => Promise<void>;
   refreshJobs: () => Promise<void>;
@@ -64,8 +64,8 @@ export function useJobs(): UseJobsResult {
   }, [poll]);
 
   const startJob = useCallback(
-    async (url: string) => {
-      const result = await createJob(url);
+    async (url: string, maxItems?: number) => {
+      const result = await createJob(url, maxItems);
 
       if (!result.success) {
         // Refresh to show current state

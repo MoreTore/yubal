@@ -8,7 +8,12 @@ from rapidfuzz import process
 from yubal.client import YTMusicProtocol
 from yubal.models.domain import ExtractProgress, PlaylistInfo, TrackMetadata, VideoType
 from yubal.models.ytmusic import Album, AlbumTrack, PlaylistTrack
-from yubal.utils import format_artists, get_square_thumbnail, parse_playlist_id
+from yubal.utils import (
+    format_artists,
+    get_square_thumbnail,
+    is_album_playlist,
+    parse_playlist_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +38,9 @@ class MetadataExtractorService:
         """
         self._client = client
 
-    def extract(self, url: str) -> Iterator[ExtractProgress]:
+    def extract(
+        self, url: str, max_items: int | None = None
+    ) -> Iterator[ExtractProgress]:
         """Extract metadata for all tracks in a playlist.
 
         Yields progress updates as each track is processed. Use extract_all()
@@ -41,6 +48,8 @@ class MetadataExtractorService:
 
         Args:
             url: YouTube Music playlist URL.
+            max_items: Maximum number of tracks to extract. Only applies to
+                playlists, not albums. If None, extracts all tracks.
 
         Yields:
             ExtractProgress with current/total counts and the extracted track.
@@ -59,13 +68,31 @@ class MetadataExtractorService:
         logger.info("Extracting metadata for playlist: %s", playlist_id)
 
         playlist = self._client.get_playlist(playlist_id)
-        total = len(playlist.tracks)
+        playlist_total = len(playlist.tracks) + playlist.unavailable_count
         unavailable_count = playlist.unavailable_count
-        logger.info(
-            "Found %d tracks in playlist (%d unavailable)",
-            total,
-            unavailable_count,
-        )
+
+        # Apply max_items limit only to playlists, not albums
+        tracks = playlist.tracks
+        limited = False
+        if max_items and not is_album_playlist(playlist_id):
+            if max_items < len(playlist.tracks):
+                logger.info(
+                    "Limiting to %d of %d tracks", max_items, playlist_total
+                )
+                tracks = tracks[:max_items]
+            limited = True
+            # Don't report unavailable count when limiting (those tracks are outside scope)
+            unavailable_count = 0
+
+        total = len(tracks)
+        if limited:
+            logger.info("Processing %d tracks (limited from %d)", total, playlist_total)
+        else:
+            logger.info(
+                "Found %d tracks in playlist (%d unavailable)",
+                total,
+                unavailable_count,
+            )
 
         # Create playlist info for progress updates
         playlist_info = PlaylistInfo(
@@ -77,7 +104,7 @@ class MetadataExtractorService:
         extracted_count = 0
         skipped_count = 0
 
-        for track in playlist.tracks:
+        for track in tracks:
             try:
                 metadata = self._extract_track(track)
             except Exception as e:
@@ -98,6 +125,7 @@ class MetadataExtractorService:
             yield ExtractProgress(
                 current=extracted_count,
                 total=total,
+                playlist_total=playlist_total,
                 skipped=skipped_count,
                 unavailable=unavailable_count,
                 track=metadata,
@@ -111,13 +139,17 @@ class MetadataExtractorService:
             unavailable_count,
         )
 
-    def extract_all(self, url: str) -> list[TrackMetadata]:
+    def extract_all(
+        self, url: str, max_items: int | None = None
+    ) -> list[TrackMetadata]:
         """Extract metadata for all tracks in a playlist.
 
         Convenience method that collects all results from extract().
 
         Args:
             url: YouTube Music playlist URL.
+            max_items: Maximum number of tracks to extract. Only applies to
+                playlists, not albums. If None, extracts all tracks.
 
         Returns:
             List of extracted track metadata.
@@ -127,7 +159,7 @@ class MetadataExtractorService:
             PlaylistNotFoundError: If playlist doesn't exist.
             APIError: If API requests fail.
         """
-        return [p.track for p in self.extract(url)]
+        return [p.track for p in self.extract(url, max_items=max_items)]
 
     def _extract_track(self, track: PlaylistTrack) -> TrackMetadata | None:
         """Extract metadata for a single track.

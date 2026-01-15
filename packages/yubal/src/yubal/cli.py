@@ -43,7 +43,10 @@ def setup_logging() -> None:
 
 
 def print_table(
-    tracks: list[TrackMetadata], skipped: int = 0, unavailable: int = 0
+    tracks: list[TrackMetadata],
+    skipped: int = 0,
+    unavailable: int = 0,
+    playlist_total: int = 0,
 ) -> None:
     """Print tracks as a Rich table.
 
@@ -51,6 +54,7 @@ def print_table(
         tracks: List of track metadata to display.
         skipped: Number of tracks skipped (unsupported video type).
         unavailable: Number of tracks unavailable (no videoId).
+        playlist_total: Total tracks in playlist (0 means no limit applied).
     """
     console = Console()
     table = Table(show_header=True, header_style="bold")
@@ -90,7 +94,17 @@ def print_table(
 
     console.print(table)
 
-    # Build summary message with optional skipped/unavailable info
+    # Build summary message
+    track_count = len(tracks)
+    is_limited = playlist_total > 0 and track_count < playlist_total
+
+    if is_limited:
+        # Show "X of Y tracks" when limit is applied
+        msg = f"\nDownloading [cyan]{track_count}[/cyan] of [cyan]{playlist_total}[/cyan] tracks"
+    else:
+        msg = f"\nExtracted {track_count} track(s)"
+
+    # Add skipped/unavailable info
     summary_parts = []
     if skipped > 0:
         summary_parts.append(f"[yellow]{skipped} skipped[/yellow] (unsupported type)")
@@ -100,11 +114,9 @@ def print_table(
         )
 
     if summary_parts:
-        console.print(
-            f"\nExtracted {len(tracks)} track(s) ({', '.join(summary_parts)})"
-        )
-    else:
-        console.print(f"\nExtracted {len(tracks)} track(s)")
+        msg += f" ({', '.join(summary_parts)})"
+
+    console.print(msg)
 
 
 @click.group()
@@ -180,10 +192,17 @@ def meta_cmd(url: str, as_json: bool) -> None:
     default="opus",
     help="Audio codec (default: opus).",
 )
+@click.option(
+    "--max-items",
+    type=int,
+    default=None,
+    help="Maximum number of tracks to download (playlists only, not albums).",
+)
 def download_cmd(
     url: str,
     output: Path,
     codec: str,
+    max_items: int | None,
 ) -> None:
     """Download tracks from a YouTube Music playlist.
 
@@ -209,7 +228,8 @@ def download_cmd(
                 base_path=output,
                 codec=AudioCodec(codec),
                 quiet=True,
-            )
+            ),
+            max_items=max_items,
         )
         service = PlaylistDownloadService(config)
 
@@ -224,6 +244,7 @@ def download_cmd(
         tracks: list[TrackMetadata] = []
         skipped = 0
         unavailable = 0
+        playlist_total = 0
 
         with Progress(
             SpinnerColumn(),
@@ -247,6 +268,7 @@ def download_cmd(
                     tracks.append(ep.track)
                     skipped = ep.skipped
                     unavailable = ep.unavailable
+                    playlist_total = ep.playlist_total
 
                 elif p.phase == "downloading" and p.download_progress:
                     # Hide extract task, show download task on first download
@@ -255,7 +277,12 @@ def download_cmd(
                         progress.update(download_task, visible=True)
                         # Show track table before downloads
                         console.print()
-                        print_table(tracks, skipped=skipped, unavailable=unavailable)
+                        print_table(
+                            tracks,
+                            skipped=skipped,
+                            unavailable=unavailable,
+                            playlist_total=playlist_total,
+                        )
                         console.print()
                         console.print(f"[bold]Downloading to {output}...[/bold]\n")
 

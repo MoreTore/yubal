@@ -125,7 +125,7 @@ class PlaylistDownloadService:
 
         # Phase 1: Extract metadata
         logger.info("Phase 1: Extracting metadata from %s", url)
-        for progress in self._extractor.extract(url):
+        for progress in self._extractor.extract(url, max_items=self._config.max_items):
             tracks.append(progress.track)
             playlist_info = progress.playlist_info
             yield PlaylistProgress(

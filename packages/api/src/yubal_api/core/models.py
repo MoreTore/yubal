@@ -38,6 +38,7 @@ class Job(BaseModel):
     id: str
     url: str
     audio_format: AudioFormat = "opus"
+    max_items: int | None = None
     status: JobStatus = JobStatus.PENDING
     progress: float = 0.0
     album_info: AlbumInfo | None = None

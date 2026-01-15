@@ -30,9 +30,12 @@ export type CreateJobResult =
       activeJobId?: string;
     };
 
-export async function createJob(url: string): Promise<CreateJobResult> {
+export async function createJob(
+  url: string,
+  maxItems?: number,
+): Promise<CreateJobResult> {
   const { data, error, response } = await api.POST("/jobs", {
-    body: { url },
+    body: { url, max_items: maxItems },
   });
 
   if (error) {

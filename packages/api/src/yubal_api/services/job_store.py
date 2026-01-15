@@ -42,7 +42,10 @@ class JobStore:
         self._logs.pop(job_id, None)
 
     def create_job(
-        self, url: str, audio_format: AudioFormat = "opus"
+        self,
+        url: str,
+        audio_format: AudioFormat = "opus",
+        max_items: int | None = None,
     ) -> tuple[Job, bool] | None:
         """Create a new job.
 
@@ -65,6 +68,7 @@ class JobStore:
                 id=self._id_generator(),
                 url=url,
                 audio_format=audio_format,
+                max_items=max_items,
             )
             self._jobs[job.id] = job
 

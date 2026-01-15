@@ -110,6 +110,7 @@ class SyncService:
             | None
         ),
         cancel_token: CancelToken,
+        max_items: int | None = None,
     ) -> SyncResult:
         """Execute extraction + download workflow.
 
@@ -122,6 +123,7 @@ class SyncService:
             url: YouTube Music album/playlist URL.
             progress_callback: Optional callback for progress updates.
             cancel_token: Token for cancellation.
+            max_items: Maximum number of tracks to download (playlists only).
 
         Returns:
             SyncResult with success status and details.
@@ -150,6 +152,7 @@ class SyncService:
                 ),
                 generate_m3u=True,
                 save_cover=True,
+                max_items=max_items,
             )
             service = create_playlist_downloader(
                 config, cookies_path=self._cookies_path
