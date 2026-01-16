@@ -16,7 +16,7 @@ import {
   NavbarMenuToggle,
   Tooltip,
 } from "@heroui/react";
-import { ArrowUp, Cookie, Disc3, Star, Trash2, Upload } from "lucide-react";
+import { Cookie, Disc3, Star, Trash2, Upload } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -190,15 +190,14 @@ export function Header() {
                   target="_blank"
                   rel="noopener noreferrer"
                   size="sm"
-                  variant="solid"
-                  color="success"
+                  variant="dot"
+                  color="secondary"
                   classNames={{
-                    base: "cursor-pointer",
-                    content: "font-mono text-xs tracking-wider",
+                    dot: "animate-pulse"
                   }}
-                  startContent={<ArrowUp className="h-3 w-3" />}
                 >
-                  {versionInfo.latestVersion}
+                  <span className="font-mono">{versionInfo.latestVersion} released
+                  </span>
                 </Chip>
               </Tooltip>
             </motion.div>
@@ -358,7 +357,7 @@ export function Header() {
             <Link
               as="button"
               color="foreground"
-              className="w-full gap-2"
+              className="w-full gap-2 cursor-pointer"
               size="lg"
               onPress={() => fileInputRef.current?.click()}
             >
@@ -391,12 +390,11 @@ export function Header() {
               className="w-full gap-2"
               size="lg"
             >
-              <ArrowUp className="h-4 w-4" />
-              Update to {versionInfo.latestVersion}
+              <span className="text-secondary">Update to {versionInfo.latestVersion}</span>
             </Link>
           </NavbarMenuItem>
         )}
       </NavbarMenu>
-    </Navbar>
+    </Navbar >
   );
 }
