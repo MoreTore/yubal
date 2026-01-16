@@ -73,11 +73,10 @@ services:
       - 8000:8000
     environment:
       YUBAL_TZ: UTC
-      # Check the Configuration section for more variables
+      # See Configuration section for all options
     volumes:
-      - ./data:/app/data # Where your music will be saved
-      - ./beets:/app/beets # Beets configuration and database
-      - ./ytdlp:/app/ytdlp # yt-dlp configuration (cookies)
+      - ./library:/app/library # Music library output
+      - ./config:/app/config   # Config (cookies at ytdlp/cookies.txt)
     restart: unless-stopped
 ```
 
@@ -93,11 +92,11 @@ Open your browser to `http://localhost:8000` and paste a YouTube Music album URL
 
 ## 🍪 Cookies (Optional)
 
-To download age-restricted content or access higher bitrate audio (Premium accounts):
+To download age-restricted content, access private playlists, or get higher bitrate audio (Premium accounts):
 
 1. Export your cookies using a browser extension. [See yt-dlp FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp)
 2. Save the file as `cookies.txt`
-3. Place it in your mounted `ytdlp` volume (or upload via the Web UI)
+3. Place it at `config/ytdlp/cookies.txt` (or upload via the Web UI)
 
 > [!CAUTION]
 > **Cookie usage can backfire.** Authenticated requests may trigger stricter rate limiting from YouTube.
@@ -110,15 +109,20 @@ To download age-restricted content or access higher bitrate audio (Premium accou
 
 yubal is configured via Environment Variables.
 
-| Variable              | Description                              | Default (Docker) |
-| --------------------- | ---------------------------------------- | ---------------- |
-| `YUBAL_HOST`          | Server bind address                      | `0.0.0.0`        |
-| `YUBAL_PORT`          | Server listening port                    | `8000`           |
-| `YUBAL_LIBRARY`       | Destination for tagged music             | `/app/library`   |
-| `YUBAL_CONFIG`        | Config directory (cookies in `ytdlp/`)   | `/app/config`    |
-| `YUBAL_AUDIO_FORMAT`  | Output audio codec (e.g., `opus`, `mp3`) | `opus`           |
-| `YUBAL_AUDIO_QUALITY` | Transcoding quality (VBR scale 0-10)     | `0` (Best)       |
-| `YUBAL_TZ`            | Timezone (IANA format)                   | `UTC`            |
+| Variable              | Description                                    | Default (Docker)  |
+| --------------------- | ---------------------------------------------- | ----------------- |
+| `YUBAL_HOST`          | Server bind address                            | `0.0.0.0`         |
+| `YUBAL_PORT`          | Server listening port                          | `8000`            |
+| `YUBAL_LIBRARY`       | Music library output                           | `/app/library`    |
+| `YUBAL_CONFIG`        | Config directory (cookies at `ytdlp/cookies.txt`) | `/app/config`  |
+| `YUBAL_AUDIO_FORMAT`  | Audio codec: `opus`, `mp3`, `m4a`              | `opus`            |
+| `YUBAL_AUDIO_QUALITY` | Transcoding quality (0=best, 10=worst)         | `0`               |
+| `YUBAL_TZ`            | Timezone (IANA format)                         | `UTC`             |
+| `YUBAL_DEBUG`         | Enable debug mode                              | `false`           |
+| `YUBAL_LOG_LEVEL`     | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO`            |
+| `YUBAL_CORS_ORIGINS`  | Allowed CORS origins                           | `["*"]`           |
+| `YUBAL_RELOAD`        | Auto-reload on code changes (dev only)         | `false`           |
+| `YUBAL_TEMP`          | Temp directory for downloads                   | System temp       |
 
 > [!NOTE]
 > **Audio Transcoding**

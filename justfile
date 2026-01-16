@@ -183,15 +183,16 @@ clean:
 
 # Docker
 [group('docker')]
+[doc("Build local Docker image")]
 docker-build:
-    docker build --no-cache -t yubal:local .
+    docker build -t yubal:local .
 
 [group('docker')]
-docker-check-size:
-    docker build --no-cache -t yubal:check-size .
-    docker images yubal:check-size | awk 'NR==2 {print "📦 Image size: " $7}'
-    docker rmi yubal:check-size
-    @echo '✅ Docker build successful!'
+[doc("Build image, show size, then remove")]
+docker-size:
+    @docker build -q -t yubal:size-check . > /dev/null
+    @docker images yubal:size-check --format '{{"{{"}}.Size{{"}}"}}'
+    @docker rmi yubal:size-check > /dev/null
 
 # yubal CLI
 [group('cli')]

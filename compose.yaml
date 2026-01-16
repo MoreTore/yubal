@@ -10,7 +10,6 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - ./data:/app/data
-      - ./beets:/app/beets
-      - ./ytdlp:/app/ytdlp
+      - ./library:/app/library
+      - ./config:/app/config
     restart: unless-stopped
