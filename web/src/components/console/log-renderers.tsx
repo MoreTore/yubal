@@ -1,20 +1,17 @@
+import { ArrowDown, Check, Circle, X } from "lucide-react";
 import type { components } from "../../api/schema";
 
 type LogEntry = components["schemas"]["LogEntry"];
 type LogStatus = NonNullable<LogEntry["status"]>;
 
-/** Status icons for result messages */
-const STATUS_ICONS: Record<LogStatus, string> = {
-  success: "✓",
-  skipped: "○",
-  failed: "✗",
-};
+/** Common icon size class for consistency */
+const ICON_CLASS = "h-4 w-4 shrink-0";
 
-/** Status colors using Tailwind classes */
-const STATUS_COLORS: Record<LogStatus, string> = {
-  success: "text-success",
-  skipped: "text-warning",
-  failed: "text-danger",
+/** Status icon configuration mapping status to icon component and color */
+const STATUS_CONFIG: Record<LogStatus, { icon: typeof Check; color: string }> = {
+  success: { icon: Check, color: "text-success" },
+  skipped: { icon: Circle, color: "text-warning" },
+  failed: { icon: X, color: "text-danger" },
 };
 
 /** Header log - prominent visual separator */
@@ -56,12 +53,12 @@ export function ExtractionStatsLog({
   unavailable: number;
 }) {
   return (
-    <div>
-      <span className="text-success">✓ </span>
+    <div className="flex items-center gap-1">
+      <Check className={`${ICON_CLASS} text-success`} />
       <span className="text-success">{extracted} extracted</span>
-      <span>, </span>
+      <span>,</span>
       <span className="text-warning">{skipped} skipped</span>
-      <span>, </span>
+      <span>,</span>
       <span className="text-foreground-400">{unavailable} unavailable</span>
     </div>
   );
@@ -78,12 +75,12 @@ export function DownloadStatsLog({
   failed: number;
 }) {
   return (
-    <div>
-      <span className="text-success">✓ </span>
+    <div className="flex items-center gap-1">
+      <Check className={`${ICON_CLASS} text-success`} />
       <span className="text-success">{success} success</span>
-      <span>, </span>
+      <span>,</span>
       <span className="text-warning">{skipped} skipped</span>
-      <span>, </span>
+      <span>,</span>
       <span className="text-danger">{failed} failed</span>
     </div>
   );
@@ -102,10 +99,10 @@ export function ProgressLog({
   isDownload: boolean;
 }) {
   return (
-    <div>
-      {isDownload && <span className="text-primary">↓ </span>}
+    <div className="flex items-center gap-1">
+      {isDownload && <ArrowDown className={`${ICON_CLASS} text-primary`} />}
       <span className="text-foreground-400">
-        [{current}/{total}]{" "}
+        [{current}/{total}]
       </span>
       <span>{message}</span>
     </div>
@@ -120,9 +117,12 @@ export function StatusLog({
   status: LogStatus;
   message: string;
 }) {
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
+
   return (
-    <div>
-      <span className={STATUS_COLORS[status]}>{STATUS_ICONS[status]} </span>
+    <div className="flex items-center gap-1">
+      <Icon className={`${ICON_CLASS} ${config.color}`} />
       <span>{message}</span>
     </div>
   );
@@ -156,7 +156,6 @@ export function LogLine({ entry }: { entry: LogEntry }) {
       const { stats } = entry;
       if (!stats) return <DefaultLog message={entry.message} />;
 
-      // Extraction stats (has 'extracted' field)
       if (typeof stats.extracted === "number") {
         return (
           <ExtractionStatsLog
@@ -167,7 +166,6 @@ export function LogLine({ entry }: { entry: LogEntry }) {
         );
       }
 
-      // Download stats (has 'success' field)
       return (
         <DownloadStatsLog
           success={stats.success ?? 0}

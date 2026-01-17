@@ -71,7 +71,7 @@ export default function App() {
                 color="primary"
                 radius="lg"
                 variant={canSync ? "shadow" : "solid"}
-                className="shadow-secondary/40"
+                className="shadow-primary-100/50"
                 onPress={handleSync}
                 isDisabled={!canSync}
                 startContent={match(urlType)
