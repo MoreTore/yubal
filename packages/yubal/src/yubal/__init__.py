@@ -59,8 +59,6 @@ from yubal.services import (
 )
 from yubal.utils import clear_cover_cache, fetch_cover
 
-__version__ = "0.1.0"
-
 
 def create_extractor(
     config: APIConfig | None = None,

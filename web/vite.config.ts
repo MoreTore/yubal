@@ -56,5 +56,15 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom"],
+          "vendor-heroui": ["@heroui/react"],
+          "vendor-icons": ["lucide-react"],
+        },
+      },
+    },
   },
 });

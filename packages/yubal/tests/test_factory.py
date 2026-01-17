@@ -53,10 +53,3 @@ class TestPublicAPI:
         assert hasattr(yubal, "PlaylistParseError")
         assert hasattr(yubal, "PlaylistNotFoundError")
         assert hasattr(yubal, "APIError")
-
-    def test_version_available(self) -> None:
-        """Version should be available."""
-        import yubal
-
-        assert hasattr(yubal, "__version__")
-        assert yubal.__version__ == "0.1.0"

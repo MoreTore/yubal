@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from importlib.metadata import version
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -107,7 +108,7 @@ def create_api() -> FastAPI:
     api = FastAPI(
         title="yubal API",
         description="YouTube Album Downloader API",
-        version="0.1.0",
+        version=version("yubal_api"),
     )
 
     # Register exception handlers
