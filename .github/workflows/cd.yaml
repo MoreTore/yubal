@@ -82,10 +82,8 @@ jobs:
             VERSION=${{ steps.version.outputs.version }}
             COMMIT_SHA=${{ steps.version.outputs.commit }}
             IS_RELEASE=${{ steps.version.outputs.is_release }}
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ github.ref_name }}
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-master
-          cache-to: ${{ !startsWith(github.ref, 'refs/tags/') && format('type=registry,ref={0}/{1}:buildcache-{2},mode=max', env.REGISTRY, env.IMAGE_NAME, github.ref_name) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - uses: actions/attest-build-provenance@v3
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
