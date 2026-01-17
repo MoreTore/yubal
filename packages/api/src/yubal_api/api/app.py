@@ -66,7 +66,7 @@ def create_services() -> Services:
 
     job_executor = JobExecutor(
         job_store=job_store,
-        base_path=settings.library,
+        base_path=settings.data,
         audio_format=settings.audio_format,
         cookies_path=settings.cookies_file,
     )

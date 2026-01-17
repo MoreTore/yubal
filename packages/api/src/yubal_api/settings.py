@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     root: Path = Field(description="Project root directory")
 
     # Path settings (default to root-relative paths)
-    library: Path = Field(description="Music library")
+    data: Path = Field(description="Music library")
     config: Path = Field(description="Config directory")
 
     # Server settings
@@ -61,8 +61,8 @@ class Settings(BaseSettings):
         root = data.get("root")
         if root:
             root = Path(root) if isinstance(root, str) else root
-            if not data.get("library"):
-                data["library"] = root / "library"
+            if not data.get("data"):
+                data["data"] = root / "data"
             if not data.get("config"):
                 data["config"] = root / "config"
         return data
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
 
     @property
     def playlists_dir(self) -> Path:
-        return self.library / "Playlists"
+        return self.data / "Playlists"
 
 
 @lru_cache

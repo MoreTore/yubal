@@ -429,7 +429,7 @@ yubal_api (API layer)
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `YUBAL_ROOT` | Yes* | - | Project root directory (*set by justfile locally) |
-| `YUBAL_LIBRARY` | No | `{root}/library` | Music library output directory |
+| `YUBAL_DATA` | No | `{root}/data` | Music library output directory |
 | `YUBAL_CONFIG` | No | `{root}/config` | Config directory (cookies at `ytdlp/cookies.txt`) |
 | `YUBAL_HOST` | No | `127.0.0.1` | Server bind address |
 | `YUBAL_PORT` | No | `8000` | Server port |
@@ -493,7 +493,7 @@ services:
     environment:
       YUBAL_TZ: UTC
     volumes:
-      - ./library:/app/library
+      - ./data:/app/data
       - ./config:/app/config
     restart: unless-stopped
 ```
@@ -630,7 +630,7 @@ services:
                    │                             │                         │
                    │                   ┌─────────▼─────────┐               │
                    │                   │   File System     │               │
-                   │                   │  /app/library     │               │
+                   │                   │  /app/data        │               │
                    │                   │  /app/config      │               │
                    │                   └───────────────────┘               │
                    │                                                       │

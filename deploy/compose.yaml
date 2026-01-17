@@ -12,6 +12,6 @@ services:
       YUBAL_AUDIO_QUALITY: ${YUBAL_AUDIO_QUALITY}
       YUBAL_TZ: ${YUBAL_TZ}
     volumes:
-      - ./library:/app/library
+      - ./data:/app/data
       - ./config:/app/config
     restart: unless-stopped

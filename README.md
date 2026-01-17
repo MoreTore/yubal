@@ -20,7 +20,7 @@
 **yubal** is a self-hosted app for building a local music library. Paste a YouTube Music album or playlist URL, and yubal handles downloading, tagging, and album art—automatically.
 
 ```
-library/
+data/
 ├── Pink Floyd/
 │   └── 1973 - The Dark Side of the Moon/
 │       ├── 01 - Speak to Me.opus
@@ -68,7 +68,7 @@ services:
     environment:
       YUBAL_TZ: UTC
     volumes:
-      - ./library:/app/library
+      - ./data:/app/data
       - ./config:/app/config
     restart: unless-stopped
 ```
@@ -82,7 +82,7 @@ docker compose up -d
 
 | Variable              | Description                          | Default (Docker) |
 | --------------------- | ------------------------------------ | ---------------- |
-| `YUBAL_LIBRARY`       | Music library output                 | `/app/library`   |
+| `YUBAL_DATA`          | Music library output                 | `/app/data`      |
 | `YUBAL_CONFIG`        | Config directory                     | `/app/config`    |
 | `YUBAL_AUDIO_FORMAT`  | `opus`, `mp3`, or `m4a`              | `opus`           |
 | `YUBAL_AUDIO_QUALITY` | Transcode quality (0=best, 10=worst) | `0`              |
