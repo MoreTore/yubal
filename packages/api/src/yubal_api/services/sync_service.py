@@ -16,7 +16,7 @@ from yubal import (
     TrackMetadata,
     create_playlist_downloader,
 )
-from yubal.models.domain import PlaylistInfo
+from yubal.models.domain import ContentKind, PlaylistInfo
 
 from yubal_api.core.enums import ProgressStep
 from yubal_api.core.models import AlbumInfo
@@ -93,9 +93,15 @@ def album_info_from_yubal(
         except ValueError:
             year_int = None
 
+    # Use channel name for playlists, album artist for albums
+    if playlist_info.kind == ContentKind.PLAYLIST and playlist_info.author:
+        artist = playlist_info.author
+    else:
+        artist = first.primary_album_artist if first else "Various Artists"
+
     return AlbumInfo(
         title=playlist_info.title or "Unknown",
-        artist=first.primary_album_artist if first else "Various Artists",
+        artist=artist,
         year=year_int,
         track_count=len(tracks),
         playlist_id=playlist_info.playlist_id,

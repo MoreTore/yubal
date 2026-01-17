@@ -151,6 +151,7 @@ class PlaylistInfo(BaseModel):
         title: The playlist title/name.
         cover_url: URL to the playlist cover image.
         kind: Whether this is an album or playlist.
+        author: Channel/creator name (for playlists).
     """
 
     model_config = ConfigDict(frozen=True)
@@ -159,6 +160,7 @@ class PlaylistInfo(BaseModel):
     title: str | None = None
     cover_url: str | None = None
     kind: ContentKind = ContentKind.PLAYLIST
+    author: str | None = None
 
 
 class ExtractProgress(BaseModel):

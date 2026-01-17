@@ -65,6 +65,7 @@ class Playlist(YTMusicModel):
     thumbnails: list[Thumbnail] = Field(default_factory=list)
     tracks: list[PlaylistTrack]
     unavailable_count: int = 0  # Tracks without videoId (set by client)
+    author: Artist | None = None  # Channel/creator name
 
 
 class AlbumTrack(YTMusicModel):

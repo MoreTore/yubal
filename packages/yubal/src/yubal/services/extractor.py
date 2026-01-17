@@ -113,6 +113,7 @@ class MetadataExtractorService:
             title=playlist.title,
             cover_url=get_square_thumbnail(playlist.thumbnails),
             kind=kind,
+            author=playlist.author.name if playlist.author else None,
         )
 
         extracted_count = 0
