@@ -218,7 +218,7 @@ test-cov-web:
 # Utils
 [group('utils')]
 [doc("Bump version across all packages")]
-[confirm("Bump to version {{VERSION}}?")]
+[confirm]
 [script('bash')]
 version VERSION:
     set -euo pipefail
@@ -228,7 +228,7 @@ version VERSION:
         -exec sed -i '' 's/^version = ".*"/version = "{{VERSION}}"/' {} \;
 
     # Update web package
-    cd web && npm pkg set version={{VERSION}}
+    (cd web && npm pkg set version={{VERSION}})
 
     # Sync lockfiles
     just sync
