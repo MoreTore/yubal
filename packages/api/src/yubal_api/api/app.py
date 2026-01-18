@@ -110,7 +110,7 @@ def create_api() -> FastAPI:
     """Create the API sub-application."""
     api = FastAPI(
         title="yubal API",
-        description="YouTube Album Downloader API",
+        description="YouTube Music Downloader API",
         version=version("yubal_api"),
     )
 
