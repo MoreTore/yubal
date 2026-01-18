@@ -305,6 +305,10 @@ docker-size:
     @docker images yubal:size-check --format '{{"{{"}}.Size{{"}}"}}'
     @docker rmi yubal:size-check > /dev/null
 
+[group('docker')]
+[doc("Run docker compose up")]
+compose *args:
+    docker compose up --build {{ args }}
 
 [group('lint')]
 [doc("Lint Dockerfile")]

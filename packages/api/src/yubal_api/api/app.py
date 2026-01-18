@@ -11,6 +11,7 @@ from importlib.metadata import version
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from rich.console import Console
 from rich.logging import RichHandler
 
 from yubal_api.api.exceptions import register_exception_handlers
@@ -29,7 +30,10 @@ from yubal_api.settings import get_settings
 def setup_logging() -> None:
     """Configure logging with Rich handler for all loggers including uvicorn."""
     settings = get_settings()
-    handler = RichHandler(rich_tracebacks=True, show_path=False, markup=True)
+    console = Console(force_terminal=True)
+    handler = RichHandler(
+        console=console, rich_tracebacks=True, show_path=False, markup=True
+    )
     handler.setFormatter(logging.Formatter("%(name)s - %(message)s", datefmt="[%X]"))
 
     # Configure root logger

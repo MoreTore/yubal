@@ -134,9 +134,23 @@ export function FileLog({ message }: { message: string }) {
   return <div className="text-foreground-400">{message}</div>;
 }
 
-/** Default/plain text display */
-export function DefaultLog({ message }: { message: string }) {
-  return <div>{message}</div>;
+/** Level-based color mapping */
+const LEVEL_COLORS: Record<string, string> = {
+  WARNING: "text-warning",
+  ERROR: "text-danger",
+  CRITICAL: "text-danger",
+};
+
+/** Default/plain text display with level-based coloring */
+export function DefaultLog({
+  message,
+  level,
+}: {
+  message: string;
+  level?: string;
+}) {
+  const colorClass = level ? LEVEL_COLORS[level] : undefined;
+  return <div className={colorClass}>{message}</div>;
 }
 
 /**
@@ -197,6 +211,6 @@ export function LogLine({ entry }: { entry: LogEntry }) {
 
     case "default":
     default:
-      return <DefaultLog message={entry.message} />;
+      return <DefaultLog message={entry.message} level={entry.level} />;
   }
 }
