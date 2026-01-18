@@ -159,7 +159,7 @@ class SyncService:
             url: YouTube Music album/playlist URL.
             progress_callback: Optional callback for progress updates.
             cancel_token: Token for cancellation.
-            max_items: Maximum number of tracks to download (playlists only).
+            max_items: Maximum number of tracks to download.
 
         Returns:
             SyncResult with success status and details.

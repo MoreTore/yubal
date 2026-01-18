@@ -46,7 +46,7 @@ class CreateJobRequest(BaseModel):
         default=None,
         ge=1,
         le=10000,
-        description="Maximum number of tracks to download (playlists only)",
+        description="Maximum number of tracks to download",
     )
 
 

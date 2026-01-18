@@ -32,10 +32,15 @@ from yubal.services import MetadataExtractorService, PlaylistDownloadService
 logger = logging.getLogger("yubal")
 
 
-def setup_logging() -> None:
-    """Configure logging with Rich handler."""
+def setup_logging(verbose: bool = False) -> None:
+    """Configure logging with Rich handler.
+
+    Args:
+        verbose: If True, set log level to DEBUG. Otherwise WARNING.
+    """
+    level = logging.DEBUG if verbose else logging.WARNING
     logging.basicConfig(
-        level=logging.WARNING,
+        level=level,
         format="%(message)s",
         datefmt="[%X]",
         handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
@@ -165,9 +170,10 @@ def print_tracks(
 
 
 @click.group()
-def main() -> None:
+@click.option("-v", "--verbose", is_flag=True, help="Enable debug logging.")
+def main(verbose: bool) -> None:
     """Extract and download from YouTube Music albums and playlists."""
-    setup_logging()
+    setup_logging(verbose=verbose)
 
 
 @main.command(name="meta")
@@ -179,13 +185,15 @@ def main() -> None:
     help="Path to cookies.txt for YouTube Music authentication.",
 )
 def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
-    """Extract structured metadata from an album or playlist.
+    """Extract structured metadata from a YouTube Music URL.
 
-    URL should be a YouTube Music album or playlist URL:
+    URL should be a YouTube Music playlist URL. The content type (album vs
+    playlist) is automatically detected based on the tracks.
 
     \b
-      Album:    https://music.youtube.com/playlist?list=OLAK5uy_xxx
-      Playlist: https://music.youtube.com/playlist?list=PLxxx
+    Examples:
+      yubal meta "https://music.youtube.com/playlist?list=OLAK5uy_xxx"
+      yubal meta "https://music.youtube.com/playlist?list=PLxxx"
     """
     console = Console()
 
@@ -196,6 +204,8 @@ def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
         tracks: list[TrackMetadata] = []
         skipped = 0
         unavailable = 0
+        playlist_kind: str | None = None
+        playlist_title: str | None = None
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -215,12 +225,21 @@ def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
                 tracks.append(extract_progress.track)
                 skipped = extract_progress.skipped
                 unavailable = extract_progress.unavailable
+                playlist_kind = extract_progress.playlist_info.kind.value
+                playlist_title = extract_progress.playlist_info.title
 
         if as_json:
             data = [t.model_dump() for t in tracks]
             json.dump(data, sys.stdout, indent=2, ensure_ascii=False, default=str)
         else:
-            print_tracks(console, tracks, skipped=skipped, unavailable=unavailable)
+            print_tracks(
+                console,
+                tracks,
+                skipped=skipped,
+                unavailable=unavailable,
+                kind=playlist_kind,
+                title=playlist_title,
+            )
 
     except YTMetaError as e:
         logger.error(str(e))
@@ -249,7 +268,7 @@ def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
     "--max-items",
     type=int,
     default=None,
-    help="Maximum number of tracks to download (playlists only, not albums).",
+    help="Maximum number of tracks to download.",
 )
 @click.option(
     "--cookies",
@@ -282,11 +301,14 @@ def download_cmd(
     no_cover: bool,
     album_m3u: bool,
 ) -> None:
-    """Download tracks from a YouTube Music album or playlist.
+    """Download tracks from a YouTube Music URL.
 
     Downloads each track using yt-dlp, preferring the ATV (Audio Track Video)
     version for better audio quality, falling back to OMV (Official Music Video)
     if ATV is unavailable. Existing files are automatically skipped.
+
+    The content type (album vs playlist) is automatically detected based on
+    the tracks. Albums skip M3U generation by default (use --album-m3u to override).
 
     \b
     Examples:

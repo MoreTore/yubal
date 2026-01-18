@@ -4,13 +4,13 @@ import logging
 from pathlib import Path
 
 from yubal.models.domain import (
+    ContentKind,
     DownloadResult,
     DownloadStatus,
     PlaylistInfo,
     TrackMetadata,
 )
 from yubal.utils.m3u import write_m3u, write_playlist_cover
-from yubal.utils.playlist import is_album_playlist
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +66,9 @@ class PlaylistComposerService:
 
         # Generate M3U playlist
         if generate_m3u:
-            # Skip album playlists if configured (they have inherent structure)
-            if skip_album_m3u and is_album_playlist(playlist_info.playlist_id):
-                logger.debug(
-                    "Skipping M3U for album playlist: %s", playlist_info.playlist_id
-                )
+            # Skip albums if configured (they have inherent folder structure)
+            if skip_album_m3u and playlist_info.kind == ContentKind.ALBUM:
+                logger.debug("Skipping M3U for album: %s", playlist_info.playlist_id)
             else:
                 tracks = self._collect_tracks_for_m3u(results)
                 if tracks:

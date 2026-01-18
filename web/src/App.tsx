@@ -1,7 +1,6 @@
-import { Badge, Button, NumberInput, Tooltip } from "@heroui/react";
-import { Disc3, Download, Hash, ListMusic } from "lucide-react";
+import { Button, NumberInput, Tooltip } from "@heroui/react";
+import { Download, Hash } from "lucide-react";
 import { useState } from "react";
-import { match } from "ts-pattern";
 import { ConsolePanel } from "./components/console-panel";
 import { DownloadsPanel } from "./components/downloads-panel";
 import { Footer } from "./components/layout/footer";
@@ -9,7 +8,7 @@ import { Header } from "./components/layout/header";
 import { BlurFade } from "./components/magicui/blur-fade";
 import { UrlInput } from "./components/url-input";
 import { useJobs } from "./hooks/use-jobs";
-import { getUrlType, isValidUrl, UrlType } from "./lib/url";
+import { isValidUrl } from "./lib/url";
 
 const DEFAULT_MAX_ITEMS = 50;
 
@@ -19,12 +18,10 @@ export default function App() {
   const { jobs, startJob, cancelJob, deleteJob } = useJobs();
 
   const canSync = isValidUrl(url);
-  const urlType = canSync ? getUrlType(url) : null;
-  const isPlaylist = urlType === UrlType.PLAYLIST;
 
   const handleSync = async () => {
     if (canSync) {
-      await startJob(url, isPlaylist ? maxItems : undefined);
+      await startJob(url, maxItems);
       setUrl("");
     }
   };
@@ -44,51 +41,30 @@ export default function App() {
             <div className="flex-1">
               <UrlInput value={url} onChange={setUrl} />
             </div>
-            {isPlaylist && (
-              <Tooltip content="Max number of tracks to download" offset={14}>
-                <NumberInput
-                  hideStepper
-                  value={maxItems}
-                  onValueChange={setMaxItems}
-                  minValue={1}
-                  maxValue={10000}
-                  radius="lg"
-                  fullWidth={false}
-                  startContent={
-                    <Hash className="text-foreground-400 h-4 w-4" />
-                  }
-                  className="w-24 font-mono"
-                />
-              </Tooltip>
-            )}
-            <Badge
-              color="secondary"
-              content="new"
-              size="sm"
-              isInvisible={urlType != UrlType.PLAYLIST}
-            >
-              <Button
-                color="primary"
+            <Tooltip content="Max number of tracks to download" offset={14}>
+              <NumberInput
+                hideStepper
+                value={maxItems}
+                onValueChange={setMaxItems}
+                minValue={1}
+                maxValue={10000}
                 radius="lg"
-                variant={canSync ? "shadow" : "solid"}
-                className="shadow-primary-100/50"
-                onPress={handleSync}
-                isDisabled={!canSync}
-                startContent={match(urlType)
-                  .with(UrlType.ALBUM, () => <Disc3 className="h-4 w-4" />)
-                  .with(UrlType.PLAYLIST, () => (
-                    <ListMusic className="h-4 w-4" />
-                  ))
-                  .otherwise(() => (
-                    <Download className="h-4 w-4" />
-                  ))}
-              >
-                {match(urlType)
-                  .with(UrlType.ALBUM, () => "Download album")
-                  .with(UrlType.PLAYLIST, () => "Download playlist")
-                  .otherwise(() => "Download")}
-              </Button>
-            </Badge>
+                fullWidth={false}
+                startContent={<Hash className="text-foreground-400 h-4 w-4" />}
+                className="w-24 font-mono"
+              />
+            </Tooltip>
+            <Button
+              color="primary"
+              radius="lg"
+              variant={canSync ? "shadow" : "solid"}
+              className="shadow-primary-100/50"
+              onPress={handleSync}
+              isDisabled={!canSync}
+              startContent={<Download className="h-4 w-4" />}
+            >
+              Download
+            </Button>
           </section>
         </BlurFade>
 

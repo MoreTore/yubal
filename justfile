@@ -64,6 +64,26 @@ upgrade-py:
 upgrade-web:
     bun update
 
+[group('setup')]
+[doc("Upgrade all deps to latest")]
+upgrade-yolo: upgrade-yolo-py upgrade-yolo-web
+
+[group('setup')]
+[private]
+[working-directory('web')]
+upgrade-yolo-web:
+    bunx npm-check-updates -u
+    bun install
+
+[group('setup')]
+[private]
+upgrade-yolo-py:
+    uv lock --upgrade
+    uv sync --all-packages
+    @echo ""
+    @echo "📦 Outdated Python dependencies (pinned below latest):"
+    @uvx pip-check-updates || true
+
 # Dev
 [group('dev')]
 [doc("Run API + Web dev servers")]
@@ -283,6 +303,12 @@ docker-size:
     @docker build -q -t yubal:size-check . > /dev/null
     @docker images yubal:size-check --format '{{"{{"}}.Size{{"}}"}}'
     @docker rmi yubal:size-check > /dev/null
+
+
+[group('lint')]
+[doc("Lint Dockerfile")]
+docker-lint:
+    @docker run --rm -i hadolint/hadolint < Dockerfile
 
 # yubal CLI
 [group('cli')]

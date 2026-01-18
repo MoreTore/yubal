@@ -17,7 +17,6 @@ from yubal.models.ytmusic import Album, AlbumTrack, PlaylistTrack
 from yubal.utils import (
     format_artists,
     get_square_thumbnail,
-    is_album_playlist,
     parse_playlist_id,
 )
 
@@ -58,8 +57,8 @@ class MetadataExtractorService:
 
         Args:
             url: YouTube Music playlist URL.
-            max_items: Maximum number of tracks to extract. Only applies to
-                playlists, not albums. If None, extracts all tracks.
+            max_items: Maximum number of tracks to extract. If None, extracts
+                all tracks.
 
         Yields:
             ExtractProgress with current/total counts and the extracted track.
@@ -81,16 +80,15 @@ class MetadataExtractorService:
         playlist_total = len(playlist.tracks) + playlist.unavailable_count
         unavailable_count = playlist.unavailable_count
 
-        # Apply max_items limit only to playlists, not albums
+        # Apply max_items limit if specified
         tracks = playlist.tracks
         limited = False
-        if max_items and not is_album_playlist(playlist_id):
-            if max_items < len(playlist.tracks):
-                logger.info("Limiting to %d of %d tracks", max_items, playlist_total)
-                tracks = tracks[:max_items]
-                # Don't report unavailable count when truncating (outside scope)
-                unavailable_count = 0
-                limited = True
+        if max_items and max_items < len(playlist.tracks):
+            logger.info("Limiting to %d of %d tracks", max_items, playlist_total)
+            tracks = tracks[:max_items]
+            # Don't report unavailable count when truncating (outside scope)
+            unavailable_count = 0
+            limited = True
 
         total = len(tracks)
         if limited:
@@ -102,12 +100,8 @@ class MetadataExtractorService:
                 unavailable_count,
             )
 
-        # Create playlist info for progress updates
-        kind = (
-            ContentKind.ALBUM
-            if is_album_playlist(playlist_id)
-            else ContentKind.PLAYLIST
-        )
+        # Detect if this is a complete album vs a playlist
+        kind = self._detect_content_kind(playlist_id, playlist.tracks)
         playlist_info = PlaylistInfo(
             playlist_id=playlist_id,
             title=playlist.title,
@@ -167,8 +161,8 @@ class MetadataExtractorService:
 
         Args:
             url: YouTube Music playlist URL.
-            max_items: Maximum number of tracks to extract. Only applies to
-                playlists, not albums. If None, extracts all tracks.
+            max_items: Maximum number of tracks to extract. If None, extracts
+                all tracks.
 
         Returns:
             List of extracted track metadata.
@@ -179,6 +173,76 @@ class MetadataExtractorService:
             APIError: If API requests fail.
         """
         return [p.track for p in self.extract(url, max_items=max_items)]
+
+    def _detect_content_kind(
+        self, playlist_id: str, tracks: list[PlaylistTrack]
+    ) -> ContentKind:
+        """Detect if a playlist represents a complete album.
+
+        A playlist is considered an album if:
+        1. It has the OLAK5uy_ prefix (album playlist format)
+        2. All tracks reference the same album
+        3. The playlist contains all tracks from that album
+
+        This prevents false positives for "Top songs" playlists or curated
+        playlists that happen to contain tracks from a single album.
+
+        Args:
+            playlist_id: The playlist ID.
+            tracks: List of playlist tracks.
+
+        Returns:
+            ContentKind.ALBUM if complete album, ContentKind.PLAYLIST otherwise.
+        """
+        # Check 1: Must have OLAK5uy_ prefix (album playlist format)
+        if not playlist_id.startswith("OLAK5uy_"):
+            logger.debug("Not an album: missing OLAK5uy_ prefix")
+            return ContentKind.PLAYLIST
+
+        # Check 2: Must have tracks
+        if not tracks:
+            logger.debug("Not an album: no tracks")
+            return ContentKind.PLAYLIST
+
+        # Check 3: All tracks must reference the same album
+        album_ids = {t.album.id for t in tracks if t.album and t.album.id}
+        logger.debug("Album IDs found on tracks: %s", album_ids)
+
+        if len(album_ids) != 1:
+            logger.debug("Not an album: tracks reference %d different albums", len(album_ids))
+            return ContentKind.PLAYLIST
+
+        # Check 4: Fetch the album to verify all tracks are present
+        album_id = next(iter(album_ids))
+        try:
+            album = self._client.get_album(album_id)
+        except Exception as e:
+            logger.debug("Not an album: failed to fetch album %s: %s", album_id, e)
+            return ContentKind.PLAYLIST
+
+        # Check 5: Playlist must contain all album tracks
+        matched_album_tracks: set[str] = set()
+
+        for playlist_track in tracks:
+            album_track = self._find_track_in_album(album, playlist_track)
+            if album_track:
+                matched_album_tracks.add(album_track.video_id)
+
+        matched_count = len(matched_album_tracks)
+        logger.debug(
+            "Album track matching: %d/%d matched",
+            matched_count,
+            len(album.tracks),
+        )
+
+        if matched_count == len(album.tracks):
+            logger.debug("Detected complete album: %s", album.title)
+            return ContentKind.ALBUM
+
+        logger.debug(
+            "Not an album: matched %d/%d tracks", matched_count, len(album.tracks)
+        )
+        return ContentKind.PLAYLIST
 
     def _extract_track(self, track: PlaylistTrack) -> TrackMetadata | None:
         """Extract metadata for a single track.

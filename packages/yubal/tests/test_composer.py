@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from yubal.models.domain import (
+    ContentKind,
     DownloadResult,
     DownloadStatus,
     PlaylistInfo,
@@ -27,6 +28,7 @@ def playlist_info() -> PlaylistInfo:
         playlist_id="PLtest123",
         title="Test Playlist",
         cover_url="https://example.com/cover.jpg",
+        kind=ContentKind.PLAYLIST,
     )
 
 
@@ -37,6 +39,7 @@ def album_playlist_info() -> PlaylistInfo:
         playlist_id="OLAK5uy_test123",
         title="Test Album",
         cover_url="https://example.com/album.jpg",
+        kind=ContentKind.ALBUM,
     )
 
 

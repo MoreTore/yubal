@@ -32,6 +32,8 @@ ARG TARGETARCH
 WORKDIR /app
 
 # Install ffmpeg (static) + deno for yt-dlp
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl xz-utils unzip ca-certificates \
     && FFMPEG_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") \

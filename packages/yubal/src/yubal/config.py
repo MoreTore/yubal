@@ -54,7 +54,7 @@ class PlaylistDownloadConfig:
         generate_m3u: Whether to generate M3U playlist file.
         save_cover: Whether to save playlist cover image.
         skip_album_m3u: Skip M3U generation for album playlists.
-        max_items: Maximum number of tracks to download from playlists (not albums).
+        max_items: Maximum number of tracks to download.
     """
 
     download: DownloadConfig
