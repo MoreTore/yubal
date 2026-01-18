@@ -86,8 +86,10 @@ def album_info_from_yubal(
 ) -> AlbumInfo:
     """Map yubal's extraction result to API's AlbumInfo schema."""
     first = tracks[0] if tracks else None
+
+    # Only include year for albums, not playlists
     year_int: int | None = None
-    if first and first.year:
+    if playlist_info.kind != ContentKind.PLAYLIST and first and first.year:
         try:
             year_int = int(first.year)
         except ValueError:

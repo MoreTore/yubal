@@ -12,7 +12,9 @@
 [![Docker](https://img.shields.io/badge/ghcr.io-blue?logo=docker&logoColor=white)](https://ghcr.io/guillevc/yubal)
 [![codecov](https://codecov.io/gh/guillevc/yubal/branch/master/graph/badge.svg)](https://codecov.io/gh/guillevc/yubal)
 
-<img src="docs/demo1.gif" alt="Yubal Demo" width="600">
+<picture>
+  <img src="docs/demo.gif" alt="yubal demo" width="700">
+</picture>
 
 <sub>GIF is 3× speed</sub>
 
@@ -58,7 +60,8 @@ Albums are organized by artist and year. When downloading a playlist, each track
 
 - **Web UI** — Real-time progress, job queue, responsive design
 - **Smart tagging** — Metadata from YouTube Music with fuzzy track matching
-- **Albums & playlists** — M3U playlist generation included
+- **Albums & playlists** — Automatic album detection, M3U playlist generation
+- **Smart deduplication** — Tracks indexed by path, never downloaded twice across playlists or albums
 - **Format options** — Native `opus` (best quality), or transcode to `mp3`/`m4a`
 - **Docker-ready** — Multi-arch (amd64/arm64), single container
 
