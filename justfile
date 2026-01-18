@@ -82,8 +82,8 @@ upgrade-yolo-py:
     uv lock --upgrade
     uv sync --all-packages
     @echo ""
-    @echo "📦 Outdated Python dependencies (pinned below latest):"
-    @uvx pip-check-updates || true
+    @echo "📦 Outdated (constraints may be blocking):"
+    @uv pip list --outdated || true
 
 # Dev
 [group('dev')]
@@ -301,9 +301,9 @@ docker-build:
 [group('docker')]
 [doc("Build image, show size, then remove")]
 docker-size:
-    docker build -q -t yubal:size-check .
-    @docker images yubal:size-check --format '{{"{{"}}.Size{{"}}"}}'
-    @docker rmi yubal:size-check
+    docker build -q -t yubal:docker-size .
+    @docker images yubal:docker-size --format '{{"{{"}}.Size{{"}}"}}'
+    @docker rmi yubal:docker-size
 
 [group('docker')]
 [doc("Run docker compose up")]

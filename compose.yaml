@@ -3,6 +3,7 @@
 services:
   yubal:
     build: .
+    image: yubal:latest
     container_name: yubal
     environment:
       YUBAL_PORT: 8000
