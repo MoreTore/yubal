@@ -54,7 +54,18 @@ Albums are organized by artist and year. When downloading a playlist, each track
 ```
 
 > [!TIP]
-> **Using playlists?** [Navidrome](https://www.navidrome.org/) is recommended as it supports relative paths in M3U files. Other servers like Gonic [don't yet](https://github.com/sentriz/gonic/issues/529).
+> **Playlists setup**
+>
+> I recommend [Navidrome](https://www.navidrome.org/), a subsonic-compatible server that supports relative paths in M3U files, with the following environment variables:
+> 
+> ```bash
+> # Enable .m3u playlist auto-import
+> ND_AUTOIMPORTPLAYLISTS=true
+> # Set imported playlists as public by default
+> ND_DEFAULTPLAYLISTPUBLICVISIBILITY=true
+> ```
+> 
+> This gives you album/artist navigation alongside yubal's M3U playlists. See [Navidrome configuration options](https://www.navidrome.org/docs/usage/configuration/options/) for more details.
 
 ## ✨ Features
 
@@ -133,7 +144,11 @@ For age-restricted content, private playlists, or higher bitrate (Premium):
 - [ ] Batch import (multiple URLs)
 - [ ] Post-import webhooks (Navidrome/Jellyfin/Gonic)
 
-[Request a feature →](https://github.com/guillevc/yubal/issues)
+## 💬 Community
+
+Share your setup in [Setups](https://github.com/guillevc/yubal/discussions/categories/setups) — music server, clients, workflow, tips, etc. For questions or troubleshooting, check [Q&A](https://github.com/guillevc/yubal/discussions/categories/q-a).
+
+[Feature requests and bug reports](https://github.com/guillevc/yubal/issues/new) are welcome.
 
 ## 💜 Support
 
