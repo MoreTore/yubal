@@ -1,9 +1,12 @@
-import { ChevronDown, Terminal } from "lucide-react";
+import { Chip, Spinner } from "@heroui/react";
+import { ChevronDown, CloudOff, Terminal } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef } from "react";
+import type { Job } from "../api/jobs";
 import type { components } from "../api/schema";
 import { useLocalStorage } from "../hooks/use-local-storage";
 import { useLogs } from "../hooks/use-logs";
+import { isActive } from "../lib/job-status";
 import { EmptyState } from "./common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 import { LogLine } from "./console/log-renderers";
@@ -22,13 +25,19 @@ function parseLine(line: string): ParsedLine {
   }
 }
 
-export function ConsolePanel() {
+interface ConsolePanelProps {
+  jobs?: Job[];
+}
+
+export function ConsolePanel({ jobs = [] }: ConsolePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { lines, isConnected } = useLogs();
   const [isExpanded, setIsExpanded] = useLocalStorage(
     "yubal-console-expanded",
     false,
   );
+
+  const hasActiveJobs = jobs.some((job) => isActive(job.status));
 
   // Memoize parsed lines to avoid re-parsing on every render
   const parsedLines = useMemo(() => lines.map(parseLine), [lines]);
@@ -47,12 +56,29 @@ export function ConsolePanel() {
         onClick={() => setIsExpanded(!isExpanded)}
         leadingIcon={<Terminal size={18} />}
         badge={
-          !isConnected && (
-            <span className="bg-warning/10 text-warning inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs">
-              <span className="bg-warning h-1.5 w-1.5 animate-pulse rounded-full" />
+          !isConnected ? (
+            <Chip
+              size="sm"
+              radius="full"
+              color="warning"
+              variant="flat"
+              startContent={<CloudOff size={16} className="mr-1 ml-1" />}
+            >
               offline
+            </Chip>
+          ) : hasActiveJobs ? (
+            <span className="flex items-center">
+              <Spinner
+                size="sm"
+                variant="wave"
+                color="primary"
+                className="align-middle"
+                classNames={{
+                  wrapper: "h-full",
+                }}
+              />
             </span>
-          )
+          ) : null
         }
         trailingIcon={
           <motion.div

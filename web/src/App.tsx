@@ -77,7 +77,7 @@ export default function App() {
               onCancel={cancelJob}
               onDelete={handleDelete}
             />
-            <ConsolePanel />
+            <ConsolePanel jobs={jobs} />
           </section>
         </BlurFade>
       </main>
