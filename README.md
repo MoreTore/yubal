@@ -3,6 +3,7 @@
 
 > [!IMPORTANT]
 > **Upgrading from v0.1?** The folder structure and config have changed. See the [v0.2.0 release notes](https://github.com/guillevc/yubal/releases/tag/v0.2.0) for migration steps.
+
 <div align="center">
 
 # yubal
@@ -55,56 +56,6 @@ Albums are organized by artist and year. When downloading a playlist, each track
 ../Radiohead/1997 - OK Computer/02 - Paranoid Android.opus
 ```
 
-> [!TIP]
-> **Media Server Setup**
->
-> | Feature | Navidrome | Jellyfin | Gonic |
-> |---------|:---------:|:--------:|:-----:|
-> | Multi-artist tags | ✅ | ✅* | ✅* |
-> | M3U playlists | ✅ | ✅ | ❌ |
->
-> <sup>* Requires configuration</sup>
->
-> <details>
-> <summary><b>Navidrome</b> (recommended)</summary>
->
-> Multi-artist tags work out of the box.
->
-> For M3U playlist auto-import:
-> ```bash
-> ND_AUTOIMPORTPLAYLISTS=true
-> ND_DEFAULTPLAYLISTPUBLICVISIBILITY=true
-> ```
->
-> See [Navidrome configuration](https://www.navidrome.org/docs/usage/configuration/options/).
-> </details>
->
-> <details>
-> <summary><b>Jellyfin</b></summary>
->
-> M3U playlists work out of the box.
->
-> For multi-artist tags, enable in library settings:
-> 1. Go to **Dashboard → Libraries → Music Library → Manage Library**
-> 2. Check **Prefer embedded tags over filenames**
-> 3. Check **Use non-standard artists tags**
-> 4. Save and rescan library
-> </details>
->
-> <details>
-> <summary><b>Gonic</b></summary>
->
-> M3U playlists are not supported.
->
-> For multi-artist tags:
-> ```bash
-> GONIC_MULTI_VALUE_ARTIST=multi
-> GONIC_MULTI_VALUE_ALBUM_ARTIST=multi
-> ```
->
-> See [gonic documentation](https://github.com/sentriz/gonic).
-> </details>
-
 ## ✨ Features
 
 - **Web UI** — Real-time progress, job queue, responsive design
@@ -112,7 +63,7 @@ Albums are organized by artist and year. When downloading a playlist, each track
 - **Albums & playlists** — Automatic album detection, M3U playlist generation
 - **Smart deduplication** — Tracks indexed by path, never downloaded twice across playlists or albums
 - **Format options** — Native `opus` (best quality), or transcode to `mp3`/`m4a`
-- **Docker-ready** — Multi-arch (amd64/arm64), single container
+- **Media server ready** — Tested with [Navidrome, Jellyfin and Gonic](#-media-servers-integration)
 
 ## 🚀 Quick Start
 
@@ -149,7 +100,6 @@ docker compose up -d
 
 <details>
 <summary>All options</summary>
-
 | Variable             | Description            | Default (Docker) |
 | -------------------- | ---------------------- | ---------------- |
 | `YUBAL_HOST`         | Server bind address    | `0.0.0.0`        |
@@ -158,6 +108,57 @@ docker compose up -d
 | `YUBAL_CORS_ORIGINS` | Allowed CORS origins   | `["*"]`          |
 | `YUBAL_RELOAD`       | Auto-reload (dev only) | `false`          |
 | `YUBAL_TEMP`         | Temp directory         | System temp      |
+</details>
+
+## 🔌 Media Servers Integration
+
+yubal organizes downloads as `Artist/Year - Album/NN - Track.ext` and writes both slash-separated `ARTIST` and multi-value `ARTISTS` tags across all audio formats.
+
+Configure your server to read `ARTISTS` tags for proper multi-artist linking.
+
+| Feature           | Navidrome | Jellyfin | Gonic |
+| ----------------- | :-------: | :------: | :---: |
+| Folder structure  |    ✅     |    ✅    |  ✅   |
+| Multi-artist tags |    ✅     |    ⚙️    |  ⚙️   |
+| M3U playlists     |    ✅     |    ✅    |  ❌   |
+
+✅ Works out of the box · ⚙️ Requires configuration
+
+<details>
+<summary><b>Navidrome</b> (works out of the box)</summary>
+
+No configuration required. Optionally, make imported playlists public:
+
+```bash
+ND_DEFAULTPLAYLISTPUBLICVISIBILITY=true
+```
+
+See [Navidrome docs](https://www.navidrome.org/docs/usage/configuration/options/).
+
+</details>
+
+<details>
+<summary><b>Jellyfin</b></summary>
+
+For multi-artist support, enable the non-standard artists tag:
+
+1. **Dashboard → Libraries → Music Library → Manage Library**
+2. Check **Use non-standard artists tags**
+3. Save and rescan
+
+</details>
+
+<details>
+<summary><b>Gonic</b></summary>
+
+For multi-artist support:
+
+```bash
+GONIC_MULTI_VALUE_ARTIST=multi
+GONIC_MULTI_VALUE_ALBUM_ARTIST=multi
+```
+
+M3U playlists are not supported because relative paths are not supported ([pending PR](https://github.com/sentriz/gonic/pull/537)).
 
 </details>
 
