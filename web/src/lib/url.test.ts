@@ -12,16 +12,18 @@ describe("isValidUrl", () => {
       );
     });
 
-    test("accepts watch URLs", () => {
-      expect(isValidUrl("https://music.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
-        true,
-      );
-      expect(isValidUrl("http://music.youtube.com/watch?v=abc123")).toBe(true);
-    });
-
-    test("accepts browse/VL URLs (album URLs)", () => {
+    test("accepts browse URLs (album URLs)", () => {
       expect(isValidUrl("https://music.youtube.com/browse/VLPLxyz123")).toBe(
         true,
+      );
+      expect(isValidUrl("https://music.youtube.com/browse/MPREb_abc123")).toBe(
+        true,
+      );
+    });
+
+    test("rejects watch URLs (single tracks not supported)", () => {
+      expect(isValidUrl("https://music.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
+        false,
       );
     });
   });
@@ -32,14 +34,17 @@ describe("isValidUrl", () => {
         true,
       );
       expect(isValidUrl("http://youtube.com/playlist?list=abc")).toBe(true);
+      expect(isValidUrl("https://www.youtube.com/playlist?list=PLxyz")).toBe(
+        true,
+      );
     });
 
-    test("accepts watch URLs", () => {
-      expect(isValidUrl("https://youtube.com/watch?v=dQw4w9WgXcQ")).toBe(true);
+    test("rejects watch URLs (single tracks not supported)", () => {
+      expect(isValidUrl("https://youtube.com/watch?v=dQw4w9WgXcQ")).toBe(false);
     });
 
-    test("accepts browse/VL URLs", () => {
-      expect(isValidUrl("https://youtube.com/browse/VLPLxyz")).toBe(true);
+    test("rejects browse URLs (only music.youtube.com browse supported)", () => {
+      expect(isValidUrl("https://youtube.com/browse/VLPLxyz")).toBe(false);
     });
   });
 

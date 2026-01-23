@@ -7,6 +7,7 @@ import {
   type Job,
 } from "../api/jobs";
 import { isActive } from "../lib/job-status";
+import { showErrorToast } from "../lib/toast";
 
 export type { Job } from "../api/jobs";
 
@@ -60,6 +61,7 @@ export function useJobs(): UseJobsResult {
       const result = await createJob(url, maxItems);
 
       if (!result.success) {
+        showErrorToast("Download failed", result.error);
         await fetchJobs();
         return;
       }

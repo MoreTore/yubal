@@ -47,6 +47,12 @@ export async function createJob(
         activeJobId: conflict.active_job_id,
       };
     }
+    if (response.status === 422) {
+      // Validation error - extract message from detail
+      const validation = error as { detail?: { msg: string }[] };
+      const message = validation.detail?.[0]?.msg ?? "Invalid URL";
+      return { success: false, error: message };
+    }
     return { success: false, error: "Failed to create job" };
   }
 
