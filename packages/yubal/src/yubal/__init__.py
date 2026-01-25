@@ -63,7 +63,7 @@ from yubal.models.domain import (
 )
 from yubal.services import MetadataExtractorService, PlaylistDownloadService
 from yubal.services.downloader import DownloadService as _DownloadService
-from yubal.utils import clear_cover_cache, fetch_cover
+from yubal.utils import cleanup_part_files, clear_cover_cache, fetch_cover
 from yubal.utils.url import is_single_track_url, is_supported_url
 
 
@@ -208,6 +208,7 @@ __all__ = [
     "UnsupportedPlaylistError",
     "VideoType",
     "YTMetaError",
+    "cleanup_part_files",
     "clear_cover_cache",
     "create_downloader",
     "create_extractor",

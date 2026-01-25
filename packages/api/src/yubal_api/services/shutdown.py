@@ -2,28 +2,24 @@
 
 Handles Ctrl+C (SIGINT) and SIGTERM signals by:
 1. Cancelling all running jobs
-2. Cleaning up .part files from incomplete downloads
+2. Delegating cleanup to yubal package
 3. Suppressing log output during shutdown to prevent post-prompt messages
 """
 
 from __future__ import annotations
 
-import logging
 import threading
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from yubal_api.services.job_executor import JobExecutor
 
-logger = logging.getLogger(__name__)
-
 
 class ShutdownCoordinator:
     """Coordinates graceful shutdown with cleanup.
 
-    Thread-safe coordinator that cancels running jobs and cleans up
-    partial downloads when shutdown is requested.
+    Thread-safe coordinator that cancels running jobs when shutdown
+    is requested. Cleanup of partial downloads is delegated to yubal.
     """
 
     def __init__(self) -> None:
@@ -52,28 +48,3 @@ class ShutdownCoordinator:
             cancelled = self._job_executor.cancel_all_jobs()
 
         return cancelled
-
-    def cleanup_part_files(self, data_dir: Path) -> int:
-        """Remove .part files from data directory.
-
-        Uses the same pattern as yubal's _cleanup_partial_downloads.
-
-        Args:
-            data_dir: Base data directory to search for .part files.
-
-        Returns:
-            Number of .part files cleaned up.
-        """
-        cleaned = 0
-
-        try:
-            for part_file in data_dir.rglob("*.part"):
-                try:
-                    part_file.unlink(missing_ok=True)
-                    cleaned += 1
-                except OSError:
-                    pass  # Best effort cleanup
-        except OSError:
-            pass  # Directory might not exist
-
-        return cleaned

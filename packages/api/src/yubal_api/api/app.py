@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from rich.console import Console
 from rich.logging import RichHandler
+from yubal import cleanup_part_files
 
 from yubal_api.api.exceptions import register_exception_handlers
 from yubal_api.api.routes import cookies, health, jobs, logs
@@ -173,8 +174,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Suppress logging to prevent post-prompt messages
     suppress_logging()
 
-    # Clean up .part files from incomplete downloads
-    coordinator.cleanup_part_files(settings.data)
+    # Clean up .part files from incomplete downloads (delegated to yubal)
+    cleanup_part_files(settings.data)
 
     # Clean up log buffer
     clear_log_buffer()

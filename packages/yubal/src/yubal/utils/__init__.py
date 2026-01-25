@@ -5,6 +5,7 @@ Not re-exported at the top-level `yubal` package.
 """
 
 from yubal.utils.artists import format_artists
+from yubal.utils.cleanup import cleanup_part_files
 from yubal.utils.cookies import cookies_to_ytmusic_auth, is_authenticated_cookies
 from yubal.utils.cover import clear_cover_cache, fetch_cover, get_cover_cache_size
 from yubal.utils.filename import build_track_path, clean_filename
@@ -15,6 +16,7 @@ from yubal.utils.url import is_single_track_url, parse_playlist_id, parse_video_
 __all__ = [
     "build_track_path",
     "clean_filename",
+    "cleanup_part_files",
     "clear_cover_cache",
     "cookies_to_ytmusic_auth",
     "fetch_cover",
