@@ -17,7 +17,7 @@ def validate_youtube_music_url(url: str) -> str:
     url = url.strip()
     if not is_supported_url(url):
         raise ValueError(
-            "Invalid URL. Expected a YouTube Music playlist or track URL "
+            "Invalid URL. Expected a YouTube Music URL "
             "(e.g., https://music.youtube.com/playlist?list=... or "
             "https://music.youtube.com/watch?v=...)"
         )

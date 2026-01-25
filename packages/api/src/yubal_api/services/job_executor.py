@@ -7,12 +7,11 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from yubal import cleanup_part_files
+from yubal import CancelToken, cleanup_part_files
 
 from yubal_api.core.enums import JobStatus, ProgressStep
 from yubal_api.core.models import ContentInfo, Job
 from yubal_api.services.protocols import JobExecutionStore
-from yubal_api.services.sync.cancel import CancelToken
 from yubal_api.services.sync_service import SyncService
 
 logger = logging.getLogger(__name__)
@@ -164,7 +163,7 @@ class JobExecutor:
                 self._base_path, self._audio_format, self._cookies_path
             )
             result = await asyncio.to_thread(
-                sync_service.execute,
+                sync_service.run,
                 url,
                 on_progress,
                 cancel_token,
