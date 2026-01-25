@@ -200,12 +200,38 @@ class SyncService:
 
             emit(ProgressStep.FETCHING_INFO, "Starting...", 0.0)
 
+            # Track phase transitions to emit content_info when extraction ends
+            prev_phase: str | None = None
+
             # Iterate through all phases
             for progress in service.download_playlist(url, cancel_token):
                 step = _map_phase(progress.phase)
                 pct = _calculate_phase_progress(
                     progress.phase, progress.current, progress.total
                 )
+
+                # Emit content_info when transitioning from extracting to downloading
+                # This handles the case where some tracks are skipped (UGC videos)
+                # and current never equals total
+                if (
+                    prev_phase == "extracting"
+                    and progress.phase != "extracting"
+                    and content_info is None
+                    and playlist_info
+                    and tracks
+                ):
+                    content_info = content_info_from_yubal(
+                        playlist_info, tracks, url, self._audio_format
+                    )
+                    track_word = "track" if len(tracks) == 1 else "tracks"
+                    emit(
+                        ProgressStep.FETCHING_INFO,
+                        f"Found {len(tracks)} {track_word}: {content_info.title}",
+                        10.0,  # End of extraction phase
+                        {"content_info": content_info.model_dump()},
+                    )
+
+                prev_phase = progress.phase
 
                 if progress.phase == "extracting":
                     content_info, playlist_info = self._handle_extract_phase(

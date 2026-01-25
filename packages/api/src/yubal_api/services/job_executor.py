@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -149,11 +150,13 @@ class JobExecutor:
                     return
 
                 loop.call_soon_threadsafe(
-                    self._job_store.transition,
-                    job_id,
-                    status,
-                    progress,
-                    content_info,
+                    partial(
+                        self._job_store.transition,
+                        job_id,
+                        status,
+                        progress=progress,
+                        content_info=content_info,
+                    )
                 )
 
             # Run sync in thread pool
