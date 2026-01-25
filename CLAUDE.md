@@ -2,11 +2,11 @@
 
 ## Rules
 
-- Run `just format` after changing code
-- Prompt user to run `just check` and fix all errors after major changes
-- No backwards compatibility—break freely, update all dependent code
-- Use expert language subagents for specialized tasks
-- Never prompt to commit or push unless explicitly requested
+- Run `just format` and `just lint-fix` after changing code.
+- Prompt user to run `just check` and fix all errors after major changes.
+- No backwards compatibility. Break freely, update all dependent code.
+- Use expert language subagents for specialized tasks.
+- Never prompt to commit or push unless explicitly requested.
 
 ## Just Commands
 
