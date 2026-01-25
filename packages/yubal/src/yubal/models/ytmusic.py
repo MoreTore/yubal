@@ -102,4 +102,6 @@ class SearchResult(YTMusicModel):
 
     video_id: str = Field(alias="videoId")
     video_type: str | None = Field(default=None, alias="videoType")
+    title: str
+    artists: list[Artist] = Field(default_factory=list)
     album: AlbumRef | None = None

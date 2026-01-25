@@ -151,12 +151,16 @@ def sample_playlist(sample_playlist_track: PlaylistTrack) -> Playlist:
 
 
 @pytest.fixture
-def sample_search_result(sample_album_ref: AlbumRef) -> SearchResult:
+def sample_search_result(
+    sample_album_ref: AlbumRef, sample_artists: list[Artist]
+) -> SearchResult:
     """Create a sample search result."""
     return SearchResult.model_validate(
         {
             "videoId": "search123",
             "videoType": "MUSIC_VIDEO_TYPE_ATV",
+            "title": "Test Song",
+            "artists": [{"name": a.name, "id": a.id} for a in sample_artists],
             "album": {"id": sample_album_ref.id, "name": sample_album_ref.name},
         }
     )

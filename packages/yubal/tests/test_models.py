@@ -231,10 +231,12 @@ class TestYTMusicModels:
             {
                 "videoId": "s1",
                 "videoType": "MUSIC_VIDEO_TYPE_ATV",
+                "title": "Test Song",
                 "album": {"id": "alb1", "name": "Album"},
             }
         )
         assert result.video_id == "s1"
+        assert result.title == "Test Song"
         assert result.album is not None
         assert result.album.id == "alb1"
 
@@ -243,6 +245,7 @@ class TestYTMusicModels:
         result = SearchResult.model_validate(
             {
                 "videoId": "s1",
+                "title": "Test Song",
             }
         )
         assert result.album is None

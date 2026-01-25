@@ -74,7 +74,7 @@ class SkipReason(StrEnum):
     """Reason why a track was skipped.
 
     Used in both extraction and download phases:
-    - Extraction: UNSUPPORTED_VIDEO_TYPE, NO_VIDEO_ID, REGION_UNAVAILABLE
+    - Extraction: UNSUPPORTED_VIDEO_TYPE, NO_VIDEO_ID, REGION_UNAVAILABLE, NO_ALBUM_MATCH
     - Download: FILE_EXISTS
     """
 
@@ -82,6 +82,7 @@ class SkipReason(StrEnum):
     UNSUPPORTED_VIDEO_TYPE = "unsupported_video_type"
     NO_VIDEO_ID = "no_video_id"
     REGION_UNAVAILABLE = "region_unavailable"
+    NO_ALBUM_MATCH = "no_album_match"
 
 
 class UnavailableTrack(BaseModel):
@@ -290,7 +291,7 @@ class ExtractProgress(BaseModel):
         total: Total number of tracks to process (after limit applied).
         playlist_total: Total number of tracks in the original playlist (before limit).
         skipped_by_reason: Breakdown of skipped tracks by reason.
-        track: Extracted track metadata.
+        track: Extracted track metadata, or None if track was skipped.
         playlist_info: Information about the playlist being extracted.
     """
 
@@ -300,7 +301,7 @@ class ExtractProgress(BaseModel):
     total: int
     playlist_total: int
     skipped_by_reason: dict[SkipReason, int] = Field(default_factory=dict)
-    track: TrackMetadata
+    track: TrackMetadata | None
     playlist_info: PlaylistInfo
 
     @property

@@ -181,6 +181,8 @@ class TestExtractTrack:
                     SearchResult.model_validate({
                         "videoId": "plnfIj7dkJE",
                         "videoType": "MUSIC_VIDEO_TYPE_ATV",
+                        "title": "Starboy",
+                        "artists": [{"name": "The Weeknd", "id": "UC456"}],
                         "album": {"id": "MPREb_starboy", "name": "Starboy"},
                     })
                 ]

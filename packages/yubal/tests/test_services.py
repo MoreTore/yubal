@@ -260,6 +260,8 @@ class TestMetadataExtractorService:
             {
                 "videoId": "atv456",
                 "videoType": "MUSIC_VIDEO_TYPE_ATV",
+                "title": "Test Song",
+                "artists": [{"name": "Artist"}],
                 "album": {"id": "alb1", "name": "Album"},
             }
         )
@@ -631,6 +633,8 @@ class TestMetadataExtractorService:
             {
                 "videoId": "search_omv",
                 "videoType": "MUSIC_VIDEO_TYPE_OMV",  # OMV result
+                "title": "Test Song",
+                "artists": [{"name": "Artist"}],
                 "album": {"id": "alb1", "name": "Album"},
             }
         )

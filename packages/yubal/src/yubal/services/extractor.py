@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Iterator
 
-from rapidfuzz import process
+from rapidfuzz import fuzz, process
 
 from yubal.client import YTMusicProtocol
 from yubal.exceptions import TrackParseError
@@ -30,6 +30,7 @@ SUPPORTED_VIDEO_TYPES = frozenset({VideoType.ATV, VideoType.OMV})
 # Fuzzy matching thresholds (using rapidfuzz, scale 0-100)
 FUZZY_MATCH_HIGH_CONFIDENCE = 80  # Auto-accept threshold
 FUZZY_MATCH_LOW_CONFIDENCE = 50  # Minimum acceptable threshold
+ALBUM_SEARCH_TITLE_THRESHOLD = 70  # Minimum similarity for album search results
 
 
 class MetadataExtractorService:
@@ -173,7 +174,7 @@ class MetadataExtractorService:
 
         for track in tracks:
             try:
-                metadata = self._extract_single_track(track)
+                metadata, skip_reason = self._extract_single_track(track)
             except Exception as e:
                 logger.exception(
                     "Failed to extract track '%s': %s",
@@ -181,16 +182,17 @@ class MetadataExtractorService:
                     e,
                 )
                 # Continue with partial results instead of failing entirely
-                metadata = self._create_fallback_metadata(track)
+                metadata, skip_reason = self._create_fallback_metadata(track), None
 
-            # Skip tracks that return None (unsupported video types)
-            if metadata is None:
-                skipped_by_reason[SkipReason.UNSUPPORTED_VIDEO_TYPE] = (
-                    skipped_by_reason.get(SkipReason.UNSUPPORTED_VIDEO_TYPE, 0) + 1
+            # Skip tracks that return None with a skip reason
+            if metadata is None and skip_reason is not None:
+                skipped_by_reason[skip_reason] = (
+                    skipped_by_reason.get(skip_reason, 0) + 1
                 )
                 logger.debug(
-                    "Skipped track '%s': unsupported video type",
+                    "Skipped track '%s': %s",
                     track.title,
+                    skip_reason.value,
                 )
                 continue
 
@@ -262,10 +264,12 @@ class MetadataExtractorService:
         track = self._client.get_track(video_id)
 
         # Process through existing single track extraction logic
-        metadata = self._extract_single_track(track)
+        metadata, skip_reason = self._extract_single_track(track)
 
-        # Return None for unsupported video types (UGC, etc.)
+        # Return None for skipped tracks (unsupported type, no album match, etc.)
         if metadata is None:
+            if skip_reason:
+                logger.info("Track skipped: %s", skip_reason.value)
             return None
 
         # Create synthetic playlist info for single track
@@ -291,27 +295,61 @@ class MetadataExtractorService:
             url: YouTube Music watch URL with video ID.
 
         Yields:
-            Single ExtractProgress with the track metadata.
-            Does not yield anything if track has unsupported video type.
+            Single ExtractProgress with the track metadata or skip info.
+            Always yields exactly one progress update.
 
         Raises:
             TrackParseError: If URL doesn't contain a video ID.
             TrackNotFoundError: If track doesn't exist.
             APIError: If API requests fail.
         """
-        result = self.extract_track(url)
+        video_id = parse_video_id(url)
+        if not video_id:
+            raise TrackParseError(f"Could not extract video ID from: {url}")
 
-        # Don't yield anything for unsupported video types
-        if result is None:
+        logger.debug("Extracting metadata for track: %s", video_id)
+
+        # Fetch track using get_watch_playlist (same format as playlist tracks)
+        track = self._client.get_track(video_id)
+
+        # Process through existing single track extraction logic
+        metadata, skip_reason = self._extract_single_track(track)
+
+        # Create synthetic playlist info (needed even for skipped tracks)
+        playlist_info = PlaylistInfo(
+            playlist_id=video_id,
+            title=metadata.title if metadata else track.title,
+            cover_url=(
+                metadata.cover_url
+                if metadata
+                else get_square_thumbnail(track.thumbnails)
+            ),
+            kind=ContentKind.TRACK,
+            author=None,
+            unavailable_tracks=[],
+        )
+
+        # Yield progress with skip reason if skipped
+        if metadata is None and skip_reason is not None:
+            logger.info("Track skipped: %s", skip_reason.value)
+            yield ExtractProgress(
+                current=1,
+                total=1,
+                playlist_total=1,
+                skipped_by_reason={skip_reason: 1},
+                track=None,
+                playlist_info=playlist_info,
+            )
             return
 
+        # Normal case: yield progress with track metadata
         yield ExtractProgress(
             current=1,
             total=1,
             playlist_total=1,
             skipped_by_reason={},
-            track=result.track,
-            playlist_info=result.playlist_info,
+            track=metadata,
+            playlist_info=playlist_info,
         )
 
     # ============================================================================
@@ -401,7 +439,9 @@ class MetadataExtractorService:
     # SINGLE TRACK EXTRACTION - Process individual tracks and enrich with album data
     # ============================================================================
 
-    def _extract_single_track(self, track: PlaylistTrack) -> TrackMetadata | None:
+    def _extract_single_track(
+        self, track: PlaylistTrack
+    ) -> tuple[TrackMetadata | None, SkipReason | None]:
         """Extract and enrich metadata for a single track.
 
         This is the core per-track processing pipeline:
@@ -418,21 +458,26 @@ class MetadataExtractorService:
             track: Playlist track to process.
 
         Returns:
-            Extracted track metadata, or None if track should be skipped
-            (e.g., unsupported video type).
+            Tuple of (metadata, skip_reason):
+            - (TrackMetadata, None) on success
+            - (None, SkipReason) if track should be skipped
         """
         video_type = self._determine_video_type(track)
 
         # Skip tracks with unsupported video type (warning already logged)
         if video_type is None:
-            return None
+            return None, SkipReason.UNSUPPORTED_VIDEO_TYPE
 
         album_id = track.album.id if track.album else None
         search_atv_id: str | None = None
 
         # For tracks without album, search for album info
         if not album_id:
-            album_id, search_atv_id = self._search_for_album(track)
+            album_id, search_atv_id, no_match_found = self._search_for_album(track)
+
+            # Skip track if search found results but none matched
+            if no_match_found:
+                return None, SkipReason.NO_ALBUM_MATCH
 
         # Fetch album details if we have an ID
         album: Album | None = None
@@ -444,10 +489,13 @@ class MetadataExtractorService:
 
         # Build enriched metadata from album, or fallback to basic metadata
         if album:
-            return self._build_metadata_with_album_info(
-                track, album, video_type, search_atv_id
+            return (
+                self._build_metadata_with_album_info(
+                    track, album, video_type, search_atv_id
+                ),
+                None,
             )
-        return self._create_fallback_metadata(track, video_type)
+        return self._create_fallback_metadata(track, video_type), None
 
     # ============================================================================
     # VIDEO TYPE VALIDATION - Ensure track is a supported format
@@ -499,41 +547,92 @@ class MetadataExtractorService:
     # ALBUM DISCOVERY - Search for album info when not directly available
     # ============================================================================
 
-    def _search_for_album(self, track: PlaylistTrack) -> tuple[str | None, str | None]:
+    def _search_for_album(
+        self, track: PlaylistTrack
+    ) -> tuple[str | None, str | None, bool]:
         """Search YouTube Music to find album information for a track.
 
         Why search: Some playlist tracks don't include album IDs in their metadata.
         Searching allows us to find the canonical album and enrich the track with
         complete metadata (track numbers, album artists, release year, etc).
 
-        Search strategy: Query using "artist + title" and take the first result
-        with album information. Also captures the ATV video ID from search results
-        for tracks that are OMVs in the playlist (gives us both video variants).
+        Search strategy: Query using "artist + title", validate that the result
+        title matches the original track (to avoid wrong albums), and take the
+        first matching result with album information.
 
         Args:
             track: Track to search for.
 
         Returns:
-            Tuple of (album_id, atv_video_id) if found, (None, None) otherwise.
+            Tuple of (album_id, atv_video_id, no_match_found):
+            - (album_id, atv_id, False) if matching album found
+            - (None, None, False) if search failed or no results
+            - (None, None, True) if results found but none matched track title
         """
         artists = format_artists(track.artists)
         query = f"{artists} {track.title}".strip()
 
         if not query:
-            return None, None
+            return None, None, False
 
         try:
             results = self._client.search_songs(query)
         except Exception as e:
             logger.debug("Search failed for '%s': %s", query, e)
-            return None, None
+            return None, None, False
+
+        if not results:
+            return None, None, False
+
+        target_title = track.title.lower().strip()
+        target_artists = {a.name.lower().strip() for a in track.artists if a.name}
+        had_results_with_album = False
 
         for result in results:
-            if result.album:
-                atv_id = result.video_id if result.video_type == VideoType.ATV else None
-                return result.album.id, atv_id
+            if not result.album:
+                continue
 
-        return None, None
+            had_results_with_album = True
+
+            # Validate title matches to avoid wrong albums
+            result_title = result.title.lower().strip()
+            title_similarity = fuzz.ratio(target_title, result_title)
+
+            if title_similarity < ALBUM_SEARCH_TITLE_THRESHOLD:
+                logger.debug(
+                    "Skipping search result '%s' - low title similarity to '%s' (%.0f%%)",
+                    result.title,
+                    track.title,
+                    title_similarity,
+                )
+                continue
+
+            # Validate at least one artist matches
+            result_artists = {a.name.lower().strip() for a in result.artists if a.name}
+            if not target_artists & result_artists:
+                logger.debug(
+                    "Skipping search result '%s' - no matching artists (%s vs %s)",
+                    result.title,
+                    target_artists,
+                    result_artists,
+                )
+                continue
+
+            atv_id = (
+                result.video_id if result.video_type == VideoType.ATV.value else None
+            )
+            return result.album.id, atv_id, False
+
+        # Had results with album info but none matched title
+        if had_results_with_album:
+            logger.warning(
+                "No matching album found for '%s' by %s - search results didn't match",
+                track.title,
+                artists,
+            )
+            return None, None, True
+
+        return None, None, False
 
     # ============================================================================
     # TRACK MATCHING - Four-tier strategy to match playlist tracks to album tracks

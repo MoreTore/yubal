@@ -321,7 +321,9 @@ class PlaylistDownloadService:
         last_progress = None
 
         for progress in self._extractor.extract(url, max_items=self._config.max_items):
-            self._extracted_tracks.append(progress.track)
+            # Only add non-None tracks (skip those with skip reasons)
+            if progress.track is not None:
+                self._extracted_tracks.append(progress.track)
             self._playlist_info = progress.playlist_info
             last_progress = progress
             yield PlaylistProgress(

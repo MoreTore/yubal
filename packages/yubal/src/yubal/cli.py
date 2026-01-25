@@ -8,6 +8,7 @@ For production use, import yubal as a library.
 import json
 import logging
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import click
@@ -26,26 +27,112 @@ from rich.table import Table
 from yubal.client import YTMusicClient
 from yubal.config import AudioCodec, DownloadConfig, PlaylistDownloadConfig
 from yubal.exceptions import YTMetaError
-from yubal.models.domain import DownloadStatus, TrackMetadata, UnavailableTrack
+from yubal.models.domain import (
+    DownloadStatus,
+    ExtractProgress,
+    SkipReason,
+    TrackMetadata,
+    UnavailableTrack,
+)
 from yubal.services import MetadataExtractorService, PlaylistDownloadService
 from yubal.utils.url import is_single_track_url
 
 logger = logging.getLogger("yubal")
 
 
-def setup_logging(verbose: bool = False) -> None:
+@dataclass
+class ExtractionState:
+    """Accumulates state during metadata extraction."""
+
+    tracks: list[TrackMetadata] = field(default_factory=list)
+    skipped_by_reason: dict[SkipReason, int] = field(default_factory=dict)
+    unavailable_tracks: list[UnavailableTrack] = field(default_factory=list)
+    playlist_total: int = 0
+    playlist_kind: str | None = None
+    playlist_title: str | None = None
+
+    @property
+    def skipped(self) -> int:
+        """Total skipped tracks."""
+        return sum(self.skipped_by_reason.values())
+
+    @property
+    def unavailable(self) -> int:
+        """Tracks without video ID."""
+        return self.skipped_by_reason.get(SkipReason.NO_VIDEO_ID, 0)
+
+    def update_from_progress(self, progress: ExtractProgress) -> None:
+        """Update state from extraction progress."""
+        if progress.track is not None:
+            self.tracks.append(progress.track)
+        self.skipped_by_reason = progress.skipped_by_reason
+        self.unavailable_tracks = list(progress.playlist_info.unavailable_tracks)
+        self.playlist_total = progress.playlist_total
+        self.playlist_kind = progress.playlist_info.kind.value
+        self.playlist_title = progress.playlist_info.title
+
+
+def print_no_tracks_message(console: Console, state: ExtractionState) -> None:
+    """Print appropriate message when no tracks were extracted."""
+    if SkipReason.NO_ALBUM_MATCH in state.skipped_by_reason:
+        console.print(
+            "[yellow]Track skipped: Could not find matching album info "
+            "(search results didn't match track title/artist)[/yellow]"
+        )
+    elif SkipReason.UNSUPPORTED_VIDEO_TYPE in state.skipped_by_reason:
+        console.print(
+            "[yellow]Track skipped: Unsupported video type "
+            "(only ATV and OMV are supported)[/yellow]"
+        )
+    else:
+        console.print(
+            "[yellow]No tracks found (may be unsupported video type)[/yellow]"
+        )
+    if state.unavailable_tracks:
+        print_unavailable_tracks(console, state.unavailable_tracks)
+
+# Standard progress bar columns used by both meta and download commands.
+# Using the same console for Progress and RichHandler ensures logs appear
+# above the progress bar rather than interfering with it.
+PROGRESS_COLUMNS = (
+    SpinnerColumn(),
+    TextColumn("[progress.description]{task.description}"),
+    BarColumn(),
+    TaskProgressColumn(),
+    TimeElapsedColumn(),
+)
+
+
+def setup_logging(verbose: bool = False, console: Console | None = None) -> None:
     """Configure logging with Rich handler.
+
+    This function clears existing handlers before adding a new one, allowing
+    it to be called multiple times to reconfigure logging (e.g., to switch
+    from default console to a shared Progress console).
 
     Args:
         verbose: If True, set log level to DEBUG. Otherwise WARNING.
+            When reconfiguring with a console, pass the same verbose
+            setting to preserve the log level.
+        console: Optional Console instance to use for RichHandler. When
+            using Progress bars, pass the same Console to both Progress
+            and this function so logs appear above the progress bar.
     """
     level = logging.DEBUG if verbose else logging.WARNING
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
+
+    # Clear existing handlers to allow reconfiguration
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+
+    handler = RichHandler(
+        rich_tracebacks=True,
+        show_path=False,
+        console=console,
     )
+    handler.setFormatter(logging.Formatter("%(message)s", datefmt="[%X]"))
+
+    root_logger.setLevel(level)
+    root_logger.addHandler(handler)
 
 
 def print_section_header(console: Console, title: str, subtitle: str = "") -> None:
@@ -198,8 +285,11 @@ def print_tracks(
 
 @click.group()
 @click.option("-v", "--verbose", is_flag=True, help="Enable debug logging.")
-def main(verbose: bool) -> None:
+@click.pass_context
+def main(ctx: click.Context, verbose: bool) -> None:
     """Extract and download from YouTube Music albums and playlists."""
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
     setup_logging(verbose=verbose)
 
 
@@ -211,7 +301,8 @@ def main(verbose: bool) -> None:
     type=click.Path(exists=True, path_type=Path),
     help="Path to cookies.txt for YouTube Music authentication.",
 )
-def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
+@click.pass_context
+def meta_cmd(ctx: click.Context, url: str, as_json: bool, cookies: Path | None) -> None:
     """Extract structured metadata from a YouTube Music URL.
 
     URL can be either a single track URL or a playlist/album URL.
@@ -224,31 +315,22 @@ def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
       yubal meta "https://music.youtube.com/playlist?list=PLxxx"
     """
     console = Console()
+    verbose = ctx.obj.get("verbose", False)
+
+    # Reconfigure logging to use this console so logs appear above progress bar
+    setup_logging(verbose=verbose, console=console)
 
     try:
         client = YTMusicClient(cookies_path=cookies)
         service = MetadataExtractorService(client)
-
-        tracks: list[TrackMetadata] = []
-        skipped = 0
-        unavailable = 0
-        unavailable_tracks_list: list[UnavailableTrack] = []
-        playlist_kind: str | None = None
-        playlist_title: str | None = None
+        state = ExtractionState()
 
         # Inform user about single track detection (early feedback)
         if is_single_track_url(url):
             console.print("[cyan]Detected single track[/cyan]")
 
         # Unified extraction API handles all URL types
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
+        with Progress(*PROGRESS_COLUMNS, console=console) as progress:
             task = progress.add_task("Extracting metadata", total=None)
 
             for extract_progress in service.extract(url):
@@ -257,33 +339,24 @@ def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
                     completed=extract_progress.current,
                     total=extract_progress.total - extract_progress.skipped,
                 )
-                tracks.append(extract_progress.track)
-                skipped = extract_progress.skipped
-                unavailable = extract_progress.unavailable
-                unavailable_tracks_list = list(
-                    extract_progress.playlist_info.unavailable_tracks
-                )
-                playlist_kind = extract_progress.playlist_info.kind.value
-                playlist_title = extract_progress.playlist_info.title
+                state.update_from_progress(extract_progress)
 
-        if not tracks:
-            console.print(
-                "[yellow]No tracks found (may be unsupported video type)[/yellow]"
-            )
+        if not state.tracks:
+            print_no_tracks_message(console, state)
             return
 
         if as_json:
-            data = [t.model_dump() for t in tracks]
+            data = [t.model_dump() for t in state.tracks]
             json.dump(data, sys.stdout, indent=2, ensure_ascii=False, default=str)
         else:
             print_tracks(
                 console,
-                tracks,
-                skipped=skipped,
-                unavailable=unavailable,
-                kind=playlist_kind,
-                title=playlist_title,
-                unavailable_tracks=unavailable_tracks_list,
+                state.tracks,
+                skipped=state.skipped,
+                unavailable=state.unavailable,
+                kind=state.playlist_kind,
+                title=state.playlist_title,
+                unavailable_tracks=state.unavailable_tracks,
             )
 
     except YTMetaError as e:
@@ -335,7 +408,9 @@ def meta_cmd(url: str, as_json: bool, cookies: Path | None) -> None:
     is_flag=True,
     help="Generate M3U files for albums (disabled by default).",
 )
+@click.pass_context
 def download_cmd(
+    ctx: click.Context,
     url: str,
     output: Path,
     codec: str,
@@ -363,6 +438,10 @@ def download_cmd(
       yubal download "https://music.youtube.com/playlist?list=PLxxx" ~/Music
     """
     console = Console()
+    verbose = ctx.obj.get("verbose", False)
+
+    # Reconfigure logging to use this console so logs appear above progress bar
+    setup_logging(verbose=verbose, console=console)
 
     try:
         # Detect single track URL and inform the user
@@ -390,23 +469,9 @@ def download_cmd(
             DownloadStatus.FAILED: "[red]FAIL[/red]",
         }
 
-        # Track extraction info for table display
-        tracks: list[TrackMetadata] = []
-        skipped = 0
-        unavailable = 0
-        unavailable_tracks_list: list[UnavailableTrack] = []
-        playlist_total = 0
-        playlist_kind: str | None = None
-        playlist_title: str | None = None
+        state = ExtractionState()
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
+        with Progress(*PROGRESS_COLUMNS, console=console) as progress:
             extract_task = progress.add_task("Extracting metadata", total=None)
             download_task = progress.add_task("Downloading", total=None, visible=False)
 
@@ -418,13 +483,7 @@ def download_cmd(
                         completed=ep.current,
                         total=ep.total - ep.skipped,
                     )
-                    tracks.append(ep.track)
-                    skipped = ep.skipped
-                    unavailable = ep.unavailable
-                    unavailable_tracks_list = list(ep.playlist_info.unavailable_tracks)
-                    playlist_total = ep.playlist_total
-                    playlist_kind = ep.playlist_info.kind.value
-                    playlist_title = ep.playlist_info.title
+                    state.update_from_progress(ep)
 
                 elif p.phase == "downloading" and p.download_progress:
                     # Hide extract task, show download task on first download
@@ -440,13 +499,13 @@ def download_cmd(
                         # Show tracks section
                         print_tracks(
                             console,
-                            tracks,
-                            skipped=skipped,
-                            unavailable=unavailable,
-                            unavailable_tracks=unavailable_tracks_list,
-                            playlist_total=playlist_total,
-                            kind=playlist_kind,
-                            title=playlist_title,
+                            state.tracks,
+                            skipped=state.skipped,
+                            unavailable=state.unavailable,
+                            unavailable_tracks=state.unavailable_tracks,
+                            playlist_total=state.playlist_total,
+                            kind=state.playlist_kind,
+                            title=state.playlist_title,
                         )
 
                         # Show download section header
@@ -465,25 +524,24 @@ def download_cmd(
                     console.print(status_line)
 
         # Get final result
-        result = service.get_result()
-        if not result:
-            console.print("[yellow]No tracks found in playlist[/yellow]")
-            # Still show unavailable tracks if any
-            if unavailable_tracks_list:
-                print_unavailable_tracks(console, unavailable_tracks_list)
+        final_result = service.get_result()
+        if not final_result:
+            print_no_tracks_message(console, state)
             return
 
         # Show summary section
         print_section_header(console, "Summary")
         console.print(
-            f"  [green]Downloaded: {result.success_count}[/green]  "
-            f"[yellow]Skipped: {result.skipped_count}[/yellow]  "
-            f"[red]Failed: {result.failed_count}[/red]"
+            f"  [green]Downloaded: {final_result.success_count}[/green]  "
+            f"[yellow]Skipped: {final_result.skipped_count}[/yellow]  "
+            f"[red]Failed: {final_result.failed_count}[/red]"
         )
 
         # Show failed downloads
         failed = [
-            r for r in result.download_results if r.status == DownloadStatus.FAILED
+            r
+            for r in final_result.download_results
+            if r.status == DownloadStatus.FAILED
         ]
         if failed:
             console.print()
@@ -494,13 +552,13 @@ def download_cmd(
                 )
 
         # Show generated files
-        if result.m3u_path or result.cover_path:
+        if final_result.m3u_path or final_result.cover_path:
             console.print()
             console.print("  [cyan]Output files:[/cyan]")
-            if result.m3u_path:
-                console.print(f"    • M3U: {result.m3u_path}")
-            if result.cover_path:
-                console.print(f"    • Cover: {result.cover_path}")
+            if final_result.m3u_path:
+                console.print(f"    • M3U: {final_result.m3u_path}")
+            if final_result.cover_path:
+                console.print(f"    • Cover: {final_result.cover_path}")
 
     except YTMetaError as e:
         logger.error(str(e))
