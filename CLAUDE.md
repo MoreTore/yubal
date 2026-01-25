@@ -12,31 +12,32 @@
 
 Available commands via `just`. Use these instead of raw tool commands.
 
-| Command           | Description                    |
-| ----------------- | ------------------------------ |
-| `build`           | Build web frontend             |
-| `check`           | Run all checks (CI)            |
-| `clean`           | Clean build artifacts          |
-| `smoke`           | Run smoke tests                |
-| `cli *args`       | yubal CLI                      |
-| `dev`             | Run API + Web dev servers      |
-| `compose *args`   | Run docker compose             |
-| `docker-build`    | Build local Docker image       |
-| `docker-size`     | Build image, show size, remove |
-| `docs`            | Generate API documentation     |
-| `docs-serve`      | Serve API docs locally         |
-| `format`          | Format Python + Web + Root     |
-| `format-check`    | Check formatting               |
-| `docker-lint`     | Lint Dockerfile                |
-| `lint`            | Lint Python + Web              |
-| `lint-fix`        | Lint and fix                   |
-| `prod`            | Build and serve production     |
-| `install`         | Install deps (frozen)          |
-| `sync`            | Sync deps (updates lockfile)   |
-| `upgrade`         | Upgrade all deps               |
-| `upgrade-yolo`    | Upgrade all to latest          |
-| `test`            | Run all tests                  |
-| `test-cov`        | Run tests with coverage        |
-| `typecheck`       | Typecheck Python + Web         |
-| `gen-api`         | Generate OpenAPI + TS types    |
-| `version VERSION` | Bump version                   |
+| Command           | Description                     |
+| ----------------- | ------------------------------- |
+| `build`           | Build web frontend              |
+| `check`           | Run all checks (CI)             |
+| `clean`           | Clean build artifacts           |
+| `smoke`           | Run smoke tests                 |
+| `cli *args`       | yubal CLI                       |
+| `dev`             | Run API + Web dev servers       |
+| `compose *args`   | Run docker compose              |
+| `docker-build`    | Build local Docker image        |
+| `docker-size`     | Build image, show size, remove  |
+| `docs`            | Generate API documentation      |
+| `docs-serve`      | Serve API docs locally          |
+| `format`          | Format Python + Web + Root      |
+| `format-check`    | Check formatting                |
+| `dead-code`       | Detect dead code (Python + Web) |
+| `docker-lint`     | Lint Dockerfile                 |
+| `lint`            | Lint Python + Web               |
+| `lint-fix`        | Lint and fix                    |
+| `prod`            | Build and serve production      |
+| `install`         | Install deps (frozen)           |
+| `sync`            | Sync deps (updates lockfile)    |
+| `upgrade`         | Upgrade all deps                |
+| `upgrade-yolo`    | Upgrade all to latest           |
+| `test`            | Run all tests                   |
+| `test-cov`        | Run tests with coverage         |
+| `typecheck`       | Typecheck Python + Web          |
+| `gen-api`         | Generate OpenAPI + TS types     |
+| `version VERSION` | Bump version                    |

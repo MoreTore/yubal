@@ -1,10 +1,6 @@
 import { api } from "./client";
 import type { components } from "./schema";
 
-// Re-export types from schema
-export type ContentInfo = components["schemas"]["ContentInfo"];
-export type ContentKind = components["schemas"]["ContentKind"];
-
 export type JobStatus =
   | "pending"
   | "fetching_info"

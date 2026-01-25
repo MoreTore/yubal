@@ -325,6 +325,21 @@ compose *args:
 docker-lint:
     @docker run --rm -i hadolint/hadolint < Dockerfile
 
+[group('lint')]
+[doc("Detect dead Python code")]
+dead-code: dead-code-py dead-code-web
+
+[group('lint')]
+[private]
+dead-code-py:
+    uv run --with vulture vulture packages/yubal/src packages/api/src scripts --min-confidence 80
+
+[group('lint')]
+[private]
+[working-directory('web')]
+dead-code-web:
+    bunx knip
+
 # Documentation
 [group('docs')]
 [doc("Generate API documentation")]

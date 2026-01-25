@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowDown, Check, Circle, X } from "lucide-react";
-import type { components } from "../../api/schema";
+import type { components } from "../api/schema";
 
 type LogEntry = components["schemas"]["LogEntry"];
 type LogStatus = NonNullable<LogEntry["status"]>;
@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<LogStatus, { icon: typeof Check; color: string }> =
   };
 
 /** Header log - prominent visual separator */
-export function HeaderLog({ header }: { header: string }) {
+function HeaderLog({ header }: { header: string }) {
   return (
     <div className="mt-2 first:mt-0">
       <span className="text-secondary font-bold">
@@ -30,13 +30,7 @@ export function HeaderLog({ header }: { header: string }) {
 }
 
 /** Phase log - cyan/primary bold with separator */
-export function PhaseLog({
-  phaseNum,
-  phase,
-}: {
-  phaseNum: number;
-  phase: string;
-}) {
+function PhaseLog({ phaseNum, phase }: { phaseNum: number; phase: string }) {
   return (
     <div>
       <span className="text-primary font-bold">
@@ -70,7 +64,7 @@ function formatSkippedMessage(skippedByReason: SkippedByReason): string {
 }
 
 /** Extraction stats display */
-export function ExtractionStatsLog({
+function ExtractionStatsLog({
   success,
   skippedByReason,
 }: {
@@ -94,7 +88,7 @@ export function ExtractionStatsLog({
 }
 
 /** Download stats display */
-export function DownloadStatsLog({
+function DownloadStatsLog({
   success,
   failed,
   skippedByReason,
@@ -123,7 +117,7 @@ export function DownloadStatsLog({
 }
 
 /** Progress tracking display */
-export function ProgressLog({
+function ProgressLog({
   current,
   total,
   message,
@@ -146,7 +140,7 @@ export function ProgressLog({
 }
 
 /** Status message display */
-export function StatusLog({
+function StatusLog({
   status,
   message,
 }: {
@@ -165,7 +159,7 @@ export function StatusLog({
 }
 
 /** File operation display */
-export function FileLog({ message }: { message: string }) {
+function FileLog({ message }: { message: string }) {
   return <div className="text-foreground-400">{message}</div>;
 }
 
@@ -177,13 +171,7 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 /** Default/plain text display with level-based coloring */
-export function DefaultLog({
-  message,
-  level,
-}: {
-  message: string;
-  level?: string;
-}) {
+function DefaultLog({ message, level }: { message: string; level?: string }) {
   const colorClass = level ? LEVEL_COLORS[level] : undefined;
   return <div className={colorClass}>{message}</div>;
 }

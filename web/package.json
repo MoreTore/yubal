@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@heroui/react": "^2.8.7",
-    "ansi_up": "^6.0.6",
     "lucide-react": "^0.562.0",
     "motion": "^12.27.0",
     "openapi-fetch": "0.15.0",

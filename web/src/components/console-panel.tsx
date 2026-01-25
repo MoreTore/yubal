@@ -9,7 +9,7 @@ import { useLogs } from "../hooks/use-logs";
 import { isActive } from "../lib/job-status";
 import { EmptyState } from "./common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
-import { LogLine } from "./console/log-renderers";
+import { LogLine } from "./log-renderers";
 
 type LogEntry = components["schemas"]["LogEntry"];
 
