@@ -1,5 +1,6 @@
 """Tests for download service."""
 
+import logging
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 from unittest.mock import patch
@@ -13,6 +14,7 @@ from yubal.services.downloader import (
     DownloadResult,
     DownloadService,
     DownloadStatus,
+    YTDLPDownloader,
 )
 
 
@@ -371,3 +373,169 @@ class TestDownloadConfig:
 
         with pytest.raises(FrozenInstanceError):
             config.codec = AudioCodec.MP3  # type: ignore
+
+
+class TestYTDLPDownloaderRetry:
+    """Tests for YTDLPDownloader retry behavior."""
+
+    def test_retry_on_403_with_eventual_success(
+        self, download_config: DownloadConfig, tmp_path: Path
+    ) -> None:
+        """Should retry on 403 errors and succeed after transient failure."""
+        downloader = YTDLPDownloader(download_config)
+        output_path = tmp_path / "test_track"
+        call_count = 0
+
+        def mock_download(urls: list[str]) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("HTTP Error 403: Forbidden")
+            # Success on third attempt - create the file
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            Path(f"{output_path}.opus").touch()
+
+        with patch("yt_dlp.YoutubeDL") as mock_ydl:
+            mock_instance = mock_ydl.return_value.__enter__.return_value
+            mock_instance.download = mock_download
+
+            with patch("time.sleep"):  # Don't actually sleep in tests
+                result = downloader.download("test_video_id", output_path)
+
+        assert call_count == 3
+        assert result.exists()
+
+    def test_failure_after_max_retries(
+        self, download_config: DownloadConfig, tmp_path: Path
+    ) -> None:
+        """Should fail after exhausting all retry attempts."""
+        downloader = YTDLPDownloader(download_config)
+        output_path = tmp_path / "test_track"
+        call_count = 0
+
+        def mock_download(urls: list[str]) -> None:
+            nonlocal call_count
+            call_count += 1
+            raise Exception("HTTP Error 403: Forbidden")
+
+        with patch("yt_dlp.YoutubeDL") as mock_ydl:
+            mock_instance = mock_ydl.return_value.__enter__.return_value
+            mock_instance.download = mock_download
+
+            with patch("time.sleep"):
+                with pytest.raises(DownloadError) as exc_info:
+                    downloader.download("test_video_id", output_path)
+
+        assert call_count == 4  # Initial + 3 retries
+        assert "after 4 attempts" in str(exc_info.value)
+
+    def test_no_retry_for_video_unavailable(
+        self, download_config: DownloadConfig, tmp_path: Path
+    ) -> None:
+        """Should not retry for non-retryable errors like 'Video unavailable'."""
+        downloader = YTDLPDownloader(download_config)
+        output_path = tmp_path / "test_track"
+        call_count = 0
+
+        def mock_download(urls: list[str]) -> None:
+            nonlocal call_count
+            call_count += 1
+            raise Exception("Video unavailable")
+
+        with patch("yt_dlp.YoutubeDL") as mock_ydl:
+            mock_instance = mock_ydl.return_value.__enter__.return_value
+            mock_instance.download = mock_download
+
+            with pytest.raises(DownloadError) as exc_info:
+                downloader.download("test_video_id", output_path)
+
+        assert call_count == 1  # No retries
+        assert "unavailable" in str(exc_info.value)
+
+    def test_warning_logs_on_retry(
+        self,
+        download_config: DownloadConfig,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Should log warnings on each retry attempt."""
+        downloader = YTDLPDownloader(download_config)
+        output_path = tmp_path / "test_track"
+        call_count = 0
+
+        def mock_download(urls: list[str]) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("HTTP Error 403: Forbidden")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            Path(f"{output_path}.opus").touch()
+
+        with patch("yt_dlp.YoutubeDL") as mock_ydl:
+            mock_instance = mock_ydl.return_value.__enter__.return_value
+            mock_instance.download = mock_download
+
+            with patch("time.sleep"):
+                with caplog.at_level(logging.WARNING):
+                    downloader.download("test_video_id", output_path)
+
+        # Check that retry warnings were logged
+        warning_messages = [
+            r.message for r in caplog.records if r.levelno == logging.WARNING
+        ]
+        assert len(warning_messages) == 2  # Two retries before success
+        assert all("Transient error" in msg for msg in warning_messages)
+        assert "attempt 1/4" in warning_messages[0]
+        assert "attempt 2/4" in warning_messages[1]
+
+    def test_retry_on_429_rate_limit(
+        self, download_config: DownloadConfig, tmp_path: Path
+    ) -> None:
+        """Should retry on 429 rate limit errors."""
+        downloader = YTDLPDownloader(download_config)
+        output_path = tmp_path / "test_track"
+        call_count = 0
+
+        def mock_download(urls: list[str]) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise Exception("HTTP Error 429: Too Many Requests")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            Path(f"{output_path}.opus").touch()
+
+        with patch("yt_dlp.YoutubeDL") as mock_ydl:
+            mock_instance = mock_ydl.return_value.__enter__.return_value
+            mock_instance.download = mock_download
+
+            with patch("time.sleep"):
+                result = downloader.download("test_video_id", output_path)
+
+        assert call_count == 2
+        assert result.exists()
+
+    def test_retry_on_5xx_server_error(
+        self, download_config: DownloadConfig, tmp_path: Path
+    ) -> None:
+        """Should retry on 5xx server errors."""
+        downloader = YTDLPDownloader(download_config)
+        output_path = tmp_path / "test_track"
+        call_count = 0
+
+        def mock_download(urls: list[str]) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise Exception("HTTP Error 503: Service Unavailable")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            Path(f"{output_path}.opus").touch()
+
+        with patch("yt_dlp.YoutubeDL") as mock_ydl:
+            mock_instance = mock_ydl.return_value.__enter__.return_value
+            mock_instance.download = mock_download
+
+            with patch("time.sleep"):
+                result = downloader.download("test_video_id", output_path)
+
+        assert call_count == 2
+        assert result.exists()

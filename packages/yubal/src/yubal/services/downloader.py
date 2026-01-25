@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Protocol
@@ -65,6 +66,8 @@ class YTDLPDownloader:
     """
 
     YOUTUBE_MUSIC_URL = "https://music.youtube.com/watch?v={video_id}"
+    MAX_RETRIES: int = 3
+    RETRY_BASE_DELAY: float = 1.0  # seconds, doubles each retry (1s, 2s, 4s)
 
     def __init__(self, config: DownloadConfig) -> None:
         """Initialize the downloader.
@@ -90,6 +93,7 @@ class YTDLPDownloader:
         return {
             "format": "bestaudio/best",
             "outtmpl": str(output_path),
+            "color": "never",  # Disable ANSI codes in error messages
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -101,6 +105,21 @@ class YTDLPDownloader:
             "no_warnings": self._config.quiet,
             "noprogress": self._config.quiet,
         }
+
+    def _is_retryable_error(self, error_msg: str) -> bool:
+        """Check if the error is a retryable transient HTTP error."""
+        retryable_patterns = (
+            "HTTP Error 403",
+            "403 Forbidden",
+            "HTTP Error 429",
+            "HTTP Error 5",  # Catches 500, 502, 503, etc.
+        )
+        return any(pattern in error_msg for pattern in retryable_patterns)
+
+    def _cleanup_partial_downloads(self, output_path: Path) -> None:
+        """Remove partial download files before retry."""
+        for partial in output_path.parent.glob(f"{output_path.name}*.part"):
+            partial.unlink(missing_ok=True)
 
     def download(self, video_id: str, output_path: Path) -> Path:
         """Download a track and extract audio to the specified path.
@@ -141,27 +160,63 @@ class YTDLPDownloader:
 
         opts["postprocessor_hooks"] = [capture_postprocessed_path]
 
-        try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                ydl.download([url])
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception as e:
-            error_msg = str(e)
-            # Provide more helpful error messages for common issues
-            if "Video unavailable" in error_msg:
-                logger.error("Video %s is unavailable (may be region-locked)", video_id)
-                raise DownloadError(
-                    f"Video {video_id} is unavailable (may be region-locked or removed)"
-                ) from e
-            if "Sign in" in error_msg or "cookies" in error_msg.lower():
-                logger.error("Authentication required for video %s", video_id)
-                raise DownloadError(
-                    f"Authentication required for {video_id}. "
-                    "Try providing a cookies.txt file."
-                ) from e
-            logger.exception("Failed to download %s: %s", video_id, e)
-            raise DownloadError(f"Failed to download {video_id}: {e}") from e
+        for attempt in range(self.MAX_RETRIES + 1):
+            try:
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    ydl.download([url])
+                break  # Success
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as e:
+                error_msg = str(e)
+
+                # Non-retryable errors - fail immediately
+                if "Video unavailable" in error_msg:
+                    logger.error(
+                        "Video %s is unavailable (may be region-locked)", video_id
+                    )
+                    raise DownloadError(
+                        f"Video {video_id} is unavailable "
+                        "(may be region-locked or removed)"
+                    ) from e
+                if "Sign in" in error_msg or "cookies" in error_msg.lower():
+                    logger.error("Authentication required for video %s", video_id)
+                    raise DownloadError(
+                        f"Authentication required for {video_id}. "
+                        "Try providing a cookies.txt file."
+                    ) from e
+
+                # Retryable transient errors (403, 429, 5xx)
+                if self._is_retryable_error(error_msg):
+                    if attempt < self.MAX_RETRIES:
+                        delay = self.RETRY_BASE_DELAY * (2**attempt)
+                        logger.warning(
+                            "Transient error downloading %s (attempt %d/%d), "
+                            "retrying in %.1fs: %s",
+                            video_id,
+                            attempt + 1,
+                            self.MAX_RETRIES + 1,
+                            delay,
+                            error_msg,
+                        )
+                        self._cleanup_partial_downloads(output_path)
+                        time.sleep(delay)
+                        continue
+                    # All retries exhausted
+                    logger.error(
+                        "Failed to download %s after %d attempts: %s",
+                        video_id,
+                        self.MAX_RETRIES + 1,
+                        error_msg,
+                    )
+                    raise DownloadError(
+                        f"Failed to download {video_id} after "
+                        f"{self.MAX_RETRIES + 1} attempts: {e}"
+                    ) from e
+
+                # Other errors - fail immediately
+                logger.exception("Failed to download %s: %s", video_id, e)
+                raise DownloadError(f"Failed to download {video_id}: {e}") from e
 
         # Return actual path captured by hook, or fallback to expected path
         return self._resolve_output_path(actual_path, output_path)
