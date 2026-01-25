@@ -82,9 +82,11 @@ class TestTagTrack:
         mock_audio = MagicMock()
         cover_bytes = b"\xff\xd8\xff" + b"fake image data"
 
-        with patch("yubal.services.tagger.MediaFile", return_value=mock_audio):
-            with patch("yubal.services.tagger.Image") as mock_image:
-                tag_track(Path("/fake/path.opus"), sample_track, cover_bytes)
+        with (
+            patch("yubal.services.tagger.MediaFile", return_value=mock_audio),
+            patch("yubal.services.tagger.Image") as mock_image,
+        ):
+            tag_track(Path("/fake/path.opus"), sample_track, cover_bytes)
 
         mock_image.assert_called_once_with(data=cover_bytes)
         assert mock_audio.images == [mock_image.return_value]

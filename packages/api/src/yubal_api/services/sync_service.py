@@ -203,52 +203,25 @@ class SyncService:
             # Iterate through all phases
             for progress in service.download_playlist(url, cancel_token):
                 step = _map_phase(progress.phase)
-
-                # Calculate progress percentage using the helper
                 pct = _calculate_phase_progress(
                     progress.phase, progress.current, progress.total
                 )
 
                 if progress.phase == "extracting":
-                    # Collect tracks for content_info building
-                    if progress.extract_progress:
-                        if progress.extract_progress.track is not None:
-                            tracks.append(progress.extract_progress.track)
-                        playlist_info = progress.extract_progress.playlist_info
-
-                    msg = self._format_extract_message(progress)
-                    emit(step, msg, pct)
-
-                    # Build content_info when extraction completes
-                    if progress.current == progress.total and playlist_info and tracks:
-                        content_info = content_info_from_yubal(
-                            playlist_info, tracks, url, self._audio_format
-                        )
-                        track_word = "track" if len(tracks) == 1 else "tracks"
-                        emit(
-                            step,
-                            f"Found {len(tracks)} {track_word}: {content_info.title}",
-                            pct,
-                            {"content_info": content_info.model_dump()},
-                        )
-
+                    content_info, playlist_info = self._handle_extract_phase(
+                        progress,
+                        tracks,
+                        playlist_info,
+                        content_info,
+                        url,
+                        emit,
+                        step,
+                        pct,
+                    )
                 elif progress.phase == "downloading":
-                    msg = self._format_download_message(progress)
-                    emit(step, msg, pct)
-
-                    # Update bitrate from first successful download
-                    if (
-                        progress.download_progress
-                        and content_info
-                        and not content_info.audio_bitrate
-                    ):
-                        result = progress.download_progress.result
-                        if result.status == DownloadStatus.SUCCESS and result.bitrate:
-                            content_info.audio_bitrate = result.bitrate
-
+                    self._handle_download_phase(progress, content_info, emit, step, pct)
                 elif progress.phase == "composing":
-                    msg = progress.message or "Generating playlist files..."
-                    emit(step, msg, pct)
+                    emit(step, progress.message or "Generating playlist files...", pct)
 
             # Get final result
             result = service.get_result()
@@ -316,3 +289,58 @@ class SyncService:
                 status_msg = result.status.value
             return f"[{dp.current}/{dp.total}] {result.track.title}: {status_msg}"
         return f"Downloading {progress.current}/{progress.total}..."
+
+    def _handle_extract_phase(
+        self,
+        progress: PlaylistProgress,
+        tracks: list[TrackMetadata],
+        playlist_info: PlaylistInfo | None,
+        content_info: ContentInfo | None,
+        url: str,
+        emit: Callable[[ProgressStep, str, float | None, dict[str, Any] | None], None],
+        step: ProgressStep,
+        pct: float,
+    ) -> tuple[ContentInfo | None, PlaylistInfo | None]:
+        """Handle extraction phase progress."""
+        if progress.extract_progress:
+            if progress.extract_progress.track is not None:
+                tracks.append(progress.extract_progress.track)
+            playlist_info = progress.extract_progress.playlist_info
+
+        emit(step, self._format_extract_message(progress), pct, None)
+
+        # Build content_info when extraction completes
+        if progress.current == progress.total and playlist_info and tracks:
+            content_info = content_info_from_yubal(
+                playlist_info, tracks, url, self._audio_format
+            )
+            track_word = "track" if len(tracks) == 1 else "tracks"
+            emit(
+                step,
+                f"Found {len(tracks)} {track_word}: {content_info.title}",
+                pct,
+                {"content_info": content_info.model_dump()},
+            )
+
+        return content_info, playlist_info
+
+    def _handle_download_phase(
+        self,
+        progress: PlaylistProgress,
+        content_info: ContentInfo | None,
+        emit: Callable[[ProgressStep, str, float | None, dict[str, Any] | None], None],
+        step: ProgressStep,
+        pct: float,
+    ) -> None:
+        """Handle download phase progress."""
+        emit(step, self._format_download_message(progress), pct, None)
+
+        # Update bitrate from first successful download
+        if (
+            progress.download_progress
+            and content_info
+            and not content_info.audio_bitrate
+        ):
+            result = progress.download_progress.result
+            if result.status == DownloadStatus.SUCCESS and result.bitrate:
+                content_info.audio_bitrate = result.bitrate

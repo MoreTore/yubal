@@ -322,11 +322,11 @@ class TestDownloadService:
         mock_downloader = MockDownloader()
         service = DownloadService(download_config, mock_downloader)
 
-        with patch("yubal.services.downloader.tag_track") as mock_tag:
-            with patch(
-                "yubal.services.downloader.fetch_cover", return_value=b"cover data"
-            ):
-                result = service.download_track(sample_track)
+        with (
+            patch("yubal.services.downloader.tag_track") as mock_tag,
+            patch("yubal.services.downloader.fetch_cover", return_value=b"cover data"),
+        ):
+            result = service.download_track(sample_track)
 
         assert result.status == DownloadStatus.SUCCESS
         mock_tag.assert_called_once()

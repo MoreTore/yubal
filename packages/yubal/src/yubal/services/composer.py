@@ -174,12 +174,12 @@ class PlaylistComposerService:
             List of (track_metadata, output_path) tuples for M3U generation.
             Only includes tracks with SUCCESS or SKIPPED status.
         """
-        tracks: list[tuple[TrackMetadata, Path]] = []
-        for result in results:
-            if result.status in (DownloadStatus.SUCCESS, DownloadStatus.SKIPPED):
-                if result.output_path:
-                    tracks.append((result.track, result.output_path))
-        return tracks
+        return [
+            (result.track, result.output_path)
+            for result in results
+            if result.status in (DownloadStatus.SUCCESS, DownloadStatus.SKIPPED)
+            and result.output_path
+        ]
 
     # ============================================================================
     # COVER GENERATION - Save playlist cover image

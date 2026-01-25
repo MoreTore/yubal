@@ -83,16 +83,11 @@ def is_supported_url(url: str) -> bool:
 
     url = url.strip()
 
-    # Playlist URL (has list= parameter)
-    if PLAYLIST_ID_PATTERN.search(url):
-        return True
-
-    # Single track URL (has v= parameter without list=)
-    if VIDEO_ID_PATTERN.search(url):
-        return True
-
-    # Browse URL (album pages on music.youtube.com)
-    if "/browse/" in url and "music.youtube.com" in url:
-        return True
-
-    return False
+    return (
+        # Playlist URL (has list= parameter)
+        bool(PLAYLIST_ID_PATTERN.search(url))
+        # Single track URL (has v= parameter without list=)
+        or bool(VIDEO_ID_PATTERN.search(url))
+        # Browse URL (album pages on music.youtube.com)
+        or ("/browse/" in url and "music.youtube.com" in url)
+    )
