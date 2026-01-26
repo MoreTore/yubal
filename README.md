@@ -2,7 +2,7 @@
 
 # yubal
 
-**Turn YouTube Music into a proper music library.**
+**Download from YouTube Music. Get an organized library.**
 
 One link in, tagged and organized files out. Albums sorted by artist and year. Playlists without duplicates. Media server ready.
 
@@ -22,21 +22,11 @@ One link in, tagged and organized files out. Albums sorted by artist and year. P
 > [!IMPORTANT]
 > **Upgrading from v0.1?** The folder structure and config has changed. See the [v0.2.0 release notes](https://github.com/guillevc/yubal/releases/tag/v0.2.0) for migration steps.
 
-## Why yubal?
+## 📖 Why yubal?
 
 Downloading music is easy. _Organizing_ it is the hard part.
 
 yubal takes a YouTube Music URL and produces a clean, tagged music library:
-
-- **Albums** sorted into `Artist/Year - Album/` folders
-- **Playlists** as M3U files—tracks go to their album folders, no duplicates
-- **Metadata** from YouTube Music with fuzzy matching
-- **Album art** embedded and saved alongside
-
-Point your media server at the output folder. Done.
-
-<details>
-<summary>See folder structure</summary>
 
 ```
 data/
@@ -67,30 +57,16 @@ When downloading a playlist, each track goes to its album folder—the M3U file 
 ../Radiohead/1997 - OK Computer/02 - Paranoid Android.opus
 ```
 
-</details>
+## ✨ Features
 
-## Features
+- **Web UI** — Real-time progress, job queue, responsive design
+- **Albums, playlists & tracks** — Paste any YouTube Music link, get organized files
+- **Smart deduplication** — Same track across 10 playlists? Stored once, referenced everywhere
+- **Reliable downloads** — Automatic retry on failures, safe to interrupt
+- **Format options** — Native `opus` (best quality), or transcode to `mp3`/`m4a`
+- **Media server ready** — Tested with [Navidrome, Jellyfin, and Gonic](#-media-server-integration)
 
-**Works with any link** — Albums, playlists, or single tracks. Paste the URL, get organized files.
-
-**Smart deduplication** — Download the same track across 10 playlists? It's stored once, referenced everywhere.
-
-**Media server ready** — Tested with [Navidrome, Jellyfin, and Gonic](#-media-server-integration). Multi-artist tags work correctly.
-
-**Reliable downloads** — Automatic retry on failures. Safe to interrupt. Never lose progress.
-
-<details>
-<summary>All features</summary>
-
-- Web UI with real-time progress and job queue
-- Native `opus` or transcode to `mp3`/`m4a`
-- Fuzzy track matching for accurate metadata
-- M3U playlist generation with relative paths
-- Responsive design for mobile management
-
-</details>
-
-## Quick Start
+## 🚀 Quick Start
 
 ```yaml
 # compose.yaml
@@ -120,7 +96,7 @@ docker compose up -d
 # Open http://localhost:8000
 ```
 
-## Configuration
+## ⚙️ Configuration
 
 | Variable              | Description                          | Default (Docker) |
 | --------------------- | ------------------------------------ | ---------------- |
@@ -133,6 +109,7 @@ docker compose up -d
 
 <details>
 <summary>All options</summary>
+
 | Variable             | Description            | Default (Docker) |
 | -------------------- | ---------------------- | ---------------- |
 | `YUBAL_HOST`         | Server bind address    | `0.0.0.0`        |
@@ -141,17 +118,20 @@ docker compose up -d
 | `YUBAL_CORS_ORIGINS` | Allowed CORS origins   | `["*"]`          |
 | `YUBAL_RELOAD`       | Auto-reload (dev only) | `false`          |
 | `YUBAL_TEMP`         | Temp directory         | System temp      |
+
 </details>
 
-## Media Server Integration
+## 🔌 Media Server Integration
 
-Point your media server at the output folder and scan. yubal writes proper multi-artist tags (`ARTISTS`) for correct artist linking.
+Tested with Navidrome, Jellyfin, and Gonic. Artists link correctly, even on tracks with multiple artists.
 
-| Server        | Setup                                                      |
-| ------------- | ---------------------------------------------------------- |
-| **Navidrome** | Works out of the box                                       |
-| **Jellyfin**  | Enable "Use non-standard artists tags" in library settings |
-| **Gonic**     | Set `GONIC_MULTI_VALUE_ARTIST=multi`                       |
+| Server        | Artist linking                                                | Playlists |
+| ------------- | ------------------------------------------------------------- | :-------: |
+| **Navidrome** | ✅ Works out of the box                                       |    ✅     |
+| **Jellyfin**  | ⚙️ Enable "Use non-standard artists tags" in library settings |    ✅     |
+| **Gonic**     | ⚙️ Set `GONIC_MULTI_VALUE_ARTIST=multi`                       |    ❌     |
+
+✅ Supported · ⚙️ Requires configuration · ❌ Not supported
 
 <details>
 <summary>Detailed setup guides</summary>
@@ -176,18 +156,18 @@ For multi-artist support:
 
 ### Gonic
 
-For multi-artist support:
+For artist linking:
 
 ```bash
 GONIC_MULTI_VALUE_ARTIST=multi
 GONIC_MULTI_VALUE_ALBUM_ARTIST=multi
 ```
 
-M3U playlists with relative paths are not supported ([pending PR](https://github.com/sentriz/gonic/pull/537)).
+M3U playlists are not supported ([pending PR](https://github.com/sentriz/gonic/pull/537)).
 
 </details>
 
-## Cookies (Optional)
+## 🍪 Cookies (Optional)
 
 Need age-restricted content, private playlists, or Premium quality? Add your cookies:
 
@@ -197,7 +177,7 @@ Need age-restricted content, private playlists, or Premium quality? Add your coo
 > [!CAUTION]
 > Cookie usage may trigger stricter rate limiting and could put your account at risk. See [#3](https://github.com/guillevc/yubal/issues/3) and [yt-dlp wiki](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube).
 
-## What's Coming
+## 🗺️ What's Coming
 
 - [x] Cookie import via Web UI
 - [x] Multi-arch Docker images
@@ -214,9 +194,11 @@ Need age-restricted content, private playlists, or Premium quality? Add your coo
 - [ ] Auto-sync playlists
 - [ ] New music automatic discovery
 
-## Support
+## 💜 Support
 
-If yubal is useful to you, consider supporting its development:
+If yubal is useful to you:
+
+⭐ **[Star this repo](https://github.com/guillevc/yubal)** — Free, helps others discover yubal
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/guillevc)
 
@@ -226,7 +208,7 @@ If yubal is useful to you, consider supporting its development:
 
 [![Star History Chart](https://api.star-history.com/svg?repos=guillevc/yubal&type=Date)](https://star-history.com/#guillevc/yubal&Date)
 
-## Acknowledgments
+## 🤝 Acknowledgments
 
 Built with [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [ytmusicapi](https://github.com/sigma67/ytmusicapi).
 
