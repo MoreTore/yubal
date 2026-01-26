@@ -247,6 +247,7 @@ class SyncService:
     base_path: Path
     audio_format: str = "opus"
     cookies_path: Path | None = None
+    fetch_lyrics: bool = True
     _codec: AudioCodec = field(init=False)
 
     def __post_init__(self) -> None:
@@ -284,6 +285,7 @@ class SyncService:
             codec=self._codec,
             audio_format=self.audio_format,
             cookies_path=self.cookies_path,
+            fetch_lyrics=self.fetch_lyrics,
         )
         return workflow.execute()
 
@@ -309,6 +311,7 @@ class _SyncWorkflow:
     codec: AudioCodec
     audio_format: str
     cookies_path: Path | None
+    fetch_lyrics: bool
 
     # Workflow state
     content_info: ContentInfo | None = field(default=None, init=False)
@@ -354,6 +357,7 @@ class _SyncWorkflow:
                 base_path=self.base_path,
                 codec=self.codec,
                 quiet=True,
+                fetch_lyrics=self.fetch_lyrics,
             ),
             generate_m3u=True,
             save_cover=True,

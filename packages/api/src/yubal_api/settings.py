@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     )
     audio_quality: str = Field(default="0", description="Audio quality (0 = best)")
 
+    # Lyrics settings
+    fetch_lyrics: bool = Field(default=True, description="Fetch lyrics from lrclib.net")
+
     # Temp directory
     temp: Path = Field(
         default_factory=lambda: Path(tempfile.gettempdir()) / "yubal",

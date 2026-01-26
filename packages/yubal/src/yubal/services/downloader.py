@@ -20,6 +20,7 @@ from yubal.models.domain import (
     SkipReason,
     TrackMetadata,
 )
+from yubal.services.lyrics import LyricsService, LyricsServiceProtocol
 from yubal.services.tagger import tag_track
 from yubal.utils.cover import fetch_cover
 from yubal.utils.filename import build_track_path
@@ -303,6 +304,7 @@ class DownloadService:
         config: DownloadConfig,
         downloader: DownloaderProtocol | None = None,
         cookies_path: Path | None = None,
+        lyrics_service: LyricsServiceProtocol | None = None,
     ) -> None:
         """Initialize the service.
 
@@ -312,9 +314,16 @@ class DownloadService:
                         Uses YTDLPDownloader if not provided.
             cookies_path: Optional path to cookies.txt for authentication.
                          Required for age-restricted or premium content.
+            lyrics_service: Optional lyrics service implementation.
+                           Uses LyricsService if fetch_lyrics is enabled.
         """
         self._config = config
         self._downloader = downloader or YTDLPDownloader(config, cookies_path)
+        self._lyrics_service: LyricsServiceProtocol | None = (
+            lyrics_service
+            if lyrics_service is not None
+            else (LyricsService() if config.fetch_lyrics else None)
+        )
 
     # ============================================================================
     # PUBLIC API - Main entry points for downloading tracks
@@ -408,6 +417,8 @@ class DownloadService:
         expected = Path(f"{output_path}.{self._config.codec.value}")
         if expected.exists():
             logger.debug("Skipping existing file: %s", expected)
+            # Still fetch lyrics for existing files that don't have them yet
+            self._fetch_and_save_lyrics(expected, track)
             return DownloadResult(
                 track=track,
                 status=DownloadStatus.SKIPPED,
@@ -421,6 +432,9 @@ class DownloadService:
 
             # Tag the downloaded file with metadata
             self._apply_metadata_tags(actual_path, track)
+
+            # Fetch and save lyrics (non-fatal, logged at DEBUG)
+            self._fetch_and_save_lyrics(actual_path, track)
 
             logger.info(
                 "Downloaded: '%s'",
@@ -530,3 +544,42 @@ class DownloadService:
             tag_track(path, track, cover)
         except Exception as e:
             logger.exception("Failed to tag %s: %s", path, e)
+
+    # ============================================================================
+    # LYRICS FETCHING - Fetch and save synced lyrics from lrclib.net
+    # ============================================================================
+
+    def _fetch_and_save_lyrics(self, path: Path, track: TrackMetadata) -> None:
+        """Fetch lyrics from lrclib.net and save as .lrc file.
+
+        Fetches synced lyrics using track title, primary artist, and duration.
+        Saves lyrics as an LRC file alongside the audio file. Failures are
+        logged at DEBUG level and do not affect the download status.
+
+        Why non-fatal: Lyrics are a nice-to-have enhancement. Many tracks won't
+        have lyrics available (instrumentals, obscure tracks), so failures are
+        expected and should not cause warnings.
+
+        Args:
+            path: Path to the audio file.
+            track: Track metadata (must have duration_seconds).
+        """
+        if not self._lyrics_service or not track.duration_seconds:
+            return
+
+        # Skip if .lrc file already exists
+        lrc_path = path.with_suffix(".lrc")
+        if lrc_path.exists():
+            logger.debug("Lyrics already exist: %s", lrc_path)
+            return
+
+        # Use primary artist for lrclib.net lookup (joined artists reduce match rate)
+        lyrics = self._lyrics_service.fetch_lyrics(
+            title=track.title,
+            artist=track.artists[0],
+            duration_seconds=track.duration_seconds,
+        )
+
+        if lyrics:
+            lrc_path = self._lyrics_service.save_lyrics(lyrics, path)
+            logger.debug("Saved lyrics: %s", lrc_path)

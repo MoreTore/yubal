@@ -44,6 +44,7 @@ class JobExecutor:
         base_path: Path,
         audio_format: str = "opus",
         cookies_path: Path | None = None,
+        fetch_lyrics: bool = True,
     ) -> None:
         """Initialize the job executor.
 
@@ -52,11 +53,13 @@ class JobExecutor:
             base_path: Base directory for downloaded files.
             audio_format: Target audio format (opus, mp3, m4a).
             cookies_path: Optional path to cookies.txt for authenticated requests.
+            fetch_lyrics: Whether to fetch lyrics from lrclib.net.
         """
         self._job_store = job_store
         self._base_path = base_path
         self._audio_format = audio_format
         self._cookies_path = cookies_path
+        self._fetch_lyrics = fetch_lyrics
 
         # Track background tasks to prevent GC during execution
         self._background_tasks: set[asyncio.Task[Any]] = set()
@@ -160,7 +163,10 @@ class JobExecutor:
 
             # Run sync in thread pool
             sync_service = SyncService(
-                self._base_path, self._audio_format, self._cookies_path
+                self._base_path,
+                self._audio_format,
+                self._cookies_path,
+                self._fetch_lyrics,
             )
             result = await asyncio.to_thread(
                 sync_service.run,

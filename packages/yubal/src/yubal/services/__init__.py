@@ -7,6 +7,7 @@ Public API:
 Internal (not exported):
     DownloadService, PlaylistComposerService - Used internally
     DownloaderProtocol, YTDLPDownloader - Download backend implementation
+    LyricsService, LyricsServiceProtocol - Lyrics fetching from lrclib.net
     tag_track - Audio file tagging
 """
 

@@ -35,12 +35,14 @@ class DownloadConfig:
         codec: Audio codec for output files.
         quality: Audio quality (0 = best, 10 = worst). Only applies to lossy codecs.
         quiet: Suppress yt-dlp output.
+        fetch_lyrics: Whether to fetch lyrics from lrclib.net.
     """
 
     base_path: Path
     codec: AudioCodec = AudioCodec.OPUS
     quality: int = 0
     quiet: bool = True
+    fetch_lyrics: bool = True
 
 
 @dataclass(frozen=True)

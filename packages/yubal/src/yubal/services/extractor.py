@@ -809,6 +809,7 @@ class MetadataExtractorService:
             year=album.year,
             cover_url=get_square_thumbnail(album.thumbnails),
             video_type=video_type,
+            duration_seconds=track.duration_seconds,
         )
 
     def _create_fallback_metadata(
@@ -865,4 +866,5 @@ class MetadataExtractorService:
             year=None,
             cover_url=get_square_thumbnail(track.thumbnails),
             video_type=video_type,
+            duration_seconds=track.duration_seconds,
         )

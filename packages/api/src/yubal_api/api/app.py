@@ -105,6 +105,7 @@ def create_services() -> Services:
         base_path=settings.data,
         audio_format=settings.audio_format,
         cookies_path=settings.cookies_file,
+        fetch_lyrics=settings.fetch_lyrics,
     )
 
     # Wire up coordinator with executor

@@ -174,16 +174,14 @@ class AudioFileTaggingService:
 
 
 # ============================================================================
-# BACKWARD COMPATIBILITY - Maintain legacy function-based API
+# PUBLIC API - Convenience function for tagging audio files
 # ============================================================================
 
 
 def tag_track(path: Path, track: TrackMetadata, cover: bytes | None = None) -> None:
-    """Apply metadata tags to audio file (legacy function wrapper).
+    """Apply metadata tags to audio file.
 
-    This function maintains backward compatibility with existing code that uses
-    the function-based API. New code should use AudioFileTaggingService directly
-    for better testability and organization.
+    Convenience function that wraps AudioFileTaggingService for simple use cases.
 
     Args:
         path: Path to the audio file.

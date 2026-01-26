@@ -73,7 +73,7 @@ class Playlist(YTMusicModel):
 
     @property
     def unavailable_count(self) -> int:
-        """Number of unavailable tracks (for backward compatibility)."""
+        """Number of unavailable tracks in the playlist."""
         return len(self.unavailable_tracks_raw)
 
 

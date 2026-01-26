@@ -203,6 +203,7 @@ class TrackMetadata(BaseModel):
     year: str | None = None
     cover_url: str | None = None
     video_type: VideoType | None = None
+    duration_seconds: int | None = None
 
     @field_validator("title", "album")
     @classmethod
@@ -325,12 +326,12 @@ class ExtractProgress(BaseModel):
 
     @property
     def skipped(self) -> int:
-        """Total skipped tracks (for backward compatibility)."""
+        """Total skipped tracks across all skip reasons."""
         return sum(self.skipped_by_reason.values())
 
     @property
     def unavailable(self) -> int:
-        """Tracks without video ID (for backward compatibility)."""
+        """Tracks skipped due to missing video ID."""
         return self.skipped_by_reason.get(SkipReason.NO_VIDEO_ID, 0)
 
 
