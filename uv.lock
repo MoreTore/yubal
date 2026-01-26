@@ -985,7 +985,7 @@ wheels = [
 
 [[package]]
 name = "yubal"
-version = "0.2.3"
+version = "0.3.0"
 source = { editable = "packages/yubal" }
 dependencies = [
     { name = "click" },
@@ -1027,7 +1027,7 @@ provides-extras = ["cli"]
 
 [[package]]
 name = "yubal-api"
-version = "0.2.3"
+version = "0.3.0"
 source = { editable = "packages/api" }
 dependencies = [
     { name = "fastapi" },
@@ -1050,7 +1050,7 @@ requires-dist = [
 
 [[package]]
 name = "yubal-workspace"
-version = "0.2.3"
+version = "0.3.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
