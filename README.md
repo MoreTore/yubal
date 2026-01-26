@@ -67,6 +67,7 @@ When downloading a playlist, each track goes to its album folder—the M3U file 
 - **Albums, playlists & tracks** — Paste any YouTube Music link, get organized files
 - **Smart deduplication** — Same track across 10 playlists? Stored once, referenced everywhere
 - **Reliable downloads** — Automatic retry on failures, safe to interrupt
+- **Automatic lyrics** — Synced `.lrc` files downloaded alongside tracks when available
 - **Format options** — Native `opus` (best quality), or transcode to `mp3`/`m4a`
 - **Media server ready** — Tested with [Navidrome, Jellyfin, and Gonic](#-media-server-integration)
 
@@ -190,12 +191,13 @@ Need age-restricted content, private playlists, or Premium quality? Add your coo
       ([v0.2.0](https://github.com/guillevc/yubal/releases/tag/v0.2.0))
 - [x] Single track downloads
       ([v0.3.0](https://github.com/guillevc/yubal/releases/tag/v0.3.0))
-- [ ] Download lyrics
+- [x] Automatic lyrics (.lrc)
+      ([v0.3.0](https://github.com/guillevc/yubal/releases/tag/v0.3.0))
+- [ ] Auto-sync playlists
 - [ ] Flat folder mode
 - [ ] Browser extension
 - [ ] Batch import
 - [ ] Post-download webhooks
-- [ ] Auto-sync playlists
 - [ ] New music automatic discovery
 
 ## 💜 Support
