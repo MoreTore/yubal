@@ -1,14 +1,10 @@
-> [!TIP]
-> **New in v0.3.0:** Single track support! Download individual songs—just paste any YouTube Music link.
-
-> [!IMPORTANT]
-> **Upgrading from v0.1?** The folder structure and config have changed. See the [v0.2.0 release notes](https://github.com/guillevc/yubal/releases/tag/v0.2.0) for migration steps.
-
 <div align="center">
 
 # yubal
 
-**YouTube Music downloader with automatic metadata tagging.**
+**Turn YouTube Music into a proper music library.**
+
+One link in, tagged and organized files out. Albums sorted by artist and year. Playlists without duplicates. Media server ready.
 
 [![CI](https://github.com/guillevc/yubal/actions/workflows/ci.yaml/badge.svg)](https://github.com/guillevc/yubal/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/v/release/guillevc/yubal)](https://github.com/guillevc/yubal/releases)
@@ -23,9 +19,24 @@
 
 </div>
 
-## 📖 Overview
+> [!IMPORTANT]
+> **Upgrading from v0.1?** The folder structure and config has changed. See the [v0.2.0 release notes](https://github.com/guillevc/yubal/releases/tag/v0.2.0) for migration steps.
 
-**yubal** is a self-hosted app for building a local music library. Paste a YouTube Music album, playlist, or track URL, and yubal handles downloading, tagging, and album art—automatically.
+## Why yubal?
+
+Downloading music is easy. _Organizing_ it is the hard part.
+
+yubal takes a YouTube Music URL and produces a clean, tagged music library:
+
+- **Albums** sorted into `Artist/Year - Album/` folders
+- **Playlists** as M3U files—tracks go to their album folders, no duplicates
+- **Metadata** from YouTube Music with fuzzy matching
+- **Album art** embedded and saved alongside
+
+Point your media server at the output folder. Done.
+
+<details>
+<summary>See folder structure</summary>
 
 ```
 data/
@@ -46,7 +57,7 @@ data/
     └── My Favorites.jpg
 ```
 
-Albums are organized by artist and year. When downloading a playlist, each track goes to its respective album folder—the M3U file just references them, no duplicates:
+When downloading a playlist, each track goes to its album folder—the M3U file just references them:
 
 ```m3u
 #EXTM3U
@@ -56,17 +67,30 @@ Albums are organized by artist and year. When downloading a playlist, each track
 ../Radiohead/1997 - OK Computer/02 - Paranoid Android.opus
 ```
 
-## ✨ Features
+</details>
 
-- **Web UI** — Real-time progress, job queue, responsive design
-- **Smart tagging** — Metadata from YouTube Music with fuzzy track matching
-- **Albums, playlists & tracks** — Download full albums, playlists with M3U generation, or single tracks
-- **Smart deduplication** — Never downloads the same track twice, even across multiple playlists
-- **Reliable downloads** — Automatic retry on failures, safe to interrupt without losing progress
-- **Format options** — Native `opus` (best quality), or transcode to `mp3`/`m4a`
-- **Media server ready** — Tested with [Navidrome, Jellyfin and Gonic](#-media-servers-integration)
+## Features
 
-## 🚀 Quick Start
+**Works with any link** — Albums, playlists, or single tracks. Paste the URL, get organized files.
+
+**Smart deduplication** — Download the same track across 10 playlists? It's stored once, referenced everywhere.
+
+**Media server ready** — Tested with [Navidrome, Jellyfin, and Gonic](#-media-server-integration). Multi-artist tags work correctly.
+
+**Reliable downloads** — Automatic retry on failures. Safe to interrupt. Never lose progress.
+
+<details>
+<summary>All features</summary>
+
+- Web UI with real-time progress and job queue
+- Native `opus` or transcode to `mp3`/`m4a`
+- Fuzzy track matching for accurate metadata
+- M3U playlist generation with relative paths
+- Responsive design for mobile management
+
+</details>
+
+## Quick Start
 
 ```yaml
 # compose.yaml
@@ -96,7 +120,7 @@ docker compose up -d
 # Open http://localhost:8000
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 | Variable              | Description                          | Default (Docker) |
 | --------------------- | ------------------------------------ | ---------------- |
@@ -119,22 +143,20 @@ docker compose up -d
 | `YUBAL_TEMP`         | Temp directory         | System temp      |
 </details>
 
-## 🔌 Media Servers Integration
+## Media Server Integration
 
-yubal organizes downloads as `Artist/Year - Album/NN - Track.ext`. It writes both a slash-separated `ARTIST` tag and a multi-value `ARTISTS` tags for proper multi-artist support.
+Point your media server at the output folder and scan. yubal writes proper multi-artist tags (`ARTISTS`) for correct artist linking.
 
-Configure your server to read `ARTISTS` tags for proper multi-artist linking.
-
-| Feature           | Navidrome | Jellyfin | Gonic |
-| ----------------- | :-------: | :------: | :---: |
-| Folder structure  |    ✅     |    ✅    |  ✅   |
-| Multi-artist tags |    ✅     |    ⚙️    |  ⚙️   |
-| M3U playlists     |    ✅     |    ✅    |  ❌   |
-
-✅ Works out of the box · ⚙️ Requires configuration
+| Server        | Setup                                                      |
+| ------------- | ---------------------------------------------------------- |
+| **Navidrome** | Works out of the box                                       |
+| **Jellyfin**  | Enable "Use non-standard artists tags" in library settings |
+| **Gonic**     | Set `GONIC_MULTI_VALUE_ARTIST=multi`                       |
 
 <details>
-<summary><b>Navidrome</b> (works out of the box)</summary>
+<summary>Detailed setup guides</summary>
+
+### Navidrome
 
 No configuration required. Optionally, make imported playlists public:
 
@@ -144,21 +166,15 @@ ND_DEFAULTPLAYLISTPUBLICVISIBILITY=true
 
 See [Navidrome docs](https://www.navidrome.org/docs/usage/configuration/options/).
 
-</details>
+### Jellyfin
 
-<details>
-<summary><b>Jellyfin</b></summary>
-
-For multi-artist support, enable the non-standard artists tag:
+For multi-artist support:
 
 1. **Dashboard → Libraries → Music Library → Manage Library**
 2. Check **Use non-standard artists tags**
 3. Save and rescan
 
-</details>
-
-<details>
-<summary><b>Gonic</b></summary>
+### Gonic
 
 For multi-artist support:
 
@@ -167,21 +183,21 @@ GONIC_MULTI_VALUE_ARTIST=multi
 GONIC_MULTI_VALUE_ALBUM_ARTIST=multi
 ```
 
-M3U playlists with relative paths are not supported ([pending PR in gonic](https://github.com/sentriz/gonic/pull/537)).
+M3U playlists with relative paths are not supported ([pending PR](https://github.com/sentriz/gonic/pull/537)).
 
 </details>
 
-## 🍪 Cookies (Optional)
+## Cookies (Optional)
 
-For age-restricted content, private playlists, or higher bitrate (Premium):
+Need age-restricted content, private playlists, or Premium quality? Add your cookies:
 
-1. Export cookies with a browser extension ([yt-dlp guide](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp))
+1. Export with a browser extension ([yt-dlp guide](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp))
 2. Place at `config/ytdlp/cookies.txt` or upload via the web UI
 
 > [!CAUTION]
 > Cookie usage may trigger stricter rate limiting and could put your account at risk. See [#3](https://github.com/guillevc/yubal/issues/3) and [yt-dlp wiki](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube).
 
-## 🗺️ Roadmap
+## What's Coming
 
 - [x] Cookie import via Web UI
 - [x] Multi-arch Docker images
@@ -198,7 +214,7 @@ For age-restricted content, private playlists, or higher bitrate (Premium):
 - [ ] Auto-sync playlists
 - [ ] New music automatic discovery
 
-## 💜 Support
+## Support
 
 If yubal is useful to you, consider supporting its development:
 
@@ -210,7 +226,7 @@ If yubal is useful to you, consider supporting its development:
 
 [![Star History Chart](https://api.star-history.com/svg?repos=guillevc/yubal&type=Date)](https://star-history.com/#guillevc/yubal&Date)
 
-## 🤝 Acknowledgments
+## Acknowledgments
 
 Built with [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [ytmusicapi](https://github.com/sigma67/ytmusicapi).
 
