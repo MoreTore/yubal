@@ -593,7 +593,7 @@ class MetadataExtractorService:
 
             if not title_match.is_good_match:
                 logger.warning(
-                    "Low title match for '%s': '%s' (%.0f%%) - using anyway",
+                    "Low confidence album search: '%s' -> '%s' (%.0f%%)",
                     track.title,
                     title_match.candidate_normalized,
                     title_match.similarity,
@@ -691,7 +691,7 @@ class MetadataExtractorService:
             if fuzzy_result.is_acceptable:
                 if not fuzzy_result.is_high_confidence:
                     logger.warning(
-                        "Fuzzy match: '%s' -> '%s' (%.0f%%)",
+                        "Low confidence track match: '%s' -> '%s' (%.0f%%)",
                         track.title,
                         fuzzy_result.matched_track.title,
                         fuzzy_result.score,

@@ -141,6 +141,11 @@ class PlaylistComposerService:
             logger.debug("Skipping M3U for album: %s", playlist_info.playlist_id)
             return None
 
+        # Skip single tracks (M3U is for playlists, not individual tracks)
+        if playlist_info.kind == ContentKind.TRACK:
+            logger.debug("Skipping M3U for single track: %s", playlist_info.playlist_id)
+            return None
+
         tracks = self._collect_successful_tracks_for_playlist(results)
         if not tracks:
             logger.debug("No tracks available for M3U generation")
@@ -208,6 +213,14 @@ class PlaylistComposerService:
             Path to saved cover file, or None if no cover URL or save failed.
         """
         if not playlist_info.cover_url:
+            return None
+
+        # Skip single tracks (cover saved with the track file, not separately)
+        if playlist_info.kind == ContentKind.TRACK:
+            logger.debug(
+                "Skipping playlist cover for single track: %s",
+                playlist_info.playlist_id,
+            )
             return None
 
         cover_path = write_playlist_cover(

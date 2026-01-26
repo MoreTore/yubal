@@ -880,7 +880,7 @@ class TestMetadataExtractorService:
 
         # Should match but with warning
         assert tracks[0].track_number == 5
-        assert "Fuzzy match" in caplog.text
+        assert "Low confidence track match" in caplog.text
 
     def test_extract_fuzzy_match_low_confidence_rejected(
         self,

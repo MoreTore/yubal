@@ -17,9 +17,9 @@ def validate_youtube_music_url(url: str) -> str:
     url = url.strip()
     if not is_supported_url(url):
         raise ValueError(
-            "Invalid URL. Expected a YouTube Music URL "
-            "(e.g., https://music.youtube.com/playlist?list=... or "
-            "https://music.youtube.com/watch?v=...)"
+            "Invalid URL. Expected a YouTube or YouTube Music URL "
+            "(e.g., https://youtube.com/watch?v=... or "
+            "https://music.youtube.com/playlist?list=...)"
         )
     return url
 
@@ -31,10 +31,10 @@ class CreateJobRequest(BaseModel):
     """Request to create a new sync job."""
 
     url: YouTubeMusicUrl = Field(
-        description="YouTube Music playlist, album, or single track URL",
+        description="YouTube or YouTube Music playlist, album, or single track URL",
         examples=[
             "https://music.youtube.com/playlist?list=OLAK5uy_...",
-            "https://music.youtube.com/watch?v=VIDEO_ID",
+            "https://www.youtube.com/watch?v=VIDEO_ID",
         ],
     )
     audio_format: AudioCodec | None = Field(
