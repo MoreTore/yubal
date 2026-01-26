@@ -232,10 +232,10 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
         </div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: isRunning ? 1 : 0, scale: isRunning ? 1 : 0.8 }}
           animate={{
-            opacity: isHovered ? 1 : 0,
-            scale: isHovered ? 1 : 0.8,
+            opacity: isRunning || isHovered ? 1 : 0,
+            scale: isRunning || isHovered ? 1 : 0.8,
           }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         >
