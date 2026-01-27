@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { components } from "./schema";
 
+// Type aliases for UI (uses "playlist" terminology) → API (uses "subscription")
 export type SyncedPlaylist = components["schemas"]["SubscriptionResponse"];
 export type SchedulerStatus = components["schemas"]["SchedulerStatus"];
 

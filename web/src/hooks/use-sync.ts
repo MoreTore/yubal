@@ -9,10 +9,10 @@ import {
   updatePlaylist as updatePlaylistApi,
   type SchedulerStatus,
   type SyncedPlaylist,
-} from "../api/sync";
+} from "../api/subscriptions";
 import { showErrorToast } from "../lib/toast";
 
-export type { SchedulerStatus, SyncedPlaylist } from "../api/sync";
+export type { SchedulerStatus, SyncedPlaylist } from "../api/subscriptions";
 
 export interface UseSyncResult {
   playlists: SyncedPlaylist[];

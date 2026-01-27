@@ -1,29 +1,11 @@
 """Scheduler status endpoint."""
 
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Depends
-from starlette.requests import Request
-
-from yubal_api.db.repository import SubscriptionRepository
+from yubal_api.api.dependencies import RepositoryDep, SchedulerDep
 from yubal_api.schemas.scheduler import SchedulerStatus, SubscriptionCounts
-from yubal_api.services.scheduler import Scheduler
 
 router = APIRouter(prefix="/scheduler", tags=["scheduler"])
-
-
-def get_repository(request: Request) -> SubscriptionRepository:
-    """Get subscription repository from app state."""
-    return request.app.state.services.repository
-
-
-def get_scheduler(request: Request) -> Scheduler:
-    """Get scheduler from app state."""
-    return request.app.state.services.scheduler
-
-
-RepositoryDep = Annotated[SubscriptionRepository, Depends(get_repository)]
-SchedulerDep = Annotated[Scheduler, Depends(get_scheduler)]
 
 
 @router.get("", response_model=SchedulerStatus)
