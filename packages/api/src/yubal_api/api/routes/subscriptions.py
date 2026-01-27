@@ -1,14 +1,12 @@
 """Subscription management endpoints."""
 
 from datetime import UTC, datetime
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from starlette.requests import Request
+from fastapi import APIRouter, HTTPException, status
 
+from yubal_api.api.dependencies import RepositoryDep, SchedulerDep
 from yubal_api.db.models import Subscription, SubscriptionType
-from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionListResponse,
@@ -16,23 +14,8 @@ from yubal_api.schemas.subscription import (
     SubscriptionUpdate,
     SyncResponse,
 )
-from yubal_api.services.scheduler import Scheduler
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
-
-
-def get_repository(request: Request) -> SubscriptionRepository:
-    """Get subscription repository from app state."""
-    return request.app.state.services.repository
-
-
-def get_scheduler(request: Request) -> Scheduler:
-    """Get scheduler from app state."""
-    return request.app.state.services.scheduler
-
-
-RepositoryDep = Annotated[SubscriptionRepository, Depends(get_repository)]
-SchedulerDep = Annotated[Scheduler, Depends(get_scheduler)]
 
 
 # =============================================================================

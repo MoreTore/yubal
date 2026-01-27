@@ -2,7 +2,7 @@ import { Button, Input, Tooltip } from "@heroui/react";
 import { Inbox, Link, Plus, RefreshCw, Type } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import type { SyncedPlaylist } from "../../api/sync";
+import type { SyncedPlaylist } from "../../api/subscriptions";
 import { isValidUrl } from "../../lib/url";
 import { EmptyState } from "../common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "../common/panel";
