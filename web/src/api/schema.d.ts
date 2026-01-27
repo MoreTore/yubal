@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /** Health Check */
-        get: operations["health_check_health_get"];
+        get: operations["health_check_api_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -32,7 +32,7 @@ export interface paths {
          * List Jobs
          * @description List all jobs (oldest first, FIFO order).
          */
-        get: operations["list_jobs_jobs_get"];
+        get: operations["list_jobs_api_jobs_get"];
         put?: never;
         /**
          * Create Job
@@ -40,14 +40,14 @@ export interface paths {
          *
          *     Jobs are queued and executed sequentially. Returns 409 if queue is full.
          */
-        post: operations["create_job_jobs_post"];
+        post: operations["create_job_api_jobs_post"];
         /**
          * Clear Jobs
          * @description Clear all completed/failed/cancelled jobs.
          *
          *     Running and queued jobs are not affected.
          */
-        delete: operations["clear_jobs_jobs_delete"];
+        delete: operations["clear_jobs_api_jobs_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -66,7 +66,7 @@ export interface paths {
          * Cancel Job
          * @description Cancel a running or queued job.
          */
-        post: operations["cancel_job_jobs__job_id__cancel_post"];
+        post: operations["cancel_job_api_jobs__job_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -89,7 +89,7 @@ export interface paths {
          *
          *     Running or queued jobs cannot be deleted.
          */
-        delete: operations["delete_job_jobs__job_id__delete"];
+        delete: operations["delete_job_api_jobs__job_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -106,7 +106,7 @@ export interface paths {
          * Get buffered log entries
          * @description Returns all currently buffered log entries as an array.
          */
-        get: operations["get_log_history_logs_history_get"];
+        get: operations["get_log_history_api_logs_history_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -126,7 +126,7 @@ export interface paths {
          * Stream structured logs via SSE
          * @description Each SSE data line contains a JSON-serialized LogEntry object.
          */
-        get: operations["stream_logs_logs_sse_get"];
+        get: operations["stream_logs_api_logs_sse_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -146,7 +146,7 @@ export interface paths {
          * Cookies Status
          * @description Check if cookies file is configured.
          */
-        get: operations["cookies_status_cookies_status_get"];
+        get: operations["cookies_status_api_cookies_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -171,12 +171,152 @@ export interface paths {
          *     The cookie file enables downloading from private playlists
          *     and accessing age-restricted content on YouTube Music.
          */
-        post: operations["upload_cookies_cookies_post"];
+        post: operations["upload_cookies_api_cookies_post"];
         /**
          * Delete Cookies
          * @description Delete the cookies file.
          */
-        delete: operations["delete_cookies_cookies_delete"];
+        delete: operations["delete_cookies_api_cookies_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/playlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Playlists
+         * @description List all synced playlists.
+         */
+        get: operations["list_playlists_api_sync_playlists_get"];
+        put?: never;
+        /**
+         * Add Playlist
+         * @description Add a playlist for syncing.
+         *
+         *     Returns 409 Conflict if the URL is already registered.
+         */
+        post: operations["add_playlist_api_sync_playlists_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/playlists/{playlist_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Playlist
+         * @description Get a single synced playlist.
+         */
+        get: operations["get_playlist_api_sync_playlists__playlist_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Playlist
+         * @description Remove a playlist from syncing.
+         */
+        delete: operations["delete_playlist_api_sync_playlists__playlist_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Playlist
+         * @description Update a synced playlist's name or enabled status.
+         */
+        patch: operations["update_playlist_api_sync_playlists__playlist_id__patch"];
+        trace?: never;
+    };
+    "/sync/playlists/{playlist_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Playlist
+         * @description Create a sync job for a specific playlist.
+         *
+         *     Returns 404 if playlist not found, 409 if queue is full.
+         */
+        post: operations["sync_playlist_api_sync_playlists__playlist_id__sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync All
+         * @description Create sync jobs for all enabled playlists.
+         */
+        post: operations["sync_all_api_sync_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Config
+         * @description Get sync configuration.
+         */
+        get: operations["get_config_api_sync_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Config
+         * @description Update sync configuration.
+         */
+        patch: operations["update_config_api_sync_config_patch"];
+        trace?: never;
+    };
+    "/sync/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Status
+         * @description Get scheduler status and summary.
+         */
+        get: operations["get_status_api_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -186,6 +326,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AddPlaylistRequest
+         * @description Request to add a playlist for syncing.
+         */
+        AddPlaylistRequest: {
+            /**
+             * Url
+             * @description YouTube or YouTube Music playlist URL
+             * @example https://music.youtube.com/playlist?list=OLAK5uy_...
+             */
+            url: string;
+            /**
+             * Name
+             * @description Display name for the playlist
+             */
+            name: string;
+        };
+        /**
+         * AddPlaylistResponse
+         * @description Response when a playlist is added.
+         */
+        AddPlaylistResponse: {
+            /** Id */
+            id: string;
+            /**
+             * Message
+             * @default Playlist added
+             */
+            message: string;
+        };
         /**
          * AudioCodec
          * @description Supported audio output codecs.
@@ -284,9 +454,9 @@ export interface components {
         CreateJobRequest: {
             /**
              * Url
-             * @description YouTube Music playlist, album, or single track URL
+             * @description YouTube or YouTube Music playlist, album, or single track URL
              * @example https://music.youtube.com/playlist?list=OLAK5uy_...
-             * @example https://music.youtube.com/watch?v=VIDEO_ID
+             * @example https://www.youtube.com/watch?v=VIDEO_ID
              */
             url: string;
             /** @description Audio format for downloads. Uses server default if not set. */
@@ -588,11 +758,123 @@ export interface components {
          * @description Reason why a track was skipped.
          *
          *     Used in both extraction and download phases:
-         *     - Extraction: UNSUPPORTED_VIDEO_TYPE, NO_VIDEO_ID, REGION_UNAVAILABLE, NO_ALBUM_MATCH
+         *     - Extraction: UNSUPPORTED_VIDEO_TYPE, NO_VIDEO_ID, REGION_UNAVAILABLE,
+         *       NO_ALBUM_MATCH
          *     - Download: FILE_EXISTS
          * @enum {string}
          */
         SkipReason: "file_exists" | "unsupported_video_type" | "no_video_id" | "region_unavailable" | "no_album_match";
+        /**
+         * SyncAllResponse
+         * @description Response when sync jobs are created for all playlists.
+         */
+        SyncAllResponse: {
+            /** Job Ids */
+            job_ids: string[];
+            /** Message */
+            message: string;
+        };
+        /**
+         * SyncConfigResponse
+         * @description Response for sync configuration.
+         */
+        SyncConfigResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Interval Minutes */
+            interval_minutes: number;
+        };
+        /**
+         * SyncJobResponse
+         * @description Response when a sync job is created.
+         */
+        SyncJobResponse: {
+            /** Job Id */
+            job_id: string;
+            /**
+             * Message
+             * @default Sync job created
+             */
+            message: string;
+        };
+        /**
+         * SyncStatusResponse
+         * @description Response for scheduler status.
+         */
+        SyncStatusResponse: {
+            /** Scheduler Running */
+            scheduler_running: boolean;
+            config: components["schemas"]["SyncConfigResponse"];
+            /** Playlist Count */
+            playlist_count: number;
+            /** Enabled Playlist Count */
+            enabled_playlist_count: number;
+        };
+        /**
+         * SyncedPlaylistResponse
+         * @description Response for a synced playlist.
+         */
+        SyncedPlaylistResponse: {
+            /** Id */
+            id: string;
+            /** Url */
+            url: string;
+            /** Name */
+            name: string;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Job Id */
+            last_job_id?: string | null;
+            /** Last Sync At */
+            last_sync_at?: string | null;
+        };
+        /**
+         * SyncedPlaylistsResponse
+         * @description Response for listing synced playlists.
+         */
+        SyncedPlaylistsResponse: {
+            /** Playlists */
+            playlists: components["schemas"]["SyncedPlaylistResponse"][];
+        };
+        /**
+         * UpdatePlaylistRequest
+         * @description Request to update a synced playlist.
+         */
+        UpdatePlaylistRequest: {
+            /**
+             * Name
+             * @description New display name
+             */
+            name?: string | null;
+            /**
+             * Enabled
+             * @description Whether to include in scheduled syncs
+             */
+            enabled?: boolean | null;
+        };
+        /**
+         * UpdateSyncConfigRequest
+         * @description Request to update sync configuration.
+         */
+        UpdateSyncConfigRequest: {
+            /**
+             * Enabled
+             * @description Master switch for scheduled syncing
+             */
+            enabled?: boolean | null;
+            /**
+             * Interval Minutes
+             * @description Minutes between sync runs (5-10080)
+             */
+            interval_minutes?: number | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -611,7 +893,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    health_check_health_get: {
+    health_check_api_health_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -631,7 +913,7 @@ export interface operations {
             };
         };
     };
-    list_jobs_jobs_get: {
+    list_jobs_api_jobs_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -651,7 +933,7 @@ export interface operations {
             };
         };
     };
-    create_job_jobs_post: {
+    create_job_api_jobs_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -693,7 +975,7 @@ export interface operations {
             };
         };
     };
-    clear_jobs_jobs_delete: {
+    clear_jobs_api_jobs_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -713,7 +995,7 @@ export interface operations {
             };
         };
     };
-    cancel_job_jobs__job_id__cancel_post: {
+    cancel_job_api_jobs__job_id__cancel_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -762,7 +1044,7 @@ export interface operations {
             };
         };
     };
-    delete_job_jobs__job_id__delete: {
+    delete_job_api_jobs__job_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -809,7 +1091,7 @@ export interface operations {
             };
         };
     };
-    get_log_history_logs_history_get: {
+    get_log_history_api_logs_history_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -829,7 +1111,7 @@ export interface operations {
             };
         };
     };
-    stream_logs_logs_sse_get: {
+    stream_logs_api_logs_sse_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -847,7 +1129,7 @@ export interface operations {
             };
         };
     };
-    cookies_status_cookies_status_get: {
+    cookies_status_api_cookies_status_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -867,7 +1149,7 @@ export interface operations {
             };
         };
     };
-    upload_cookies_cookies_post: {
+    upload_cookies_api_cookies_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -900,7 +1182,7 @@ export interface operations {
             };
         };
     };
-    delete_cookies_cookies_delete: {
+    delete_cookies_api_cookies_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -916,6 +1198,278 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CookiesUploadResponse"];
+                };
+            };
+        };
+    };
+    list_playlists_api_sync_playlists_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncedPlaylistsResponse"];
+                };
+            };
+        };
+    };
+    add_playlist_api_sync_playlists_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPlaylistRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddPlaylistResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_playlist_api_sync_playlists__playlist_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncedPlaylistResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_playlist_api_sync_playlists__playlist_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_playlist_api_sync_playlists__playlist_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlaylistRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncedPlaylistResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_playlist_api_sync_playlists__playlist_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_all_api_sync_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncAllResponse"];
+                };
+            };
+        };
+    };
+    get_config_api_sync_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncConfigResponse"];
+                };
+            };
+        };
+    };
+    update_config_api_sync_config_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSyncConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncConfigResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_status_api_sync_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncStatusResponse"];
                 };
             };
         };

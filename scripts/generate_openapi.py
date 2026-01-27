@@ -1,17 +1,19 @@
 """Generate OpenAPI schema by temporarily starting the server."""
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 import requests
 
 # Configuration
 API_HOST = "127.0.0.1"
 API_PORT = 8765  # Use non-standard port to avoid conflicts with dev server
-OPENAPI_URL = f"http://{API_HOST}:{API_PORT}/api/openapi.json"
+OPENAPI_URL = f"http://{API_HOST}:{API_PORT}/openapi.json"
 MAX_WAIT_SECONDS = 10
 
 
@@ -75,6 +77,12 @@ def main() -> int:
         if result.returncode != 0:
             print(f"Type generation failed:\n{result.stderr}")
             return 1
+
+        # Strip /api prefix from paths since client.ts uses baseUrl: "/api"
+        schema_path = Path("web/src/api/schema.d.ts")
+        content = schema_path.read_text()
+        content = re.sub(r'"/api/', '"/', content)
+        schema_path.write_text(content)
 
         print("Generated web/src/api/schema.d.ts")
         return 0
