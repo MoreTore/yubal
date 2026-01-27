@@ -1,45 +1,41 @@
 import { api } from "./client";
 import type { components } from "./schema";
 
-export type SyncedPlaylist = components["schemas"]["SyncedPlaylistResponse"];
-export type SyncConfig = components["schemas"]["SyncConfigResponse"];
-export type SyncStatus = components["schemas"]["SyncStatusResponse"];
+export type SyncedPlaylist = components["schemas"]["SubscriptionResponse"];
+export type SchedulerStatus = components["schemas"]["SchedulerStatus"];
 
 export type AddPlaylistResult =
   | { success: true; id: string }
   | { success: false; error: string };
 
 export type SyncResult =
-  | { success: true; jobId: string }
-  | { success: false; error: string };
-
-export type SyncAllResult =
   | { success: true; jobIds: string[] }
   | { success: false; error: string };
 
-// --- Playlists ---
+// --- Playlists (Subscriptions) ---
 
 export async function listPlaylists(): Promise<SyncedPlaylist[]> {
-  const { data, error } = await api.GET("/sync/playlists");
+  const { data, error } = await api.GET("/subscriptions");
   if (error) return [];
-  return data.playlists;
+  return data.items;
 }
 
 export async function addPlaylist(
   url: string,
   name: string,
 ): Promise<AddPlaylistResult> {
-  const { data, error, response } = await api.POST("/sync/playlists", {
-    body: { url, name },
+  const { data, error, response } = await api.POST("/subscriptions", {
+    body: { url, name, type: "playlist", enabled: true },
   });
 
   if (error) {
     if (response.status === 409) {
-      const conflict = error as { message: string };
-      return { success: false, error: conflict.message };
+      return { success: false, error: "Playlist already exists" };
     }
     if (response.status === 422) {
-      const validation = error as { detail?: { msg: string }[] };
+      const validation = error as unknown as {
+        detail?: { msg: string }[];
+      };
       return {
         success: false,
         error: validation.detail?.[0]?.msg ?? "Invalid input",
@@ -52,8 +48,8 @@ export async function addPlaylist(
 }
 
 export async function getPlaylist(id: string): Promise<SyncedPlaylist | null> {
-  const { data, error } = await api.GET("/sync/playlists/{playlist_id}", {
-    params: { path: { playlist_id: id } },
+  const { data, error } = await api.GET("/subscriptions/{subscription_id}", {
+    params: { path: { subscription_id: id } },
   });
   if (error) return null;
   return data;
@@ -63,8 +59,8 @@ export async function updatePlaylist(
   id: string,
   updates: { name?: string; enabled?: boolean },
 ): Promise<SyncedPlaylist | null> {
-  const { data, error } = await api.PATCH("/sync/playlists/{playlist_id}", {
-    params: { path: { playlist_id: id } },
+  const { data, error } = await api.PATCH("/subscriptions/{subscription_id}", {
+    params: { path: { subscription_id: id } },
     body: updates,
   });
   if (error) return null;
@@ -72,8 +68,8 @@ export async function updatePlaylist(
 }
 
 export async function deletePlaylist(id: string): Promise<boolean> {
-  const { error } = await api.DELETE("/sync/playlists/{playlist_id}", {
-    params: { path: { playlist_id: id } },
+  const { error } = await api.DELETE("/subscriptions/{subscription_id}", {
+    params: { path: { subscription_id: id } },
   });
   return !error;
 }
@@ -82,9 +78,9 @@ export async function deletePlaylist(id: string): Promise<boolean> {
 
 export async function syncPlaylist(id: string): Promise<SyncResult> {
   const { data, error, response } = await api.POST(
-    "/sync/playlists/{playlist_id}/sync",
+    "/subscriptions/{subscription_id}/sync",
     {
-      params: { path: { playlist_id: id } },
+      params: { path: { subscription_id: id } },
     },
   );
 
@@ -98,11 +94,11 @@ export async function syncPlaylist(id: string): Promise<SyncResult> {
     return { success: false, error: "Failed to create sync job" };
   }
 
-  return { success: true, jobId: data.job_id };
+  return { success: true, jobIds: data.job_ids };
 }
 
-export async function syncAll(): Promise<SyncAllResult> {
-  const { data, error } = await api.POST("/sync/run");
+export async function syncAll(): Promise<SyncResult> {
+  const { data, error } = await api.POST("/subscriptions/sync");
 
   if (error) {
     return { success: false, error: "Failed to create sync jobs" };
@@ -111,29 +107,10 @@ export async function syncAll(): Promise<SyncAllResult> {
   return { success: true, jobIds: data.job_ids };
 }
 
-// --- Config ---
-
-export async function getConfig(): Promise<SyncConfig | null> {
-  const { data, error } = await api.GET("/sync/config");
-  if (error) return null;
-  return data;
-}
-
-export async function updateConfig(updates: {
-  enabled?: boolean;
-  interval_minutes?: number;
-}): Promise<SyncConfig | null> {
-  const { data, error } = await api.PATCH("/sync/config", {
-    body: updates,
-  });
-  if (error) return null;
-  return data;
-}
-
 // --- Status ---
 
-export async function getStatus(): Promise<SyncStatus | null> {
-  const { data, error } = await api.GET("/sync/status");
+export async function getStatus(): Promise<SchedulerStatus | null> {
+  const { data, error } = await api.GET("/scheduler");
   if (error) return null;
   return data;
 }

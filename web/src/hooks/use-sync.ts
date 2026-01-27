@@ -6,19 +6,17 @@ import {
   listPlaylists,
   syncAll as syncAllApi,
   syncPlaylist as syncPlaylistApi,
-  updateConfig as updateConfigApi,
   updatePlaylist as updatePlaylistApi,
-  type SyncConfig,
+  type SchedulerStatus,
   type SyncedPlaylist,
 } from "../api/sync";
 import { showErrorToast } from "../lib/toast";
 
-export type { SyncConfig, SyncedPlaylist } from "../api/sync";
+export type { SchedulerStatus, SyncedPlaylist } from "../api/sync";
 
 export interface UseSyncResult {
   playlists: SyncedPlaylist[];
-  config: SyncConfig | null;
-  schedulerRunning: boolean;
+  schedulerStatus: SchedulerStatus | null;
   isLoading: boolean;
   addPlaylist: (url: string, name: string) => Promise<boolean>;
   updatePlaylist: (
@@ -28,17 +26,13 @@ export interface UseSyncResult {
   deletePlaylist: (id: string) => Promise<void>;
   syncPlaylist: (id: string) => Promise<void>;
   syncAll: () => Promise<void>;
-  updateConfig: (updates: {
-    enabled?: boolean;
-    interval_minutes?: number;
-  }) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
 export function useSync(): UseSyncResult {
   const [playlists, setPlaylists] = useState<SyncedPlaylist[]>([]);
-  const [config, setConfig] = useState<SyncConfig | null>(null);
-  const [schedulerRunning, setSchedulerRunning] = useState(false);
+  const [schedulerStatus, setSchedulerStatus] =
+    useState<SchedulerStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -47,10 +41,7 @@ export function useSync(): UseSyncResult {
       getStatus(),
     ]);
     setPlaylists(playlistsData);
-    if (statusData) {
-      setConfig(statusData.config);
-      setSchedulerRunning(statusData.scheduler_running);
-    }
+    setSchedulerStatus(statusData);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -107,14 +98,6 @@ export function useSync(): UseSyncResult {
     await fetchData();
   }, [fetchData]);
 
-  const updateConfig = useCallback(
-    async (updates: { enabled?: boolean; interval_minutes?: number }) => {
-      await updateConfigApi(updates);
-      await fetchData();
-    },
-    [fetchData],
-  );
-
   useEffect(() => {
     let mounted = true;
 
@@ -134,15 +117,13 @@ export function useSync(): UseSyncResult {
 
   return {
     playlists,
-    config,
-    schedulerRunning,
+    schedulerStatus,
     isLoading,
     addPlaylist,
     updatePlaylist,
     deletePlaylist,
     syncPlaylist,
     syncAll,
-    updateConfig,
     refresh,
   };
 }
