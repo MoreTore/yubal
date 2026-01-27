@@ -1,4 +1,4 @@
-import { Button, Image, Switch, Tooltip } from "@heroui/react";
+import { Button, Switch, Tooltip } from "@heroui/react";
 import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
@@ -43,28 +43,16 @@ export function SyncedPlaylistCard({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center gap-3">
-        {/* Thumbnail */}
-        {playlist.thumbnail_url ? (
-          <div className="relative h-12 w-12 shrink-0">
-            <Image
-              src={playlist.thumbnail_url}
-              alt=""
-              radius="sm"
-              isBlurred
-              className="h-12 w-12 object-cover"
-            />
-          </div>
-        ) : (
-          <div className="bg-content3 flex h-12 w-12 shrink-0 items-center justify-center rounded">
-            <RefreshCw className="text-foreground-400 h-4 w-4" />
-          </div>
-        )}
+        {/* Icon */}
+        <div className="bg-content3 flex h-12 w-12 shrink-0 items-center justify-center rounded">
+          <RefreshCw className="text-foreground-400 h-4 w-4" />
+        </div>
 
         {/* Info */}
         <div className="min-w-0 flex-1 font-mono">
           <p className="text-foreground truncate text-sm">{playlist.name}</p>
           <p className="text-foreground-500 text-xs">
-            Synced {formatTimeAgo(playlist.last_sync_at)}
+            Synced {formatTimeAgo(playlist.last_synced_at)}
           </p>
         </div>
 

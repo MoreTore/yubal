@@ -182,61 +182,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sync/playlists": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Playlists
-         * @description List all synced playlists.
-         */
-        get: operations["list_playlists_api_sync_playlists_get"];
-        put?: never;
-        /**
-         * Add Playlist
-         * @description Add a playlist for syncing.
-         *
-         *     Returns 409 Conflict if the URL is already registered.
-         */
-        post: operations["add_playlist_api_sync_playlists_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sync/playlists/{playlist_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Playlist
-         * @description Get a single synced playlist.
-         */
-        get: operations["get_playlist_api_sync_playlists__playlist_id__get"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete Playlist
-         * @description Remove a playlist from syncing.
-         */
-        delete: operations["delete_playlist_api_sync_playlists__playlist_id__delete"];
-        options?: never;
-        head?: never;
-        /**
-         * Update Playlist
-         * @description Update a synced playlist's name or enabled status.
-         */
-        patch: operations["update_playlist_api_sync_playlists__playlist_id__patch"];
-        trace?: never;
-    };
-    "/sync/playlists/{playlist_id}/sync": {
+    "/subscriptions/sync": {
         parameters: {
             query?: never;
             header?: never;
@@ -246,19 +192,69 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sync Playlist
-         * @description Create a sync job for a specific playlist.
-         *
-         *     Returns 404 if playlist not found, 409 if queue is full.
+         * Sync All Subscriptions
+         * @description Sync all enabled subscriptions.
          */
-        post: operations["sync_playlist_api_sync_playlists__playlist_id__sync_post"];
+        post: operations["sync_all_subscriptions_api_subscriptions_sync_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/sync/run": {
+    "/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Subscriptions
+         * @description List all subscriptions.
+         */
+        get: operations["list_subscriptions_api_subscriptions_get"];
+        put?: never;
+        /**
+         * Create Subscription
+         * @description Create a new subscription.
+         */
+        post: operations["create_subscription_api_subscriptions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions/{subscription_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Subscription
+         * @description Get a subscription by ID.
+         */
+        get: operations["get_subscription_api_subscriptions__subscription_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Subscription
+         * @description Delete a subscription.
+         */
+        delete: operations["delete_subscription_api_subscriptions__subscription_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Subscription
+         * @description Update a subscription.
+         */
+        patch: operations["update_subscription_api_subscriptions__subscription_id__patch"];
+        trace?: never;
+    };
+    "/subscriptions/{subscription_id}/sync": {
         parameters: {
             query?: never;
             header?: never;
@@ -268,17 +264,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sync All
-         * @description Create sync jobs for all enabled playlists.
+         * Sync Subscription
+         * @description Sync a single subscription.
          */
-        post: operations["sync_all_api_sync_run_post"];
+        post: operations["sync_subscription_api_subscriptions__subscription_id__sync_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/sync/config": {
+    "/scheduler": {
         parameters: {
             query?: never;
             header?: never;
@@ -286,34 +282,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Config
-         * @description Get sync configuration.
+         * Get Scheduler Status
+         * @description Get scheduler status (read-only).
          */
-        get: operations["get_config_api_sync_config_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Update Config
-         * @description Update sync configuration.
-         */
-        patch: operations["update_config_api_sync_config_patch"];
-        trace?: never;
-    };
-    "/sync/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Status
-         * @description Get scheduler status and summary.
-         */
-        get: operations["get_status_api_sync_status_get"];
+        get: operations["get_scheduler_status_api_scheduler_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -326,36 +298,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * AddPlaylistRequest
-         * @description Request to add a playlist for syncing.
-         */
-        AddPlaylistRequest: {
-            /**
-             * Url
-             * @description YouTube or YouTube Music playlist URL
-             * @example https://music.youtube.com/playlist?list=OLAK5uy_...
-             */
-            url: string;
-            /**
-             * Name
-             * @description Display name for the playlist
-             */
-            name: string;
-        };
-        /**
-         * AddPlaylistResponse
-         * @description Response when a playlist is added.
-         */
-        AddPlaylistResponse: {
-            /** Id */
-            id: string;
-            /**
-             * Message
-             * @default Playlist added
-             */
-            message: string;
-        };
         /**
          * AudioCodec
          * @description Supported audio output codecs.
@@ -754,6 +696,21 @@ export interface components {
             };
         };
         /**
+         * SchedulerStatus
+         * @description Scheduler status response.
+         */
+        SchedulerStatus: {
+            /** Running */
+            running: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Interval Minutes */
+            interval_minutes: number;
+            /** Next Run At */
+            next_run_at: string | null;
+            subscription_counts: components["schemas"]["SubscriptionCounts"];
+        };
+        /**
          * SkipReason
          * @description Reason why a track was skipped.
          *
@@ -765,64 +722,55 @@ export interface components {
          */
         SkipReason: "file_exists" | "unsupported_video_type" | "no_video_id" | "region_unavailable" | "no_album_match";
         /**
-         * SyncAllResponse
-         * @description Response when sync jobs are created for all playlists.
+         * SubscriptionCounts
+         * @description Subscription count statistics.
          */
-        SyncAllResponse: {
-            /** Job Ids */
-            job_ids: string[];
-            /** Message */
-            message: string;
-        };
-        /**
-         * SyncConfigResponse
-         * @description Response for sync configuration.
-         */
-        SyncConfigResponse: {
+        SubscriptionCounts: {
+            /** Total */
+            total: number;
             /** Enabled */
-            enabled: boolean;
-            /** Interval Minutes */
-            interval_minutes: number;
+            enabled: number;
         };
         /**
-         * SyncJobResponse
-         * @description Response when a sync job is created.
+         * SubscriptionCreate
+         * @description Request to create a subscription.
          */
-        SyncJobResponse: {
-            /** Job Id */
-            job_id: string;
-            /**
-             * Message
-             * @default Sync job created
-             */
-            message: string;
-        };
-        /**
-         * SyncStatusResponse
-         * @description Response for scheduler status.
-         */
-        SyncStatusResponse: {
-            /** Scheduler Running */
-            scheduler_running: boolean;
-            config: components["schemas"]["SyncConfigResponse"];
-            /** Playlist Count */
-            playlist_count: number;
-            /** Enabled Playlist Count */
-            enabled_playlist_count: number;
-        };
-        /**
-         * SyncedPlaylistResponse
-         * @description Response for a synced playlist.
-         */
-        SyncedPlaylistResponse: {
-            /** Id */
-            id: string;
+        SubscriptionCreate: {
+            /** @default playlist */
+            type: components["schemas"]["SubscriptionType"];
             /** Url */
             url: string;
             /** Name */
             name: string;
-            /** Thumbnail Url */
-            thumbnail_url?: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
+        /**
+         * SubscriptionListResponse
+         * @description List of subscriptions response.
+         */
+        SubscriptionListResponse: {
+            /** Items */
+            items: components["schemas"]["SubscriptionResponse"][];
+        };
+        /**
+         * SubscriptionResponse
+         * @description Subscription response.
+         */
+        SubscriptionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            type: components["schemas"]["SubscriptionType"];
+            /** Url */
+            url: string;
+            /** Name */
+            name: string;
             /** Enabled */
             enabled: boolean;
             /**
@@ -830,50 +778,32 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /** Last Job Id */
-            last_job_id?: string | null;
-            /** Last Sync At */
-            last_sync_at?: string | null;
+            /** Last Synced At */
+            last_synced_at: string | null;
         };
         /**
-         * SyncedPlaylistsResponse
-         * @description Response for listing synced playlists.
+         * SubscriptionType
+         * @description Type of content subscription.
+         * @enum {string}
          */
-        SyncedPlaylistsResponse: {
-            /** Playlists */
-            playlists: components["schemas"]["SyncedPlaylistResponse"][];
-        };
+        SubscriptionType: "playlist";
         /**
-         * UpdatePlaylistRequest
-         * @description Request to update a synced playlist.
+         * SubscriptionUpdate
+         * @description Request to update a subscription.
          */
-        UpdatePlaylistRequest: {
-            /**
-             * Name
-             * @description New display name
-             */
+        SubscriptionUpdate: {
+            /** Name */
             name?: string | null;
-            /**
-             * Enabled
-             * @description Whether to include in scheduled syncs
-             */
+            /** Enabled */
             enabled?: boolean | null;
         };
         /**
-         * UpdateSyncConfigRequest
-         * @description Request to update sync configuration.
+         * SyncResponse
+         * @description Response for sync operations.
          */
-        UpdateSyncConfigRequest: {
-            /**
-             * Enabled
-             * @description Master switch for scheduled syncing
-             */
-            enabled?: boolean | null;
-            /**
-             * Interval Minutes
-             * @description Minutes between sync runs (5-10080)
-             */
-            interval_minutes?: number | null;
+        SyncResponse: {
+            /** Job Ids */
+            job_ids: string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -1202,7 +1132,7 @@ export interface operations {
             };
         };
     };
-    list_playlists_api_sync_playlists_get: {
+    sync_all_subscriptions_api_subscriptions_sync_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1217,12 +1147,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SyncedPlaylistsResponse"];
+                    "application/json": components["schemas"]["SyncResponse"];
                 };
             };
         };
     };
-    add_playlist_api_sync_playlists_post: {
+    list_subscriptions_api_subscriptions_get: {
+        parameters: {
+            query?: {
+                enabled?: boolean | null;
+                type?: components["schemas"]["SubscriptionType"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subscription_api_subscriptions_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1231,7 +1193,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AddPlaylistRequest"];
+                "application/json": components["schemas"]["SubscriptionCreate"];
             };
         };
         responses: {
@@ -1241,7 +1203,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AddPlaylistResponse"];
+                    "application/json": components["schemas"]["SubscriptionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1255,12 +1217,12 @@ export interface operations {
             };
         };
     };
-    get_playlist_api_sync_playlists__playlist_id__get: {
+    get_subscription_api_subscriptions__subscription_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                playlist_id: string;
+                subscription_id: string;
             };
             cookie?: never;
         };
@@ -1272,7 +1234,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SyncedPlaylistResponse"];
+                    "application/json": components["schemas"]["SubscriptionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1286,12 +1248,12 @@ export interface operations {
             };
         };
     };
-    delete_playlist_api_sync_playlists__playlist_id__delete: {
+    delete_subscription_api_subscriptions__subscription_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                playlist_id: string;
+                subscription_id: string;
             };
             cookie?: never;
         };
@@ -1315,18 +1277,18 @@ export interface operations {
             };
         };
     };
-    update_playlist_api_sync_playlists__playlist_id__patch: {
+    update_subscription_api_subscriptions__subscription_id__patch: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                playlist_id: string;
+                subscription_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdatePlaylistRequest"];
+                "application/json": components["schemas"]["SubscriptionUpdate"];
             };
         };
         responses: {
@@ -1336,7 +1298,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SyncedPlaylistResponse"];
+                    "application/json": components["schemas"]["SubscriptionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1350,12 +1312,12 @@ export interface operations {
             };
         };
     };
-    sync_playlist_api_sync_playlists__playlist_id__sync_post: {
+    sync_subscription_api_subscriptions__subscription_id__sync_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                playlist_id: string;
+                subscription_id: string;
             };
             cookie?: never;
         };
@@ -1367,7 +1329,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SyncJobResponse"];
+                    "application/json": components["schemas"]["SyncResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1381,7 +1343,7 @@ export interface operations {
             };
         };
     };
-    sync_all_api_sync_run_post: {
+    get_scheduler_status_api_scheduler_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1396,80 +1358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SyncAllResponse"];
-                };
-            };
-        };
-    };
-    get_config_api_sync_config_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncConfigResponse"];
-                };
-            };
-        };
-    };
-    update_config_api_sync_config_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateSyncConfigRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncConfigResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_status_api_sync_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncStatusResponse"];
+                    "application/json": components["schemas"]["SchedulerStatus"];
                 };
             };
         };
