@@ -1,22 +1,19 @@
-import { HeroUIProvider, ToastProvider } from "@heroui/react";
+import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
 import { ErrorBoundary } from "./components/common/error-boundary";
 import { ThemeProvider } from "./hooks/use-theme";
 import "./index.css";
+import { router } from "./router";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <HeroUIProvider>
-      <ToastProvider />
-      <ErrorBoundary>
-        <ThemeProvider>
-          <main className="text-foreground">
-            <App />
-          </main>
-        </ThemeProvider>
-      </ErrorBoundary>
-    </HeroUIProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <main className="text-foreground">
+          <RouterProvider router={router} />
+        </main>
+      </ThemeProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
