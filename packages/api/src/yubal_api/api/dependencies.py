@@ -18,10 +18,10 @@ from fastapi import Depends
 from yubal import AudioCodec
 
 from yubal_api.api.services_container import Services, get_services
-from yubal_api.db.repository import SyncRepository
+from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
-from yubal_api.services.sync_scheduler import SyncScheduler
+from yubal_api.services.scheduler import Scheduler
 from yubal_api.settings import get_settings
 
 # -- Service dependencies (request-scoped via app.state) --
@@ -39,20 +39,20 @@ def _get_job_executor(services: ServicesDep) -> JobExecutor:
     return services.job_executor
 
 
-def _get_sync_repository(services: ServicesDep) -> SyncRepository:
-    """Get sync repository from services container."""
-    return services.sync_repository
+def _get_repository(services: ServicesDep) -> SubscriptionRepository:
+    """Get subscription repository from services container."""
+    return services.repository
 
 
-def _get_sync_scheduler(services: ServicesDep) -> SyncScheduler:
-    """Get sync scheduler from services container."""
-    return services.sync_scheduler
+def _get_scheduler(services: ServicesDep) -> Scheduler:
+    """Get scheduler from services container."""
+    return services.scheduler
 
 
 JobStoreDep = Annotated[JobStore, Depends(_get_job_store)]
 JobExecutorDep = Annotated[JobExecutor, Depends(_get_job_executor)]
-SyncRepositoryDep = Annotated[SyncRepository, Depends(_get_sync_repository)]
-SyncSchedulerDep = Annotated[SyncScheduler, Depends(_get_sync_scheduler)]
+RepositoryDep = Annotated[SubscriptionRepository, Depends(_get_repository)]
+SchedulerDep = Annotated[Scheduler, Depends(_get_scheduler)]
 
 # -- Settings dependencies --
 

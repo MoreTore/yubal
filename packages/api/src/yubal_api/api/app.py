@@ -17,9 +17,9 @@ from rich.logging import RichHandler
 from yubal import cleanup_part_files
 
 from yubal_api.api.exceptions import register_exception_handlers
-from yubal_api.api.routes import cookies, health, jobs, logs, sync
+from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions
 from yubal_api.api.services_container import Services
-from yubal_api.db import DB_FILE, SyncRepository, create_db_engine, init_db
+from yubal_api.db import DB_FILE, SubscriptionRepository, create_db_engine, init_db
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import (
@@ -27,8 +27,8 @@ from yubal_api.services.log_buffer import (
     clear_log_buffer,
     get_log_buffer,
 )
+from yubal_api.services.scheduler import Scheduler
 from yubal_api.services.shutdown import ShutdownCoordinator
-from yubal_api.services.sync_scheduler import SyncScheduler
 from yubal_api.settings import get_settings
 
 # Global reference for shutdown suppression
@@ -89,11 +89,11 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def create_services(sync_repository: SyncRepository) -> Services:
+def create_services(repository: SubscriptionRepository) -> Services:
     """Create all application services with proper dependency wiring.
 
     Args:
-        sync_repository: Repository for sync database operations.
+        repository: Repository for subscription database operations.
 
     Returns:
         Services container with all application services.
@@ -117,10 +117,11 @@ def create_services(sync_repository: SyncRepository) -> Services:
         fetch_lyrics=settings.fetch_lyrics,
     )
 
-    # Create sync scheduler
-    sync_scheduler = SyncScheduler(
-        repository=sync_repository,
+    # Create scheduler
+    scheduler_service = Scheduler(
+        repository=repository,
         job_store=job_store,
+        settings=settings,
     )
 
     # Wire up coordinator with executor
@@ -130,8 +131,8 @@ def create_services(sync_repository: SyncRepository) -> Services:
         job_store=job_store,
         job_executor=job_executor,
         shutdown_coordinator=shutdown_coordinator,
-        sync_repository=sync_repository,
-        sync_scheduler=sync_scheduler,
+        repository=repository,
+        scheduler=scheduler_service,
     )
 
 
@@ -142,7 +143,8 @@ def create_api_router() -> APIRouter:
     api_router.include_router(jobs.router)
     api_router.include_router(logs.router)
     api_router.include_router(cookies.router)
-    api_router.include_router(sync.router)
+    api_router.include_router(subscriptions.router)
+    api_router.include_router(scheduler.router)
     return api_router
 
 
@@ -159,19 +161,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Database initialized at %s", db_path)
 
     # Create services with database repository
-    sync_repository = SyncRepository(engine)
-    services = create_services(sync_repository)
+    repository = SubscriptionRepository(engine)
+    services = create_services(repository)
     app.state.services = services
     logger.info("Services initialized")
 
     # Start scheduler
-    services.sync_scheduler.start()
+    services.scheduler.start()
 
     yield
 
     # Shutdown sequence
     # Stop scheduler first
-    await services.sync_scheduler.stop()
+    await services.scheduler.stop()
 
     # Cancel any running jobs
     services.shutdown_coordinator.begin_shutdown()

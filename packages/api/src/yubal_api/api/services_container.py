@@ -13,11 +13,11 @@ from fastapi import Request
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from yubal_api.db.repository import SyncRepository
+    from yubal_api.db.repository import SubscriptionRepository
     from yubal_api.services.job_executor import JobExecutor
     from yubal_api.services.job_store import JobStore
+    from yubal_api.services.scheduler import Scheduler
     from yubal_api.services.shutdown import ShutdownCoordinator
-    from yubal_api.services.sync_scheduler import SyncScheduler
 
 
 @dataclass
@@ -31,8 +31,8 @@ class Services:
     job_store: "JobStore"
     job_executor: "JobExecutor"
     shutdown_coordinator: "ShutdownCoordinator"
-    sync_repository: "SyncRepository"
-    sync_scheduler: "SyncScheduler"
+    repository: "SubscriptionRepository"
+    scheduler: "Scheduler"
 
     def close(self) -> None:
         """Clean up resources. Called at application shutdown."""
