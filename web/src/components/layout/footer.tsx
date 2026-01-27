@@ -51,6 +51,15 @@ export function Footer() {
           >
             ytmusicapi
           </a>
+          {" · "}
+          <a
+            href={`https://github.com/guillevc/yubal/${__IS_RELEASE__ ? `releases/tag/${__VERSION__}` : `commit/${__COMMIT_SHA__}`}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground hover:underline"
+          >
+            {__VERSION__}
+          </a>
         </p>
       </div>
     </footer>

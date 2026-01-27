@@ -3,7 +3,9 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  NavigateOptions,
   Outlet,
+  ToOptions,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
@@ -19,13 +21,13 @@ function RootLayout() {
 
   return (
     <HeroUIProvider
-      navigate={(to, options) => router.navigate({ to, ...(options ?? {}) })}
+      navigate={(to, options) => router.navigate({ to, ...options })}
       useHref={(to) => router.buildLocation({ to }).href}
     >
       <ToastProvider />
-      <div className="relative flex min-h-screen flex-col">
+      <div>
         <Header />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+        <main className="m-auto max-w-5xl px-4 py-8">
           <Outlet />
         </main>
         <BlurFade delay={0.15} direction="up">
@@ -65,8 +67,9 @@ const routeTree = rootRoute.addChildren([downloadsRoute, syncRoute]);
 
 export const router = createRouter({ routeTree });
 
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
+declare module "@react-types/shared" {
+  interface RouterConfig {
+    href: ToOptions["to"];
+    routerOptions: Omit<NavigateOptions, keyof ToOptions>;
   }
 }
