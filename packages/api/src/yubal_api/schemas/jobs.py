@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, WithJsonSchema
 from yubal import AudioCodec, is_supported_url
 
 from yubal_api.core.models import Job
@@ -24,7 +24,11 @@ def validate_youtube_music_url(url: str) -> str:
     return url
 
 
-YouTubeMusicUrl = Annotated[str, AfterValidator(validate_youtube_music_url)]
+YouTubeMusicUrl = Annotated[
+    str,
+    AfterValidator(validate_youtube_music_url),
+    WithJsonSchema({"type": "string", "format": "uri"}),
+]
 
 
 class CreateJobRequest(BaseModel):

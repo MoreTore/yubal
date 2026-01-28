@@ -10,7 +10,14 @@ LogEntryType = Literal[
 ]
 
 # Skip reason string literals for TypeScript type generation
-SkipReasonType = Literal["file_exists", "unsupported_video_type", "no_video_id"]
+# Must match SkipReason enum in yubal.models.domain
+SkipReasonType = Literal[
+    "file_exists",
+    "unsupported_video_type",
+    "no_video_id",
+    "region_unavailable",
+    "no_album_match",
+]
 
 # Stats type discriminator for frontend rendering
 StatsType = Literal["extraction", "download"]
