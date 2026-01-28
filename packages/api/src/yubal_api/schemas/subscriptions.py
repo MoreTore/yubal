@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from yubal_api.db.models import SubscriptionType
+from yubal_api.db.subscription import SubscriptionType
 from yubal_api.schemas.jobs import YouTubeMusicUrl
 
 

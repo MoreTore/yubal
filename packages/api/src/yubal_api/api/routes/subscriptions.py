@@ -5,9 +5,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 
-from yubal_api.api.dependencies import RepositoryDep, SchedulerDep
-from yubal_api.db.models import Subscription, SubscriptionType
-from yubal_api.schemas.subscription import (
+from yubal_api.api.deps import RepositoryDep, SchedulerDep
+from yubal_api.db.subscription import Subscription, SubscriptionType
+from yubal_api.schemas.subscriptions import (
     SubscriptionCreate,
     SubscriptionListResponse,
     SubscriptionResponse,

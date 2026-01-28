@@ -6,7 +6,7 @@ Jobs are processed sequentially in FIFO order.
 
 from fastapi import APIRouter, status
 
-from yubal_api.api.dependencies import (
+from yubal_api.api.deps import (
     AudioFormatDep,
     JobExecutorDep,
     JobStoreDep,
@@ -17,7 +17,7 @@ from yubal_api.api.exceptions import (
     JobNotFoundError,
     QueueFullError,
 )
-from yubal_api.core.models import Job
+from yubal_api.domain.job import Job
 from yubal_api.schemas.jobs import (
     CancelJobResponse,
     ClearJobsResponse,

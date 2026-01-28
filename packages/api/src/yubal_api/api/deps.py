@@ -4,7 +4,7 @@ This module provides type-safe dependency injection for FastAPI routes.
 Dependencies are defined as Annotated types for clean, reusable injection.
 
 Usage in routes:
-    from yubal_api.api.dependencies import JobStoreDep, CookiesFileDep
+    from yubal_api.api.deps import JobStoreDep, CookiesFileDep
 
     @router.get("/jobs")
     async def list_jobs(job_store: JobStoreDep) -> ...:
@@ -17,7 +17,7 @@ from typing import Annotated
 from fastapi import Depends
 from yubal import AudioCodec
 
-from yubal_api.api.services_container import Services, get_services
+from yubal_api.api.container import Services, get_services
 from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore

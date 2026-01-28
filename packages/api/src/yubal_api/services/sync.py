@@ -28,8 +28,8 @@ from yubal import (
 from yubal.models.enums import ContentKind
 from yubal.models.track import PlaylistInfo
 
-from yubal_api.core.enums import ProgressStep
-from yubal_api.core.models import ContentInfo
+from yubal_api.domain.enums import ProgressStep
+from yubal_api.domain.job import ContentInfo
 
 if TYPE_CHECKING:
     from yubal.services.pipeline import PlaylistDownloadService

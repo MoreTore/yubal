@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
-from yubal_api.db.models import Subscription, SubscriptionType
+from yubal_api.db.subscription import Subscription, SubscriptionType
 
 
 class SubscriptionRepository:

@@ -16,9 +16,9 @@ from rich.console import Console
 from rich.logging import RichHandler
 from yubal import cleanup_part_files
 
+from yubal_api.api.container import Services
 from yubal_api.api.exceptions import register_exception_handlers
 from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions
-from yubal_api.api.services_container import Services
 from yubal_api.db import DB_FILE, SubscriptionRepository, create_db_engine, init_db
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore

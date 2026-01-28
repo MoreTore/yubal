@@ -5,8 +5,8 @@ from typing import Protocol
 
 from yubal import PhaseStats
 
-from yubal_api.core.enums import JobStatus
-from yubal_api.core.models import ContentInfo, Job
+from yubal_api.domain.enums import JobStatus
+from yubal_api.domain.job import ContentInfo, Job
 
 
 class JobExecutionStore(Protocol):

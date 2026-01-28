@@ -6,8 +6,8 @@ import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
-from yubal_api.db.models import Subscription
 from yubal_api.db.repository import SubscriptionRepository
+from yubal_api.db.subscription import Subscription
 from yubal_api.services.job_store import JobStore
 from yubal_api.settings import Settings
 

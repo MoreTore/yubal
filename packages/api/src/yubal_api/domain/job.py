@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, ConfigDict, Field
 from yubal import AudioCodec, ContentKind, PhaseStats
 
-from yubal_api.core.enums import JobStatus
+from yubal_api.domain.enums import JobStatus
 
 
 class ContentInfo(BaseModel):

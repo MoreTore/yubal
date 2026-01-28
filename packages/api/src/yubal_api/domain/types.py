@@ -1,13 +1,19 @@
-"""Callback types for progress reporting."""
+"""Shared type definitions for the application."""
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from yubal_api.core.enums import ProgressStep
+from yubal_api.domain.enums import ProgressStep
+
+# Callable type aliases for dependency injection
+type Clock = Callable[[], datetime]
+type IdGenerator = Callable[[], str]
 
 
+# Progress reporting types
 class ProgressEvent(BaseModel):
     """A progress update event."""
 
@@ -17,6 +23,5 @@ class ProgressEvent(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
-# Callable type aliases for callbacks
 type ProgressCallback = Callable[[ProgressEvent], None]
 type CancelCheck = Callable[[], bool]

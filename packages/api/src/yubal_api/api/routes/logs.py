@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from yubal_api.schemas.log import LogEntry
+from yubal_api.schemas.logs import LogEntry
 from yubal_api.services.log_buffer import get_log_buffer
 
 logger = logging.getLogger(__name__)

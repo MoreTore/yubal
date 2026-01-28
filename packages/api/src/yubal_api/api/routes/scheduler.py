@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from yubal_api.api.dependencies import RepositoryDep, SchedulerDep
+from yubal_api.api.deps import RepositoryDep, SchedulerDep
 from yubal_api.schemas.scheduler import SchedulerStatus, SubscriptionCounts
 
 router = APIRouter(prefix="/scheduler", tags=["scheduler"])

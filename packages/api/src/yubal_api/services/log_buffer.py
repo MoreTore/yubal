@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, ClassVar, override
 
-from yubal_api.schemas.log import LogEntry, LogEntryType, LogStats
+from yubal_api.schemas.logs import LogEntry, LogEntryType, LogStats
 
 
 class LogBuffer:

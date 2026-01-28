@@ -9,10 +9,10 @@ from typing import Any
 
 from yubal import CancelToken, cleanup_part_files
 
-from yubal_api.core.enums import JobStatus, ProgressStep
-from yubal_api.core.models import ContentInfo, Job
+from yubal_api.domain.enums import JobStatus, ProgressStep
+from yubal_api.domain.job import ContentInfo, Job
 from yubal_api.services.protocols import JobExecutionStore
-from yubal_api.services.sync_service import SyncService
+from yubal_api.services.sync import SyncService
 
 logger = logging.getLogger(__name__)
 

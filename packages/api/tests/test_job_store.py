@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from yubal import AudioCodec, PhaseStats
-from yubal_api.core.enums import JobStatus
-from yubal_api.core.models import ContentInfo
+from yubal_api.domain.enums import JobStatus
+from yubal_api.domain.job import ContentInfo
 from yubal_api.services.job_store import JobStore
 
 # =============================================================================

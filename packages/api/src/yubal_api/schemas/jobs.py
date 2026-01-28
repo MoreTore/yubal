@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BaseModel, Field, WithJsonSchema
 from yubal import AudioCodec, is_supported_url
 
-from yubal_api.core.models import Job
+from yubal_api.domain.job import Job
 
 
 def validate_youtube_music_url(url: str) -> str:
