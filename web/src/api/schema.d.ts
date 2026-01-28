@@ -344,10 +344,13 @@ export interface components {
             playlist_id: string;
             /**
              * Url
-             * @default
+             * Format: uri
              */
-            url: string;
-            /** Thumbnail Url */
+            url?: string | null;
+            /**
+             * Thumbnail Url
+             * Format: uri
+             */
             thumbnail_url?: string | null;
             /** Audio Codec */
             audio_codec?: string | null;
@@ -396,6 +399,7 @@ export interface components {
         CreateJobRequest: {
             /**
              * Url
+             * Format: uri
              * @description YouTube or YouTube Music playlist, album, or single track URL
              * @example https://music.youtube.com/playlist?list=OLAK5uy_...
              * @example https://www.youtube.com/watch?v=VIDEO_ID
@@ -442,7 +446,10 @@ export interface components {
         Job: {
             /** Id */
             id: string;
-            /** Url */
+            /**
+             * Url
+             * Format: uri
+             */
             url: string;
             /** @default opus */
             audio_format: components["schemas"]["AudioCodec"];
@@ -738,7 +745,10 @@ export interface components {
         SubscriptionCreate: {
             /** @default playlist */
             type: components["schemas"]["SubscriptionType"];
-            /** Url */
+            /**
+             * Url
+             * Format: uri
+             */
             url: string;
             /** Name */
             name: string;
@@ -767,7 +777,10 @@ export interface components {
              */
             id: string;
             type: components["schemas"]["SubscriptionType"];
-            /** Url */
+            /**
+             * Url
+             * Format: uri
+             */
             url: string;
             /** Name */
             name: string;

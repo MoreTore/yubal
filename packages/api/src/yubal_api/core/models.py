@@ -16,8 +16,8 @@ class ContentInfo(BaseModel):
     year: int | None = None
     track_count: int
     playlist_id: str = ""
-    url: str = ""
-    thumbnail_url: str | None = None
+    url: str | None = Field(default=None, json_schema_extra={"format": "uri"})
+    thumbnail_url: str | None = Field(default=None, json_schema_extra={"format": "uri"})
     audio_codec: str | None = None  # e.g. "opus", "mp3"
     audio_bitrate: int | None = None  # kbps, e.g. 128
     kind: ContentKind = ContentKind.PLAYLIST
@@ -29,7 +29,7 @@ class Job(BaseModel):
     model_config = ConfigDict(validate_assignment=True)
 
     id: str
-    url: str
+    url: str = Field(json_schema_extra={"format": "uri"})
     audio_format: AudioCodec = AudioCodec.OPUS
     max_items: int | None = None
     status: JobStatus = JobStatus.PENDING

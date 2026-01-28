@@ -30,7 +30,7 @@ class SubscriptionResponse(BaseModel):
 
     id: UUID
     type: SubscriptionType
-    url: str
+    url: str = Field(json_schema_extra={"format": "uri"})
     name: str
     enabled: bool
     created_at: datetime
