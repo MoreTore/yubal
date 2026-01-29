@@ -167,7 +167,7 @@ export default function App() {
   const isSearchable = url.trim().length > 0 && !isUrlLike;
   const canSubmit = isUrl || isSearchable;
   const { suggestions } = useSearchSuggestions(url, {
-    enabled: isSearchable,
+    enabled: false,
   });
 
   const handleSubmit = async () => {
