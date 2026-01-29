@@ -1,6 +1,7 @@
 """URL parsing utilities."""
 
 import re
+from urllib.parse import urlparse
 
 from yubal.exceptions import PlaylistParseError
 
@@ -83,11 +84,16 @@ def is_supported_url(url: str) -> bool:
 
     url = url.strip()
 
-    return (
-        # Playlist URL (has list= parameter)
-        bool(PLAYLIST_ID_PATTERN.search(url))
-        # Single track URL (has v= parameter without list=)
-        or bool(VIDEO_ID_PATTERN.search(url))
-        # Browse URL (album pages on music.youtube.com)
-        or ("/browse/" in url and "music.youtube.com" in url)
-    )
+    # Playlist URL (has list= parameter)
+    if PLAYLIST_ID_PATTERN.search(url):
+        return True
+    # Single track URL (has v= parameter without list=)
+    if VIDEO_ID_PATTERN.search(url):
+        return True
+    # Browse URL (album pages on music.youtube.com)
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    path = parsed.path or ""
+    if "/browse/" in path and host == "music.youtube.com":
+        return True
+    return False
