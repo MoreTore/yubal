@@ -2,6 +2,7 @@
 name = "yubal-api"
 version = "0.3.1"
 dependencies = [
+  "alembic>=1.18.3",
   "fastapi>=0.127.1",
   "pydantic-settings>=2.12.0",
   "rich>=14.2.0",

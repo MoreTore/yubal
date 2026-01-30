@@ -8,7 +8,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from importlib.metadata import version
+from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +22,7 @@ from yubal import cleanup_part_files
 from yubal_api.api.container import Services
 from yubal_api.api.exceptions import register_exception_handlers
 from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions
-from yubal_api.db import DB_FILE, SubscriptionRepository, create_db_engine, init_db
+from yubal_api.db import SubscriptionRepository, create_db_engine
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import (
@@ -89,6 +92,14 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
+def run_migrations() -> None:
+    """Run database migrations using Alembic."""
+    # Path: packages/api/src/yubal_api/api/app.py -> packages/api/alembic.ini
+    alembic_ini = Path(__file__).parents[3] / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini))
+    command.upgrade(alembic_cfg, "head")
+
+
 def create_services(repository: SubscriptionRepository) -> Services:
     """Create all application services with proper dependency wiring.
 
@@ -155,11 +166,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     logger.info("Starting application...")
 
-    # Initialize database
-    db_path = settings.config / DB_FILE
+    # Run database migrations
+    run_migrations()
+    logger.info("Database migrations complete")
+
+    # Create database engine
+    db_path = settings.db_path
     engine = create_db_engine(db_path)
-    init_db(engine)
-    logger.info("Database initialized at %s", db_path)
 
     # Create services with database repository
     repository = SubscriptionRepository(engine)

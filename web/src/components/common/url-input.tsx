@@ -1,14 +1,20 @@
+import { YOUTUBE_MUSIC_URL_PATTERN } from "@/lib/url";
 import { Input } from "@heroui/react";
 import { Link } from "lucide-react";
-import { YOUTUBE_MUSIC_URL_PATTERN } from "@/lib/url";
 
 interface UrlInputProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
-export function UrlInput({ value, onChange, disabled }: UrlInputProps) {
+export function UrlInput({
+  value,
+  onChange,
+  disabled,
+  placeholder = "Album or playlist URL",
+}: UrlInputProps) {
   const isValid = value === "" || YOUTUBE_MUSIC_URL_PATTERN.test(value);
 
   return (
@@ -16,7 +22,7 @@ export function UrlInput({ value, onChange, disabled }: UrlInputProps) {
       isClearable
       variant="faded"
       type="url"
-      placeholder="Album or playlist URL"
+      placeholder={placeholder}
       value={value}
       onValueChange={(v) => onChange(v.trim())}
       isDisabled={disabled}

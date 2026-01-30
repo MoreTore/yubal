@@ -1,6 +1,6 @@
+import { UrlInput } from "@/components/common/url-input";
 import { ConsolePanel } from "@/features/console/console-panel";
 import { DownloadsPanel } from "@/features/downloads/downloads-panel";
-import { UrlInput } from "@/features/downloads/url-input";
 import { useJobs } from "@/features/downloads/use-jobs";
 import { isValidUrl } from "@/lib/url";
 import { Button, NumberInput, Tooltip } from "@heroui/react";

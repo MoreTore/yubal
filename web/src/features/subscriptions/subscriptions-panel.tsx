@@ -1,16 +1,13 @@
 import type { Subscription } from "@/api/subscriptions";
 import { EmptyState } from "@/components/common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "@/components/common/panel";
-import { isValidUrl } from "@/lib/url";
-import { Button, Input, Tooltip } from "@heroui/react";
-import { Inbox, Link, Plus, RefreshCw } from "lucide-react";
+import { Button, Tooltip } from "@heroui/react";
+import { Inbox, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
 import { SubscriptionCard } from "./subscription-card";
 
 interface SubscriptionsPanelProps {
   subscriptions: Subscription[];
-  onAddSubscription: (url: string) => Promise<boolean>;
   onToggleEnabled: (id: string, enabled: boolean) => void;
   onSync: (id: string) => void;
   onSyncAll: () => void;
@@ -19,27 +16,12 @@ interface SubscriptionsPanelProps {
 
 export function SubscriptionsPanel({
   subscriptions,
-  onAddSubscription,
   onToggleEnabled,
   onSync,
   onSyncAll,
   onDelete,
 }: SubscriptionsPanelProps) {
-  const [url, setUrl] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
-
-  const canAdd = isValidUrl(url);
   const enabledCount = subscriptions.filter((s) => s.enabled).length;
-
-  const handleAdd = async () => {
-    if (!canAdd) return;
-    setIsAdding(true);
-    const success = await onAddSubscription(url.trim());
-    if (success) {
-      setUrl("");
-    }
-    setIsAdding(false);
-  };
 
   return (
     <Panel>
@@ -70,32 +52,6 @@ export function SubscriptionsPanel({
       >
         Synced Playlists
       </PanelHeader>
-
-      {/* Add subscription form */}
-      <div className="border-divider flex gap-2 border-b px-3 pb-3">
-        <Input
-          placeholder="Playlist URL"
-          value={url}
-          onValueChange={setUrl}
-          variant="faded"
-          radius="lg"
-          size="sm"
-          startContent={<Link className="text-foreground-400 h-4 w-4" />}
-          className="flex-1"
-          classNames={{ input: "font-mono text-xs" }}
-        />
-        <Button
-          color="primary"
-          radius="lg"
-          size="sm"
-          isIconOnly
-          isDisabled={!canAdd}
-          isLoading={isAdding}
-          onPress={handleAdd}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
 
       <PanelContent height="h-[580px]" className="space-y-2">
         {subscriptions.length === 0 ? (

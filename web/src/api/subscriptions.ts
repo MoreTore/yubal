@@ -22,9 +22,10 @@ export async function listSubscriptions(): Promise<Subscription[]> {
 
 export async function addSubscription(
   url: string,
+  maxItems?: number,
 ): Promise<AddSubscriptionResult> {
   const { data, error, response } = await api.POST("/subscriptions", {
-    body: { url },
+    body: { url, max_items: maxItems },
   });
 
   if (error) {

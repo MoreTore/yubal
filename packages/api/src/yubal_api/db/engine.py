@@ -3,9 +3,7 @@
 from pathlib import Path
 
 from sqlalchemy import Engine
-from sqlmodel import SQLModel, create_engine
-
-DB_FILE = "yubal.db"
+from sqlmodel import create_engine
 
 
 def create_db_engine(db_path: Path) -> Engine:
@@ -22,12 +20,3 @@ def create_db_engine(db_path: Path) -> Engine:
         f"sqlite:///{db_path}",
         connect_args={"check_same_thread": False},
     )
-
-
-def init_db(engine: Engine) -> None:
-    """Create all tables if they don't exist.
-
-    Args:
-        engine: SQLAlchemy engine to use.
-    """
-    SQLModel.metadata.create_all(engine)

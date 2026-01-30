@@ -18,10 +18,10 @@ export interface UseSubscriptionsResult {
   subscriptions: Subscription[];
   schedulerStatus: SchedulerStatus | null;
   isLoading: boolean;
-  addSubscription: (url: string) => Promise<boolean>;
+  addSubscription: (url: string, maxItems?: number) => Promise<boolean>;
   updateSubscription: (
     id: string,
-    updates: { name?: string; enabled?: boolean },
+    updates: { enabled?: boolean },
   ) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
   syncSubscription: (id: string) => Promise<void>;
@@ -49,8 +49,8 @@ export function useSubscriptions(): UseSubscriptionsResult {
   }, [fetchData]);
 
   const addSubscription = useCallback(
-    async (url: string): Promise<boolean> => {
-      const result = await addSubscriptionApi(url);
+    async (url: string, maxItems?: number): Promise<boolean> => {
+      const result = await addSubscriptionApi(url, maxItems);
       if (!result.success) {
         showErrorToast("Failed to add subscription", result.error);
         return false;
@@ -62,7 +62,7 @@ export function useSubscriptions(): UseSubscriptionsResult {
   );
 
   const updateSubscription = useCallback(
-    async (id: string, updates: { name?: string; enabled?: boolean }) => {
+    async (id: string, updates: { enabled?: boolean }) => {
       const result = await updateSubscriptionApi(id, updates);
       if (result === null) {
         showErrorToast("Update failed", "Could not update subscription");

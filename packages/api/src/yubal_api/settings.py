@@ -112,6 +112,10 @@ class Settings(BaseSettings):
     def cookies_file(self) -> Path:
         return self.ytdlp_dir / "cookies.txt"
 
+    @property
+    def db_path(self) -> Path:
+        return self.config / "yubal" / "yubal.db"
+
 
 @cache
 def get_settings() -> Settings:

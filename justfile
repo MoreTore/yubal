@@ -355,3 +355,34 @@ docs-serve:
 [group('cli')]
 cli *args:
     uv run yubal {{ args }}
+
+# Database migrations
+[group('db')]
+[doc("Generate a new migration")]
+[working-directory('packages/api')]
+db-generate message:
+    uv run alembic revision --autogenerate -m "{{message}}"
+
+[group('db')]
+[doc("Run pending migrations")]
+[working-directory('packages/api')]
+db-migrate:
+    uv run alembic upgrade head
+
+[group('db')]
+[doc("Reset database (delete and recreate)")]
+[working-directory('packages/api')]
+[confirm("Delete database and run all migrations?")]
+db-reset:
+    rm -f "${YUBAL_CONFIG:-config}/yubal/yubal.db"
+    uv run alembic upgrade head
+
+[group('db')]
+[doc("Consolidate all migrations into a single initial migration")]
+[working-directory('packages/api')]
+[confirm("Delete all migrations and regenerate from current schema?")]
+db-consolidate:
+    rm -f "${YUBAL_CONFIG:-config}/yubal/yubal.db"
+    rm -f migrations/versions/*.py
+    uv run alembic revision --autogenerate -m "Initial schema"
+    uv run alembic upgrade head
