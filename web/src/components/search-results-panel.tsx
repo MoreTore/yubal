@@ -1,8 +1,10 @@
 import { Button } from "@heroui/react";
-import { Download, ExternalLink, Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import type { SearchResult } from "../api/search";
+import { getBrowseId, getMusicUrl, getThumbnailUrl, getTitle } from "../lib/music-helpers";
 import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
+import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
 interface SearchResultsPanelProps {
@@ -14,18 +16,6 @@ interface SearchResultsPanelProps {
   onViewSong: (videoId: string) => void;
   onViewArtist: (channelId: string) => void;
   downloadStatuses: Record<string, { status: DownloadStatus; progress: number | null }>;
-}
-
-function getTitle(result: SearchResult): string {
-  const primaryArtist = result.artists?.[0]?.name;
-  return (
-    result.title ||
-    result.name ||
-    primaryArtist ||
-    result.artist ||
-    result.author ||
-    "Untitled"
-  );
 }
 
 function getSubtitle(result: SearchResult): string | null {
@@ -59,41 +49,6 @@ function getInfoLine(result: SearchResult): string | null {
   return parts.join(" • ");
 }
 
-function getResultUrl(result: SearchResult): string | null {
-  if (result.playlistId) {
-    return `https://music.youtube.com/playlist?list=${result.playlistId}`;
-  }
-  if (result.browseId) {
-    return `https://music.youtube.com/browse/${result.browseId}`;
-  }
-  if (result.videoId) {
-    return `https://music.youtube.com/watch?v=${result.videoId}`;
-  }
-  return null;
-}
-
-function getThumbnailUrl(result: SearchResult): string | null {
-  const thumbnails = result.thumbnails;
-  if (!thumbnails || thumbnails.length === 0) return null;
-
-  const sorted = [...thumbnails].sort((a, b) => {
-    const aSize = (a.width ?? 0) * (a.height ?? 0);
-    const bSize = (b.width ?? 0) * (b.height ?? 0);
-    return bSize - aSize;
-  });
-
-  return sorted[0]?.url ?? null;
-}
-
-function getBrowseId(result: SearchResult): string | null {
-  const candidates = [result.browseId, result.channelId, result.artists?.[0]?.id];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim().length > 0) {
-      return candidate;
-    }
-  }
-  return null;
-}
 
 export function SearchResultsPanel({
   results,
@@ -155,7 +110,7 @@ export function SearchResultsPanel({
   const hasResults = results.length > 0;
   const topArtistThumbnail = topArtist ? getThumbnailUrl(topArtist) : null;
   const topArtistBrowseId = topArtist ? getBrowseId(topArtist) : null;
-  const topArtistUrl = topArtist ? getResultUrl(topArtist) : null;
+  const topArtistUrl = topArtist ? getMusicUrl(topArtist) : null;
   const topArtistStatus: { status: DownloadStatus; progress: number | null } =
     topArtistUrl
       ? downloadStatuses[topArtistUrl] ?? { status: "idle", progress: null }
@@ -257,7 +212,7 @@ export function SearchResultsPanel({
                         {topItems.map((item, index) => {
                           const title = getTitle(item);
                           const infoLine = getInfoLine(item);
-                          const url = getResultUrl(item);
+                          const url = getMusicUrl(item);
                           const browseId = getBrowseId(item);
                           const isAlbum =
                             item.resultType === "album" || item.category === "Albums";
@@ -269,72 +224,34 @@ export function SearchResultsPanel({
                             item.resultType === "artist" ||
                             item.category?.toLowerCase() === "artists";
                           const thumbnailUrl = getThumbnailUrl(item);
-                          const status: {
-                            status: DownloadStatus;
-                            progress: number | null;
-                          } = url
-                            ? downloadStatuses[url] ?? { status: "idle", progress: null }
-                            : { status: "idle", progress: null };
-                          const meta = infoLine;
+                          const status = url
+                            ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                            : { status: "idle" as DownloadStatus, progress: null };
 
                           return (
-                            <div
+                            <MusicItem
                               key={`top-item-${index}-${title}`}
-                              onClick={(event) => {
-                                event.stopPropagation();
+                              item={{
+                                id: `top-item-${index}`,
+                                title,
+                                meta: infoLine,
+                                thumbnailUrl,
+                                url: url ?? undefined,
+                                downloadStatus: status,
+                                isClickable: Boolean(
+                                  (isAlbum && browseId) ||
+                                  (isSong && item.videoId) ||
+                                  (isArtist && browseId)
+                                ),
+                              }}
+                              size="sm"
+                              onClick={() => {
                                 if (isAlbum && browseId) onViewAlbum(browseId);
                                 if (isSong && item.videoId) onViewSong(item.videoId);
                                 if (isArtist && browseId) onViewArtist(browseId);
                               }}
-                              className={`bg-content1/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                                isAlbum || (isSong && item.videoId) || (isArtist && browseId)
-                                  ? "cursor-pointer hover:bg-content1"
-                                  : ""
-                              }`}
-                            >
-                              {thumbnailUrl && (
-                                <img
-                                  src={thumbnailUrl}
-                                  alt={title}
-                                  className="h-10 w-10 rounded-lg object-cover"
-                                  loading="lazy"
-                                />
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <div className="text-foreground-600 truncate text-sm font-medium">
-                                  {title}
-                                </div>
-                                {meta && (
-                                  <div className="text-foreground-400 text-xs">
-                                    {meta}
-                                  </div>
-                                )}
-                              </div>
-                              {url && (
-                                <Button
-                                  size="sm"
-                                  variant="flat"
-                                  onPress={() => onQueueUrl(url)}
-                                  onClick={(event) => event.stopPropagation()}
-                                  isDisabled={
-                                    status.status === "queued" ||
-                                    status.status === "downloading"
-                                  }
-                                  isIconOnly
-                                  aria-label={`Download ${title}`}
-                                  startContent={
-                                    status.status === "idle" ? (
-                                      <Download className="h-4 w-4" />
-                                    ) : (
-                                      <DownloadStatusIcon
-                                        status={status.status}
-                                        progress={status.progress}
-                                      />
-                                    )
-                                  }
-                                />
-                              )}
-                            </div>
+                              onDownload={url ? onQueueUrl : undefined}
+                            />
                           );
                         })}
                       </div>
@@ -352,7 +269,7 @@ export function SearchResultsPanel({
                   {items.map((item, index) => {
                     const title = getTitle(item);
                     const infoLine = getInfoLine(item);
-                    const url = getResultUrl(item);
+                    const url = getMusicUrl(item);
                     const browseId = getBrowseId(item);
                     const isAlbum =
                       item.resultType === "album" || item.category === "Albums";
@@ -364,92 +281,34 @@ export function SearchResultsPanel({
                       item.resultType === "artist" ||
                       item.category?.toLowerCase() === "artists";
                     const thumbnailUrl = getThumbnailUrl(item);
-                    const status: {
-                      status: DownloadStatus;
-                      progress: number | null;
-                    } = url
-                      ? downloadStatuses[url] ?? { status: "idle", progress: null }
-                      : { status: "idle", progress: null };
-                    const meta = infoLine;
-                    const canQueue = Boolean(url);
+                    const status = url
+                      ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                      : { status: "idle" as DownloadStatus, progress: null };
 
                     return (
-                      <div
+                      <MusicItem
                         key={`${category}-${index}-${title}`}
+                        item={{
+                          id: `${category}-${index}`,
+                          title,
+                          meta: infoLine,
+                          thumbnailUrl,
+                          url: url ?? undefined,
+                          downloadStatus: status,
+                          isClickable: Boolean(
+                            (isAlbum && browseId) ||
+                            (isSong && item.videoId) ||
+                            (isArtist && browseId)
+                          ),
+                          showExternalLink: true,
+                        }}
                         onClick={() => {
                           if (isAlbum && browseId) onViewAlbum(browseId);
                           if (isSong && item.videoId) onViewSong(item.videoId);
                           if (isArtist && browseId) onViewArtist(browseId);
                         }}
-                        className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                          canQueue ? "transition" : "opacity-80"
-                        } ${
-                          isAlbum || (isSong && item.videoId) || (isArtist && browseId)
-                            ? "cursor-pointer hover:bg-content2"
-                            : ""
-                        }`}
-                      >
-                        {thumbnailUrl && (
-                          <img
-                            src={thumbnailUrl}
-                            alt={title}
-                            className="h-12 w-12 rounded-lg object-cover"
-                            loading="lazy"
-                          />
-                        )}
-                        <div className="flex min-w-0 flex-1 flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-foreground-600 truncate text-sm font-medium">
-                              {title}
-                            </span>
-                          </div>
-                          {meta && (
-                            <span className="text-foreground-400 text-xs">
-                              {meta}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {url && (
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              onPress={() => onQueueUrl(url)}
-                              onClick={(event) => event.stopPropagation()}
-                              isDisabled={
-                                status.status === "queued" ||
-                                status.status === "downloading"
-                              }
-                              isIconOnly
-                              aria-label={`Download ${title}`}
-                              startContent={
-                                status.status === "idle" ? (
-                                  <Download className="h-4 w-4" />
-                                ) : (
-                                  <DownloadStatusIcon
-                                    status={status.status}
-                                    progress={status.progress}
-                                  />
-                                )
-                              }
-                            />
-                          )}
-                          {url && (
-                            <Button
-                              size="sm"
-                              variant="light"
-                              as="a"
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              isIconOnly
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                        onDownload={url ? onQueueUrl : undefined}
+                      />
                     );
                   })}
                 </div>

@@ -1,8 +1,10 @@
 import { Button } from "@heroui/react";
-import { ArrowLeft, Download, User2 } from "lucide-react";
+import { ArrowLeft, User2 } from "lucide-react";
 import type { ArtistItem, ArtistResponse } from "../api/artist";
-import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import { getMusicUrl, getThumbnailUrl, getTitle } from "../lib/music-helpers";
+import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
+import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
 interface ArtistPanelProps {
@@ -26,23 +28,6 @@ const SECTION_LABELS: Record<ArtistSectionKey, string> = {
   related: "Related artists",
 };
 
-function getThumbnailUrl(item: { thumbnails?: Array<{ url: string; width?: number; height?: number }> }): string | null {
-  const thumbnails = item.thumbnails;
-  if (!thumbnails || thumbnails.length === 0) return null;
-
-  const sorted = [...thumbnails].sort((a, b) => {
-    const aSize = (a.width ?? 0) * (a.height ?? 0);
-    const bSize = (b.width ?? 0) * (b.height ?? 0);
-    return bSize - aSize;
-  });
-
-  return sorted[0]?.url ?? null;
-}
-
-function getItemTitle(item: ArtistItem): string {
-  return item.title || item.name || "Untitled";
-}
-
 function getItemMeta(item: ArtistItem, section: ArtistSectionKey): string | null {
   if (section === "songs") {
     return null;
@@ -55,17 +40,6 @@ function getItemMeta(item: ArtistItem, section: ArtistSectionKey): string | null
   }
   if (section === "related") {
     return item.subscribers ?? null;
-  }
-  return null;
-}
-
-function getItemUrl(item: ArtistItem, section: ArtistSectionKey): string | null {
-  if (section === "songs" || section === "videos") {
-    if (item.videoId) return `https://music.youtube.com/watch?v=${item.videoId}`;
-    if (item.playlistId) return `https://music.youtube.com/playlist?list=${item.playlistId}`;
-  }
-  if (section === "albums" || section === "singles") {
-    if (item.browseId) return `https://music.youtube.com/browse/${item.browseId}`;
   }
   return null;
 }
@@ -154,13 +128,13 @@ export function ArtistPanel({
                   </div>
                   <div className="space-y-2">
                     {items.map((item, index) => {
-                      const title = getItemTitle(item);
+                      const title = getTitle(item);
                       const thumbnailUrl = getThumbnailUrl(item);
                       const meta = getItemMeta(item, key);
-                      const url = getItemUrl(item, key);
-                      const status: { status: DownloadStatus; progress: number | null } = url
-                        ? downloadStatuses[url] ?? { status: "idle", progress: null }
-                        : { status: "idle", progress: null };
+                      const url = getMusicUrl(item);
+                      const status = url
+                        ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                        : { status: "idle" as DownloadStatus, progress: null };
 
                       const isClickable =
                         (key === "songs" || key === "videos")
@@ -172,8 +146,17 @@ export function ArtistPanel({
                               : false;
 
                       return (
-                        <div
+                        <MusicItem
                           key={`${key}-${title}-${index}`}
+                          item={{
+                            id: `${key}-${index}`,
+                            title,
+                            meta,
+                            thumbnailUrl,
+                            url: url ?? undefined,
+                            downloadStatus: status,
+                            isClickable,
+                          }}
                           onClick={() => {
                             if (key === "songs" || key === "videos") {
                               if (item.videoId) onViewSong(item.videoId);
@@ -187,53 +170,8 @@ export function ArtistPanel({
                               onViewArtist(item.browseId);
                             }
                           }}
-                          className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                            isClickable ? "cursor-pointer hover:bg-content2" : ""
-                          }`}
-                        >
-                          {thumbnailUrl && (
-                            <img
-                              src={thumbnailUrl}
-                              alt={title}
-                              className="h-12 w-12 rounded-lg object-cover"
-                              loading="lazy"
-                            />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-foreground-600 truncate text-sm font-medium">
-                              {title}
-                            </div>
-                            {meta && (
-                              <div className="text-foreground-400 truncate text-xs">
-                                {meta}
-                              </div>
-                            )}
-                          </div>
-                          {url && (
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              onPress={() => onQueueUrl(url)}
-                              onClick={(event) => event.stopPropagation()}
-                              isDisabled={
-                                status.status === "queued" ||
-                                status.status === "downloading"
-                              }
-                              isIconOnly
-                              aria-label={`Download ${title}`}
-                              startContent={
-                                status.status === "idle" ? (
-                                  <Download className="h-4 w-4" />
-                                ) : (
-                                  <DownloadStatusIcon
-                                    status={status.status}
-                                    progress={status.progress}
-                                  />
-                                )
-                              }
-                            />
-                          )}
-                        </div>
+                          onDownload={url ? onQueueUrl : undefined}
+                        />
                       );
                     })}
                   </div>

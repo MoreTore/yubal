@@ -1,8 +1,10 @@
 import { Button } from "@heroui/react";
-import { ArrowLeft, Download, Music2 } from "lucide-react";
-import type { RelatedItem, RelatedSection } from "../api/song-related";
-import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import { ArrowLeft, Music2 } from "lucide-react";
+import type { RelatedSection } from "../api/song-related";
+import { getBrowseId, getMusicUrl, getSubtitle, getThumbnailUrl, getTitle } from "../lib/music-helpers";
+import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
+import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
 interface SongRelatedPanelProps {
@@ -14,42 +16,6 @@ interface SongRelatedPanelProps {
   onViewAlbum: (browseId: string) => void;
   onViewArtist: (channelId: string) => void;
   onBack: () => void;
-}
-
-function getTitle(item: RelatedItem): string {
-  return item.title || item.name || "Untitled";
-}
-
-function getSubtitle(item: RelatedItem): string | null {
-  const artists = item.artists?.map((artist) => artist.name).filter(Boolean) ?? [];
-  if (artists.length > 0) return artists.join(", ");
-  return item.subscribers || item.description || null;
-}
-
-function getThumbnailUrl(item: RelatedItem): string | null {
-  const thumbnails = item.thumbnails;
-  if (!thumbnails || thumbnails.length === 0) return null;
-
-  const sorted = [...thumbnails].sort((a, b) => {
-    const aSize = (a.width ?? 0) * (a.height ?? 0);
-    const bSize = (b.width ?? 0) * (b.height ?? 0);
-    return bSize - aSize;
-  });
-
-  return sorted[0]?.url ?? null;
-}
-
-function getSongUrl(item: RelatedItem): string | null {
-  if (item.videoId) {
-    return `https://music.youtube.com/watch?v=${item.videoId}`;
-  }
-  return null;
-}
-
-function getBrowseId(item: RelatedItem): string | null {
-  if (item.browseId && typeof item.browseId === "string") return item.browseId;
-  const artistId = item.artists?.[0]?.id;
-  return typeof artistId === "string" ? artistId : null;
 }
 
 function isArtistSection(title: string | undefined): boolean {
@@ -108,23 +74,31 @@ export function SongRelatedPanel({
                       const title = getTitle(item);
                       const subtitle = getSubtitle(item);
                       const thumbnailUrl = getThumbnailUrl(item);
-                      const url = getSongUrl(item);
+                      const url = getMusicUrl(item);
                       const browseId = getBrowseId(item);
                       const isArtist = isArtistSection(section.title) || Boolean(item.subscribers);
                       const canView = Boolean(item.videoId || browseId);
-                      const status: {
-                        status: DownloadStatus;
-                        progress: number | null;
-                      } = url
-                        ? downloadStatuses[url] ?? { status: "idle", progress: null }
-                        : { status: "idle", progress: null };
+                      const status = url
+                        ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                        : { status: "idle" as DownloadStatus, progress: null };
                       const meta = [item.year, item.duration, item.itemCount]
                         .filter(Boolean)
                         .join(" • ");
 
                       return (
-                        <div
+                        <MusicItem
                           key={`${title}-${index}`}
+                          item={{
+                            id: `${section.title}-${index}`,
+                            title,
+                            subtitle,
+                            meta: meta || null,
+                            thumbnailUrl,
+                            url: url ?? undefined,
+                            downloadStatus: status,
+                            isClickable: canView,
+                          }}
+                          size="sm"
                           onClick={() => {
                             if (item.videoId) {
                               onViewSong(item.videoId);
@@ -138,58 +112,8 @@ export function SongRelatedPanel({
                               }
                             }
                           }}
-                          className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                            canView ? "cursor-pointer hover:bg-content2" : ""
-                          }`}
-                        >
-                          {thumbnailUrl && (
-                            <img
-                              src={thumbnailUrl}
-                              alt={title}
-                              className="h-10 w-10 rounded-lg object-cover"
-                              loading="lazy"
-                            />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-foreground-600 truncate text-sm font-medium">
-                              {title}
-                            </div>
-                            {subtitle && (
-                              <div className="text-foreground-400 truncate text-xs">
-                                {subtitle}
-                              </div>
-                            )}
-                            {meta && (
-                              <div className="text-foreground-400 text-xs">
-                                {meta}
-                              </div>
-                            )}
-                          </div>
-                          {url && (
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              onPress={() => onQueueUrl(url)}
-                              onClick={(event) => event.stopPropagation()}
-                              isDisabled={
-                                status.status === "queued" ||
-                                status.status === "downloading"
-                              }
-                              isIconOnly
-                              aria-label={`Download ${title}`}
-                              startContent={
-                                status.status === "idle" ? (
-                                  <Download className="h-4 w-4" />
-                                ) : (
-                                  <DownloadStatusIcon
-                                    status={status.status}
-                                    progress={status.progress}
-                                  />
-                                )
-                              }
-                            />
-                          )}
-                        </div>
+                          onDownload={url ? onQueueUrl : undefined}
+                        />
                       );
                     })}
                   </div>
