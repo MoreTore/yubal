@@ -2,7 +2,9 @@
 
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import { SearchStateProvider } from "@/features/search/search-state";
 import { DownloadsPage } from "@/pages/downloads";
+import { SearchPage } from "@/pages/search";
 import { SubscriptionsPage } from "@/pages/subscriptions";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import {
@@ -26,13 +28,15 @@ function RootLayout() {
       useHref={(to) => router.buildLocation({ to }).href}
     >
       <ToastProvider />
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="m-auto w-full max-w-4xl flex-1 px-4 py-6">
-          <Outlet />
-        </main>
-        <Footer />
-      </div>
+      <SearchStateProvider>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="m-auto w-full max-w-4xl flex-1 px-4 py-6">
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
+      </SearchStateProvider>
     </HeroUIProvider>
   );
 }
@@ -62,7 +66,25 @@ const subscriptionsRoute = createRoute({
   component: SubscriptionsPage,
 });
 
-const routeTree = rootRoute.addChildren([downloadsRoute, subscriptionsRoute]);
+const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/search",
+  component: SearchPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    const q = typeof search.q === "string" ? search.q : "";
+    const view =
+      search.view === "album" || search.view === "related"
+        ? search.view
+        : "results";
+    const albumId =
+      typeof search.albumId === "string" ? search.albumId : undefined;
+    const songId = typeof search.songId === "string" ? search.songId : undefined;
+    return { q, view, albumId, songId };
+  },
+});
+
+
+const routeTree = rootRoute.addChildren([downloadsRoute, subscriptionsRoute, searchRoute]);
 
 export const router = createRouter({ routeTree });
 

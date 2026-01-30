@@ -1,3 +1,6 @@
+import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
+import { CookieDropdown } from "@/features/cookies/cookie-dropdown";
+import { useCookies } from "@/features/cookies/use-cookies";
 import {
   Button,
   Link,
@@ -12,12 +15,10 @@ import {
 import { useRouterState } from "@tanstack/react-router";
 import { Disc3, Star } from "lucide-react";
 import { useState } from "react";
-import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
-import { CookieDropdown } from "@/features/cookies/cookie-dropdown";
-import { useCookies } from "@/features/cookies/use-cookies";
 
 const navItems = [
   { label: "Downloads", href: "/" },
+  { label: "Search", href: "/search" },
   { label: "My playlists", href: "/subscriptions" },
 ];
 

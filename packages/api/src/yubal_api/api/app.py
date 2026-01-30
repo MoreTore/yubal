@@ -11,6 +11,8 @@ from importlib.metadata import version
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from rich.console import Console
 from rich.logging import RichHandler
@@ -18,8 +20,9 @@ from yubal import cleanup_part_files
 
 from yubal_api.api.container import Services
 from yubal_api.api.exceptions import register_exception_handlers
-from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions
+from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions, albums, search, songs
 from yubal_api.db import DB_FILE, SubscriptionRepository, create_db_engine, init_db
+
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import (
@@ -145,6 +148,9 @@ def create_api_router() -> APIRouter:
     api_router.include_router(cookies.router)
     api_router.include_router(subscriptions.router)
     api_router.include_router(scheduler.router)
+    api_router.include_router(search.router)
+    api_router.include_router(albums.router)
+    api_router.include_router(songs.router)
     return api_router
 
 
@@ -227,8 +233,25 @@ def create_app() -> FastAPI:
     mimetypes.add_type("text/css", ".css")
 
     web_build = settings.root / "web" / "dist"
+    index_file = web_build / "index.html"
     if web_build.exists():
         app.mount("/", StaticFiles(directory=web_build, html=True), name="static")
+
+    @app.middleware("http")
+    async def spa_fallback(request: Request, call_next):
+        response = await call_next(request)
+        if response.status_code != 404:
+            return response
+
+        path = request.url.path
+        if path.startswith("/api"):
+            return response
+        if "." in path.rsplit("/", 1)[-1]:
+            return response
+        if not index_file.exists():
+            return response
+
+        return FileResponse(index_file)
 
     return app
 
