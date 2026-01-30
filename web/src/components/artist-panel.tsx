@@ -1,7 +1,12 @@
 import { Button } from "@heroui/react";
 import { ArrowLeft, User2 } from "lucide-react";
 import type { ArtistItem, ArtistResponse } from "../api/artist";
-import { getMusicUrl, getThumbnailUrl, getTitle } from "../lib/music-helpers";
+import {
+  getMusicUrl,
+  getSubtitle,
+  getThumbnailUrl,
+  getTitle,
+} from "../lib/music-helpers";
 import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
 import { MusicItem } from "./common/music-item";
@@ -15,7 +20,10 @@ interface ArtistPanelProps {
   onViewAlbum: (browseId: string) => void;
   onViewSong: (videoId: string) => void;
   onViewArtist: (channelId: string) => void;
-  downloadStatuses: Record<string, { status: DownloadStatus; progress: number | null }>;
+  downloadStatuses: Record<
+    string,
+    { status: DownloadStatus; progress: number | null }
+  >;
 }
 
 type ArtistSectionKey = "songs" | "albums" | "singles" | "videos" | "related";
@@ -28,7 +36,10 @@ const SECTION_LABELS: Record<ArtistSectionKey, string> = {
   related: "Related artists",
 };
 
-function getItemMeta(item: ArtistItem, section: ArtistSectionKey): string | null {
+function getItemMeta(
+  item: ArtistItem,
+  section: ArtistSectionKey,
+): string | null {
   if (section === "songs") {
     return null;
   }
@@ -90,7 +101,7 @@ export function ArtistPanel({
             <section className="bg-content2/70 border-content3/40 relative overflow-hidden rounded-2xl border p-4">
               {heroThumbnail && (
                 <div
-                  className="absolute inset-0 bg-cover bg-center blur-2xl scale-110 opacity-20"
+                  className="absolute inset-0 scale-110 bg-cover bg-center opacity-20 blur-2xl"
                   style={{ backgroundImage: `url(${heroThumbnail})` }}
                 />
               )}
@@ -107,7 +118,7 @@ export function ArtistPanel({
                   <div className="text-foreground-600 truncate text-lg font-semibold">
                     {artist.name ?? "Unknown artist"}
                   </div>
-                  <div className="text-foreground-400 text-xs uppercase tracking-wider">
+                  <div className="text-foreground-400 text-xs tracking-wider uppercase">
                     {artist.subscribers}
                     {artist.views ? ` • ${artist.views}` : ""}
                   </div>
@@ -123,7 +134,7 @@ export function ArtistPanel({
             {sections.map(([key, items]) =>
               items.length === 0 ? null : (
                 <section key={key} className="space-y-2">
-                  <div className="text-foreground-400 text-xs uppercase tracking-wider">
+                  <div className="text-foreground-400 text-xs tracking-wider uppercase">
                     {SECTION_LABELS[key]}
                   </div>
                   <div className="space-y-2">
@@ -131,13 +142,17 @@ export function ArtistPanel({
                       const title = getTitle(item);
                       const thumbnailUrl = getThumbnailUrl(item);
                       const meta = getItemMeta(item, key);
+                      const subtitle = getSubtitle(item);
                       const url = getMusicUrl(item);
                       const status = url
-                        ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                        ? (downloadStatuses[url] ?? {
+                            status: "idle" as DownloadStatus,
+                            progress: null,
+                          })
                         : { status: "idle" as DownloadStatus, progress: null };
 
                       const isClickable =
-                        (key === "songs" || key === "videos")
+                        key === "songs" || key === "videos"
                           ? Boolean(item.videoId)
                           : key === "albums" || key === "singles"
                             ? Boolean(item.browseId)
@@ -151,11 +166,13 @@ export function ArtistPanel({
                           item={{
                             id: `${key}-${index}`,
                             title,
+                            subtitle,
                             meta,
                             thumbnailUrl,
                             url: url ?? undefined,
                             downloadStatus: status,
                             isClickable,
+                            videoId: item.videoId ?? undefined,
                           }}
                           onClick={() => {
                             if (key === "songs" || key === "videos") {
@@ -171,6 +188,9 @@ export function ArtistPanel({
                             }
                           }}
                           onDownload={url ? onQueueUrl : undefined}
+                          showPlayButton={
+                            key === "songs" && Boolean(item.videoId)
+                          }
                         />
                       );
                     })}

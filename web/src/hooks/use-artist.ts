@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from "react";
 import { fetchArtist, type ArtistResponse } from "../api/artist";
 import { showErrorToast } from "../lib/toast";

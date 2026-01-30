@@ -30,7 +30,9 @@ export interface RelatedSection {
   contents?: RelatedItem[] | string;
 }
 
-export async function fetchSongRelated(videoId: string): Promise<RelatedSection[]> {
+export async function fetchSongRelated(
+  videoId: string,
+): Promise<RelatedSection[]> {
   const response = await fetch(`/api/songs/${videoId}/related`);
   if (!response.ok) {
     const message = await response.text();

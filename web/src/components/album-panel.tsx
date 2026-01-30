@@ -2,7 +2,11 @@ import { Button } from "@heroui/react";
 import { ArrowLeft, Disc3, Download } from "lucide-react";
 import type { AlbumResponse } from "../api/album";
 import { getAlbumThumbnail, getTrackMeta } from "../api/album";
-import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import {
+  DownloadStatusIcon,
+  type DownloadStatus,
+} from "./common/download-indicator";
+import { PlayButton } from "./common/play-button";
 import { EmptyState } from "./common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
@@ -14,7 +18,10 @@ interface AlbumPanelProps {
   onDownloadTrack?: (videoId: string) => void;
   onViewSong?: (videoId: string) => void;
   albumStatus?: { status: DownloadStatus; progress: number | null };
-  trackStatuses?: Record<string, { status: DownloadStatus; progress: number | null }>;
+  trackStatuses?: Record<
+    string,
+    { status: DownloadStatus; progress: number | null }
+  >;
 }
 
 export function AlbumPanel({
@@ -92,21 +99,25 @@ export function AlbumPanel({
                 <div className="text-foreground-600 truncate text-lg font-semibold">
                   {album.title}
                 </div>
-                <div className="text-foreground-400 text-xs uppercase tracking-wider">
+                <div className="text-foreground-400 text-xs tracking-wider uppercase">
                   {(album.artists ?? [])
                     .map((artist) => artist.name)
                     .filter(Boolean)
                     .join(", ") || "Unknown artist"}
                 </div>
                 <div className="text-foreground-400 mt-1 text-xs">
-                  {[album.year, album.trackCount && `${album.trackCount} tracks`, album.duration]
+                  {[
+                    album.year,
+                    album.trackCount && `${album.trackCount} tracks`,
+                    album.duration,
+                  ]
                     .filter(Boolean)
                     .join(" • ")}
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <div className="text-foreground-400 text-xs uppercase tracking-wider">
+              <div className="text-foreground-400 text-xs tracking-wider uppercase">
                 Tracks
               </div>
               {tracks.length === 0 ? (
@@ -114,14 +125,12 @@ export function AlbumPanel({
               ) : (
                 <div className="space-y-2">
                   {tracks.map((track, index) => {
-                    const trackStatus =
-                      track.videoId
-                        ? trackStatuses[track.videoId]?.status ?? "idle"
-                        : "idle";
-                    const trackProgress =
-                      track.videoId
-                        ? trackStatuses[track.videoId]?.progress ?? null
-                        : null;
+                    const trackStatus = track.videoId
+                      ? (trackStatuses[track.videoId]?.status ?? "idle")
+                      : "idle";
+                    const trackProgress = track.videoId
+                      ? (trackStatuses[track.videoId]?.progress ?? null)
+                      : null;
 
                     return (
                       <div
@@ -130,22 +139,43 @@ export function AlbumPanel({
                           if (track.videoId) onViewSong?.(track.videoId);
                         }}
                         className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                          track.videoId ? "cursor-pointer hover:bg-content2" : ""
+                          track.videoId
+                            ? "hover:bg-content2 cursor-pointer"
+                            : ""
                         }`}
                       >
-                      <div className="text-foreground-400 w-6 text-xs">
-                        {track.trackNumber ?? index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-foreground-600 truncate text-sm font-medium">
-                          {track.title}
+                        <div className="text-foreground-400 w-6 text-xs">
+                          {track.trackNumber ?? index + 1}
                         </div>
-                        {getTrackMeta(track) && (
-                          <div className="text-foreground-400 truncate text-xs">
-                            {getTrackMeta(track)}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-foreground-600 truncate text-sm font-medium">
+                            {track.title}
                           </div>
+                          {getTrackMeta(track) && (
+                            <div className="text-foreground-400 truncate text-xs">
+                              {getTrackMeta(track)}
+                            </div>
+                          )}
+                        </div>
+                        {track.videoId && (
+                          <PlayButton
+                            videoId={track.videoId}
+                            title={track.title}
+                            subtitle={
+                              (track.artists ?? [])
+                                .map((artist) => artist.name)
+                                .filter(Boolean)
+                                .join(", ") ||
+                              (album?.artists ?? [])
+                                .map((artist) => artist.name)
+                                .filter(Boolean)
+                                .join(", ") ||
+                              null
+                            }
+                            thumbnailUrl={thumbnail ?? undefined}
+                            durationSeconds={track.duration_seconds ?? null}
+                          />
                         )}
-                      </div>
                         {track.videoId && onDownloadTrack && (
                           <Button
                             size="sm"

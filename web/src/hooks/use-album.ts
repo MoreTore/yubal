@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from "react";
 import { fetchAlbum, type AlbumResponse } from "../api/album";
 import { showErrorToast } from "../lib/toast";

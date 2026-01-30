@@ -61,7 +61,10 @@ export async function fetchArtistAlbums(
     order?: "Recency" | "Popularity" | "Alphabetical order";
   } = {},
 ): Promise<ArtistItem[]> {
-  const url = new URL(`/api/artists/${channelId}/albums`, window.location.origin);
+  const url = new URL(
+    `/api/artists/${channelId}/albums`,
+    window.location.origin,
+  );
   url.searchParams.set("params", params);
   if (options.limit) url.searchParams.set("limit", String(options.limit));
   if (options.order) url.searchParams.set("order", options.order);

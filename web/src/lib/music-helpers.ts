@@ -2,7 +2,9 @@ interface ThumbnailSource {
   thumbnails?: Array<{ url: string; width?: number; height?: number }>;
 }
 
-export function getThumbnailUrl(item: ThumbnailSource | null | undefined): string | null {
+export function getThumbnailUrl(
+  item: ThumbnailSource | null | undefined,
+): string | null {
   const thumbnails = item?.thumbnails;
   if (!thumbnails || thumbnails.length === 0) return null;
 
@@ -25,7 +27,14 @@ interface TitleSource {
 
 export function getTitle(item: TitleSource, defaultValue = "Untitled"): string {
   const primaryArtist = item.artists?.[0]?.name;
-  return item.title || item.name || primaryArtist || item.artist || item.author || defaultValue;
+  return (
+    item.title ||
+    item.name ||
+    primaryArtist ||
+    item.artist ||
+    item.author ||
+    defaultValue
+  );
 }
 
 interface SubtitleSource {
@@ -41,7 +50,9 @@ export function getSubtitle(item: SubtitleSource): string | null {
     const names = item.artists.map((artist) => artist.name).filter(Boolean);
     if (names.length > 0) return names.join(", ");
   }
-  return item.artist || item.author || item.subscribers || item.description || null;
+  return (
+    item.artist || item.author || item.subscribers || item.description || null
+  );
 }
 
 interface BrowseIdSource {

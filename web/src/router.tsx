@@ -1,7 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 
+import { AudioPlayerBar } from "@/components/audio-player-bar";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import { AudioPlayerProvider } from "@/features/player/audio-player-provider";
 import { SearchStateProvider } from "@/features/search/search-state";
 import { DownloadsPage } from "@/pages/downloads";
 import { SearchPage } from "@/pages/search";
@@ -28,15 +30,18 @@ function RootLayout() {
       useHref={(to) => router.buildLocation({ to }).href}
     >
       <ToastProvider />
-      <SearchStateProvider>
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="m-auto w-full max-w-4xl flex-1 px-4 py-6">
-            <Outlet />
-          </main>
-          <Footer />
-        </div>
-      </SearchStateProvider>
+      <AudioPlayerProvider>
+        <SearchStateProvider>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="m-auto w-full max-w-4xl flex-1 px-4 pt-6 pb-32">
+              <Outlet />
+            </main>
+            <Footer />
+          </div>
+          <AudioPlayerBar />
+        </SearchStateProvider>
+      </AudioPlayerProvider>
     </HeroUIProvider>
   );
 }
@@ -80,15 +85,19 @@ const searchRoute = createRoute({
         : "results";
     const albumId =
       typeof search.albumId === "string" ? search.albumId : undefined;
-    const songId = typeof search.songId === "string" ? search.songId : undefined;
+    const songId =
+      typeof search.songId === "string" ? search.songId : undefined;
     const artistId =
       typeof search.artistId === "string" ? search.artistId : undefined;
     return { q, view, albumId, songId, artistId };
   },
 });
 
-
-const routeTree = rootRoute.addChildren([downloadsRoute, subscriptionsRoute, searchRoute]);
+const routeTree = rootRoute.addChildren([
+  downloadsRoute,
+  subscriptionsRoute,
+  searchRoute,
+]);
 
 export const router = createRouter({ routeTree });
 

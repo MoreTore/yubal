@@ -1,6 +1,7 @@
 import { Button } from "@heroui/react";
 import { Download, ExternalLink } from "lucide-react";
 import { DownloadStatusIcon, type DownloadStatus } from "./download-indicator";
+import { PlayButton } from "./play-button";
 
 export interface MusicItemData {
   id: string;
@@ -13,6 +14,8 @@ export interface MusicItemData {
   isClickable?: boolean;
   showExternalLink?: boolean;
   leadingContent?: React.ReactNode;
+  videoId?: string | null;
+  durationSeconds?: number | null;
 }
 
 interface MusicItemProps {
@@ -20,6 +23,7 @@ interface MusicItemProps {
   onClick?: () => void;
   onDownload?: (url: string) => void;
   size?: "sm" | "md" | "lg";
+  showPlayButton?: boolean;
 }
 
 export function MusicItem({
@@ -27,6 +31,7 @@ export function MusicItem({
   onClick,
   onDownload,
   size = "md",
+  showPlayButton = false,
 }: MusicItemProps) {
   const {
     title,
@@ -38,6 +43,8 @@ export function MusicItem({
     isClickable = false,
     showExternalLink = false,
     leadingContent,
+    videoId,
+    durationSeconds,
   } = item;
 
   const thumbnailSizes = {
@@ -50,7 +57,7 @@ export function MusicItem({
     <div
       onClick={isClickable ? onClick : undefined}
       className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-        isClickable ? "cursor-pointer hover:bg-content2" : ""
+        isClickable ? "hover:bg-content2 cursor-pointer" : ""
       }`}
     >
       {leadingContent}
@@ -67,17 +74,20 @@ export function MusicItem({
           {title}
         </div>
         {subtitle && (
-          <div className="text-foreground-400 truncate text-xs">
-            {subtitle}
-          </div>
+          <div className="text-foreground-400 truncate text-xs">{subtitle}</div>
         )}
-        {meta && (
-          <div className="text-foreground-400 text-xs">
-            {meta}
-          </div>
-        )}
+        {meta && <div className="text-foreground-400 text-xs">{meta}</div>}
       </div>
       <div className="flex items-center gap-2">
+        {showPlayButton && videoId && (
+          <PlayButton
+            videoId={videoId}
+            title={title}
+            subtitle={subtitle ?? meta ?? null}
+            thumbnailUrl={thumbnailUrl ?? undefined}
+            durationSeconds={durationSeconds ?? null}
+          />
+        )}
         {url && onDownload && (
           <Button
             size="sm"

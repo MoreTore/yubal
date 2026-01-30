@@ -4,12 +4,12 @@ import logging
 import mimetypes
 import shutil
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
 from importlib.metadata import version
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -248,7 +248,10 @@ def create_app() -> FastAPI:
         app.mount("/", StaticFiles(directory=web_build, html=True), name="static")
 
     @app.middleware("http")
-    async def spa_fallback(request: Request, call_next):
+    async def spa_fallback(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         response = await call_next(request)
         if response.status_code != 404:
             return response

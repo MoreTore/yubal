@@ -3,9 +3,9 @@
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
-
 from yubal import APIError
 from yubal.client import YTMusicClient
+
 from yubal_api.settings import get_settings
 
 router = APIRouter(prefix="/artists", tags=["artists"])
@@ -33,9 +33,7 @@ async def get_artist_albums(
     channel_id: str,
     params: str = Query(..., description="Params token from get_artist()"),
     limit: int | None = Query(100, ge=1),
-    order: Literal["Recency", "Popularity", "Alphabetical order"] | None = Query(
-        None
-    ),
+    order: Literal["Recency", "Popularity", "Alphabetical order"] | None = Query(None),
 ) -> list[dict]:
     """Get full list of artist albums/singles/shows."""
     settings = get_settings()

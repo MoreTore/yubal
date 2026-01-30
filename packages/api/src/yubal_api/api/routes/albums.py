@@ -1,9 +1,9 @@
 """Album API endpoints."""
 
 from fastapi import APIRouter, HTTPException, status
-
 from yubal import APIError
 from yubal.client import YTMusicClient
+
 from yubal_api.settings import get_settings
 
 router = APIRouter(prefix="/albums", tags=["albums"])

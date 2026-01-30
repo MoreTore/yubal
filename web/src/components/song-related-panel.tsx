@@ -1,7 +1,13 @@
 import { Button } from "@heroui/react";
 import { ArrowLeft, Music2 } from "lucide-react";
 import type { RelatedSection } from "../api/song-related";
-import { getBrowseId, getMusicUrl, getSubtitle, getThumbnailUrl, getTitle } from "../lib/music-helpers";
+import {
+  getBrowseId,
+  getMusicUrl,
+  getSubtitle,
+  getThumbnailUrl,
+  getTitle,
+} from "../lib/music-helpers";
 import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
 import { MusicItem } from "./common/music-item";
@@ -11,7 +17,10 @@ interface SongRelatedPanelProps {
   sections: RelatedSection[];
   isLoading: boolean;
   onQueueUrl: (url: string) => void;
-  downloadStatuses: Record<string, { status: DownloadStatus; progress: number | null }>;
+  downloadStatuses: Record<
+    string,
+    { status: DownloadStatus; progress: number | null }
+  >;
   onViewSong: (videoId: string) => void;
   onViewAlbum: (browseId: string) => void;
   onViewArtist: (channelId: string) => void;
@@ -60,7 +69,7 @@ export function SongRelatedPanel({
             {sections.map((section, sectionIndex) => (
               <section key={`${section.title ?? "section"}-${sectionIndex}`}>
                 {section.title && (
-                  <div className="text-foreground-400 mb-2 text-xs uppercase tracking-wider">
+                  <div className="text-foreground-400 mb-2 text-xs tracking-wider uppercase">
                     {section.title}
                   </div>
                 )}
@@ -76,10 +85,15 @@ export function SongRelatedPanel({
                       const thumbnailUrl = getThumbnailUrl(item);
                       const url = getMusicUrl(item);
                       const browseId = getBrowseId(item);
-                      const isArtist = isArtistSection(section.title) || Boolean(item.subscribers);
+                      const isArtist =
+                        isArtistSection(section.title) ||
+                        Boolean(item.subscribers);
                       const canView = Boolean(item.videoId || browseId);
                       const status = url
-                        ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                        ? (downloadStatuses[url] ?? {
+                            status: "idle" as DownloadStatus,
+                            progress: null,
+                          })
                         : { status: "idle" as DownloadStatus, progress: null };
                       const meta = [item.year, item.duration, item.itemCount]
                         .filter(Boolean)
@@ -97,6 +111,7 @@ export function SongRelatedPanel({
                             url: url ?? undefined,
                             downloadStatus: status,
                             isClickable: canView,
+                            videoId: item.videoId ?? undefined,
                           }}
                           size="sm"
                           onClick={() => {
@@ -113,6 +128,7 @@ export function SongRelatedPanel({
                             }
                           }}
                           onDownload={url ? onQueueUrl : undefined}
+                          showPlayButton={Boolean(item.videoId)}
                         />
                       );
                     })}

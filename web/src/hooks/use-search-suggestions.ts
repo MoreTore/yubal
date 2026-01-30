@@ -44,7 +44,8 @@ export function useSearchSuggestions(
     setIsLoading(true);
     debounceRef.current = window.setTimeout(async () => {
       try {
-        const { suggestions: nextSuggestions } = await searchSuggestions(trimmed);
+        const { suggestions: nextSuggestions } =
+          await searchSuggestions(trimmed);
         setSuggestions(nextSuggestions);
       } catch {
         setSuggestions([]);

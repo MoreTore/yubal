@@ -14,7 +14,11 @@ export function Spinner(): ReactElement {
   );
 }
 
-export function ProgressRing({ progress }: { progress: number | null }): ReactElement {
+export function ProgressRing({
+  progress,
+}: {
+  progress: number | null;
+}): ReactElement {
   const size = 18;
   const stroke = 2.5;
   const radius = (size - stroke) / 2;

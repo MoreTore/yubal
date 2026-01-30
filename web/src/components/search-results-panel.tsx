@@ -1,8 +1,17 @@
 import { Button } from "@heroui/react";
 import { Download, Search } from "lucide-react";
 import type { SearchResult } from "../api/search";
-import { getBrowseId, getMusicUrl, getThumbnailUrl, getTitle } from "../lib/music-helpers";
-import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import {
+  getBrowseId,
+  getMusicUrl,
+  getSubtitle,
+  getThumbnailUrl,
+  getTitle,
+} from "../lib/music-helpers";
+import {
+  DownloadStatusIcon,
+  type DownloadStatus,
+} from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
 import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
@@ -15,7 +24,10 @@ interface SearchResultsPanelProps {
   onViewAlbum: (browseId: string) => void;
   onViewSong: (videoId: string) => void;
   onViewArtist: (channelId: string) => void;
-  downloadStatuses: Record<string, { status: DownloadStatus; progress: number | null }>;
+  downloadStatuses: Record<
+    string,
+    { status: DownloadStatus; progress: number | null }
+  >;
 }
 
 function getSubtitle(result: SearchResult): string | null {
@@ -39,7 +51,7 @@ function getInfoLine(result: SearchResult): string | null {
   const isListenAgain = category === "listen again";
   const isSong =
     result.resultType === "song" || category === "songs" || isListenAgain;
-  const duration = isSong ? result.duration ?? null : null;
+  const duration = isSong ? (result.duration ?? null) : null;
   const typeLabel = isListenAgain
     ? null
     : formatTypeLabel(result.resultType ?? result.category);
@@ -48,7 +60,6 @@ function getInfoLine(result: SearchResult): string | null {
   if (parts.length === 0) return null;
   return parts.join(" • ");
 }
-
 
 export function SearchResultsPanel({
   results,
@@ -72,7 +83,10 @@ export function SearchResultsPanel({
 
   if (topArtist) {
     const artistName =
-      topArtist.artists?.[0]?.name || topArtist.name || topArtist.artist || null;
+      topArtist.artists?.[0]?.name ||
+      topArtist.name ||
+      topArtist.artist ||
+      null;
 
     usedIndexes.add(topArtistIndex);
 
@@ -113,7 +127,7 @@ export function SearchResultsPanel({
   const topArtistUrl = topArtist ? getMusicUrl(topArtist) : null;
   const topArtistStatus: { status: DownloadStatus; progress: number | null } =
     topArtistUrl
-      ? downloadStatuses[topArtistUrl] ?? { status: "idle", progress: null }
+      ? (downloadStatuses[topArtistUrl] ?? { status: "idle", progress: null })
       : { status: "idle", progress: null };
 
   return (
@@ -147,12 +161,12 @@ export function SearchResultsPanel({
           <div className="space-y-6">
             {topArtist && (
               <section className="space-y-3">
-                <div className="text-foreground-400 text-xs uppercase tracking-wider">
+                <div className="text-foreground-400 text-xs tracking-wider uppercase">
                   Top result
                 </div>
                 <div
                   className={`bg-content2/70 border-content3/40 relative overflow-hidden rounded-2xl border p-4 ${
-                    topArtistBrowseId ? "cursor-pointer hover:bg-content2" : ""
+                    topArtistBrowseId ? "hover:bg-content2 cursor-pointer" : ""
                   }`}
                   onClick={() => {
                     if (topArtistBrowseId) onViewArtist(topArtistBrowseId);
@@ -160,7 +174,7 @@ export function SearchResultsPanel({
                 >
                   {topArtistThumbnail && (
                     <div
-                      className="absolute inset-0 bg-cover bg-center blur-2xl scale-110 opacity-20"
+                      className="absolute inset-0 scale-110 bg-cover bg-center opacity-20 blur-2xl"
                       style={{ backgroundImage: `url(${topArtistThumbnail})` }}
                     />
                   )}
@@ -178,7 +192,7 @@ export function SearchResultsPanel({
                         <div className="text-foreground-600 truncate text-lg font-semibold">
                           {getTitle(topArtist)}
                         </div>
-                        <div className="text-foreground-400 text-xs uppercase tracking-wider">
+                        <div className="text-foreground-400 text-xs tracking-wider uppercase">
                           Artist
                         </div>
                       </div>
@@ -211,11 +225,13 @@ export function SearchResultsPanel({
                       <div className="space-y-2">
                         {topItems.map((item, index) => {
                           const title = getTitle(item);
+                          const subtitle = getSubtitle(item);
                           const infoLine = getInfoLine(item);
                           const url = getMusicUrl(item);
                           const browseId = getBrowseId(item);
                           const isAlbum =
-                            item.resultType === "album" || item.category === "Albums";
+                            item.resultType === "album" ||
+                            item.category === "Albums";
                           const isSong =
                             item.resultType === "song" ||
                             item.category?.toLowerCase() === "songs" ||
@@ -225,8 +241,14 @@ export function SearchResultsPanel({
                             item.category?.toLowerCase() === "artists";
                           const thumbnailUrl = getThumbnailUrl(item);
                           const status = url
-                            ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
-                            : { status: "idle" as DownloadStatus, progress: null };
+                            ? (downloadStatuses[url] ?? {
+                                status: "idle" as DownloadStatus,
+                                progress: null,
+                              })
+                            : {
+                                status: "idle" as DownloadStatus,
+                                progress: null,
+                              };
 
                           return (
                             <MusicItem
@@ -234,6 +256,7 @@ export function SearchResultsPanel({
                               item={{
                                 id: `top-item-${index}`,
                                 title,
+                                subtitle,
                                 meta: infoLine,
                                 thumbnailUrl,
                                 url: url ?? undefined,
@@ -241,16 +264,20 @@ export function SearchResultsPanel({
                                 isClickable: Boolean(
                                   (isAlbum && browseId) ||
                                   (isSong && item.videoId) ||
-                                  (isArtist && browseId)
+                                  (isArtist && browseId),
                                 ),
+                                videoId: item.videoId ?? undefined,
                               }}
                               size="sm"
                               onClick={() => {
                                 if (isAlbum && browseId) onViewAlbum(browseId);
-                                if (isSong && item.videoId) onViewSong(item.videoId);
-                                if (isArtist && browseId) onViewArtist(browseId);
+                                if (isSong && item.videoId)
+                                  onViewSong(item.videoId);
+                                if (isArtist && browseId)
+                                  onViewArtist(browseId);
                               }}
                               onDownload={url ? onQueueUrl : undefined}
+                              showPlayButton={Boolean(isSong && item.videoId)}
                             />
                           );
                         })}
@@ -262,12 +289,13 @@ export function SearchResultsPanel({
             )}
             {Object.entries(grouped).map(([category, items]) => (
               <section key={category} className="space-y-2">
-                <div className="text-foreground-400 text-xs uppercase tracking-wider">
+                <div className="text-foreground-400 text-xs tracking-wider uppercase">
                   {category}
                 </div>
                 <div className="space-y-2">
                   {items.map((item, index) => {
                     const title = getTitle(item);
+                    const subtitle = getSubtitle(item);
                     const infoLine = getInfoLine(item);
                     const url = getMusicUrl(item);
                     const browseId = getBrowseId(item);
@@ -282,7 +310,10 @@ export function SearchResultsPanel({
                       item.category?.toLowerCase() === "artists";
                     const thumbnailUrl = getThumbnailUrl(item);
                     const status = url
-                      ? downloadStatuses[url] ?? { status: "idle" as DownloadStatus, progress: null }
+                      ? (downloadStatuses[url] ?? {
+                          status: "idle" as DownloadStatus,
+                          progress: null,
+                        })
                       : { status: "idle" as DownloadStatus, progress: null };
 
                     return (
@@ -291,6 +322,7 @@ export function SearchResultsPanel({
                         item={{
                           id: `${category}-${index}`,
                           title,
+                          subtitle,
                           meta: infoLine,
                           thumbnailUrl,
                           url: url ?? undefined,
@@ -298,9 +330,10 @@ export function SearchResultsPanel({
                           isClickable: Boolean(
                             (isAlbum && browseId) ||
                             (isSong && item.videoId) ||
-                            (isArtist && browseId)
+                            (isArtist && browseId),
                           ),
                           showExternalLink: true,
+                          videoId: item.videoId ?? undefined,
                         }}
                         onClick={() => {
                           if (isAlbum && browseId) onViewAlbum(browseId);
@@ -308,6 +341,7 @@ export function SearchResultsPanel({
                           if (isArtist && browseId) onViewArtist(browseId);
                         }}
                         onDownload={url ? onQueueUrl : undefined}
+                        showPlayButton={Boolean(isSong && item.videoId)}
                       />
                     );
                   })}

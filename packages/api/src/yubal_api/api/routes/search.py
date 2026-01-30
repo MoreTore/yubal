@@ -1,9 +1,9 @@
 """Search API endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query, status
-
 from yubal import APIError
 from yubal.client import YTMusicClient
+
 from yubal_api.schemas.search import SearchResponse, SearchSuggestionsResponse
 from yubal_api.settings import get_settings
 
@@ -18,9 +18,7 @@ async def search(
         alias="filter",
         description="Filter for item types (songs, videos, albums, artists, playlists)",
     ),
-    scope: str | None = Query(
-        None, description="Search scope (library, uploads)"
-    ),
+    scope: str | None = Query(None, description="Search scope (library, uploads)"),
     limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
     ignore_spelling: bool | None = Query(
         None, description="Ignore YouTube Music spelling suggestions"

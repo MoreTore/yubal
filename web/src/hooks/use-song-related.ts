@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from "react";
 import { fetchSongRelated, type RelatedSection } from "../api/song-related";
 import { showErrorToast } from "../lib/toast";

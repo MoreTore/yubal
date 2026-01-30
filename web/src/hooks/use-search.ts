@@ -1,5 +1,9 @@
 import { useCallback, useState } from "react";
-import { searchYtMusic, type SearchOptions, type SearchResult } from "../api/search";
+import {
+  searchYtMusic,
+  type SearchOptions,
+  type SearchResult,
+} from "../api/search";
 import { showErrorToast } from "../lib/toast";
 
 export interface UseSearchResult {
