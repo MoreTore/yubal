@@ -73,13 +73,17 @@ const searchRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => {
     const q = typeof search.q === "string" ? search.q : "";
     const view =
-      search.view === "album" || search.view === "related"
+      search.view === "album" ||
+      search.view === "related" ||
+      search.view === "artist"
         ? search.view
         : "results";
     const albumId =
       typeof search.albumId === "string" ? search.albumId : undefined;
     const songId = typeof search.songId === "string" ? search.songId : undefined;
-    return { q, view, albumId, songId };
+    const artistId =
+      typeof search.artistId === "string" ? search.artistId : undefined;
+    return { q, view, albumId, songId, artistId };
   },
 });
 

@@ -1,4 +1,5 @@
 import { AlbumPanel } from "@/components/album-panel";
+import { ArtistPanel } from "@/components/artist-panel";
 import type { DownloadStatus } from "@/components/common/download-indicator";
 import { SearchResultsPanel } from "@/components/search-results-panel";
 import { SongRelatedPanel } from "@/components/song-related-panel";
@@ -6,6 +7,7 @@ import { useJobs } from "@/features/downloads/use-jobs";
 import { SearchInput } from "@/features/search/search-input";
 import { useSearchState, type ViewMode } from "@/features/search/search-state";
 import { useAlbum } from "@/hooks/use-album";
+import { useArtist } from "@/hooks/use-artist";
 import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import { useSongRelated } from "@/hooks/use-song-related";
 import { isValidUrl } from "@/lib/url";
@@ -19,6 +21,7 @@ interface SearchRouteParams {
 	view: ViewMode;
 	albumId?: string;
 	songId?: string;
+	artistId?: string;
 }
 
 
@@ -74,6 +77,8 @@ export function SearchPage() {
 		setSelectedAlbumId,
 		selectedSongId,
 		setSelectedSongId,
+		selectedArtistId,
+		setSelectedArtistId,
 		results,
 		query,
 		isSearching,
@@ -87,6 +92,7 @@ export function SearchPage() {
 	const { suggestions } = useSearchSuggestions(input, { enabled: !isUrlLike });
 
 	const { album, isLoading: isAlbumLoading } = useAlbum(selectedAlbumId);
+	const { artist, isLoading: isArtistLoading } = useArtist(selectedArtistId);
 	const { sections, isLoading: isRelatedLoading } =
 		useSongRelated(selectedSongId);
 
@@ -95,7 +101,8 @@ export function SearchPage() {
 			routeSearch.q ||
 			(routeSearch.view && routeSearch.view !== "results") ||
 			routeSearch.albumId ||
-			routeSearch.songId,
+			routeSearch.songId ||
+			routeSearch.artistId,
 		);
 
 		if (hasUrlState) {
@@ -103,6 +110,7 @@ export function SearchPage() {
 			setView(routeSearch.view ?? "results");
 			setSelectedAlbumId(routeSearch.albumId ?? null);
 			setSelectedSongId(routeSearch.songId ?? null);
+			setSelectedArtistId(routeSearch.artistId ?? null);
 
 			if (!routeSearch.q) {
 				if (query) clear();
@@ -117,7 +125,13 @@ export function SearchPage() {
 			return;
 		}
 
-		if (query || view !== "results" || selectedAlbumId || selectedSongId) {
+		if (
+			query ||
+			view !== "results" ||
+			selectedAlbumId ||
+			selectedSongId ||
+			selectedArtistId
+		) {
 			navigate({
 				to: "/search",
 				search: {
@@ -125,6 +139,7 @@ export function SearchPage() {
 					view,
 					albumId: selectedAlbumId ?? undefined,
 					songId: selectedSongId ?? undefined,
+					artistId: selectedArtistId ?? undefined,
 				},
 				replace: true,
 			});
@@ -140,11 +155,13 @@ export function SearchPage() {
 		view,
 		selectedAlbumId,
 		selectedSongId,
+		selectedArtistId,
 		navigate,
 		setInput,
 		setView,
 		setSelectedAlbumId,
 		setSelectedSongId,
+		setSelectedArtistId,
 	]);
 
 	const { downloadStatuses, trackStatuses, albumStatuses } = useMemo(() => {
@@ -196,7 +213,13 @@ export function SearchPage() {
 
 		navigate({
 			to: "/search",
-			search: { q: trimmed, view: "results", albumId: undefined, songId: undefined },
+			search: {
+				q: trimmed,
+				view: "results",
+				albumId: undefined,
+				songId: undefined,
+				artistId: undefined,
+			},
 			replace: true,
 		});
 		lastSearchRef.current = trimmed;
@@ -204,6 +227,7 @@ export function SearchPage() {
 		setView("results");
 		setSelectedAlbumId(null);
 		setSelectedSongId(null);
+		setSelectedArtistId(null);
 	};
 
 	return (
@@ -221,12 +245,19 @@ export function SearchPage() {
 							setInput(value);
 							navigate({
 								to: "/search",
-								search: { q: value, view: "results", albumId: undefined, songId: undefined },
+								search: {
+									q: value,
+									view: "results",
+									albumId: undefined,
+									songId: undefined,
+									artistId: undefined,
+								},
 								replace: true,
 							});
 							lastSearchRef.current = value;
 							search(value);
 							setView("results");
+							setSelectedArtistId(null);
 						}}
 					/>
 				</div>
@@ -252,6 +283,7 @@ export function SearchPage() {
 						onViewAlbum={(browseId) => {
 							setSelectedAlbumId(browseId);
 							setSelectedSongId(null);
+							setSelectedArtistId(null);
 							setView("album");
 							navigate({
 								to: "/search",
@@ -260,6 +292,7 @@ export function SearchPage() {
 									view: "album",
 									albumId: browseId,
 									songId: undefined,
+									artistId: undefined,
 								},
 								replace: true,
 							});
@@ -267,6 +300,7 @@ export function SearchPage() {
 						onViewSong={(videoId) => {
 							setSelectedSongId(videoId);
 							setSelectedAlbumId(null);
+							setSelectedArtistId(null);
 							setView("related");
 							navigate({
 								to: "/search",
@@ -275,6 +309,24 @@ export function SearchPage() {
 									view: "related",
 									songId: videoId,
 									albumId: undefined,
+									artistId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						onViewArtist={(channelId) => {
+							setSelectedArtistId(channelId);
+							setSelectedAlbumId(null);
+							setSelectedSongId(null);
+							setView("artist");
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "artist",
+									artistId: channelId,
+									albumId: undefined,
+									songId: undefined,
 								},
 								replace: true,
 							});
@@ -289,6 +341,7 @@ export function SearchPage() {
 						isLoading={isAlbumLoading}
 						onBack={() => {
 							setView("results");
+							setSelectedAlbumId(null);
 							navigate({
 								to: "/search",
 								search: {
@@ -296,6 +349,7 @@ export function SearchPage() {
 									view: "results",
 									albumId: undefined,
 									songId: undefined,
+									artistId: undefined,
 								},
 								replace: true,
 							});
@@ -320,6 +374,7 @@ export function SearchPage() {
 									view: "related",
 									songId: videoId,
 									albumId: undefined,
+									artistId: undefined,
 								},
 								replace: true,
 							});
@@ -333,6 +388,81 @@ export function SearchPage() {
 					/>
 				)}
 
+				{view === "artist" && (
+					<ArtistPanel
+						artist={artist}
+						isLoading={isArtistLoading}
+						onBack={() => {
+							setView("results");
+							setSelectedArtistId(null);
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "results",
+									albumId: undefined,
+									songId: undefined,
+									artistId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						onQueueUrl={(url) => startJob(url)}
+						onViewAlbum={(browseId) => {
+							setSelectedAlbumId(browseId);
+							setSelectedSongId(null);
+							setSelectedArtistId(null);
+							setView("album");
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "album",
+									albumId: browseId,
+									songId: undefined,
+									artistId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						onViewSong={(videoId) => {
+							setSelectedSongId(videoId);
+							setSelectedAlbumId(null);
+							setSelectedArtistId(null);
+							setView("related");
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "related",
+									songId: videoId,
+									albumId: undefined,
+									artistId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						onViewArtist={(channelId) => {
+							setSelectedArtistId(channelId);
+							setSelectedAlbumId(null);
+							setSelectedSongId(null);
+							setView("artist");
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "artist",
+									artistId: channelId,
+									albumId: undefined,
+									songId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						downloadStatuses={downloadStatuses}
+					/>
+				)}
+
 				{view === "related" && (
 					<SongRelatedPanel
 						sections={sections}
@@ -341,6 +471,7 @@ export function SearchPage() {
 						downloadStatuses={downloadStatuses}
 						onViewSong={(videoId) => {
 							setSelectedSongId(videoId);
+							setSelectedArtistId(null);
 							navigate({
 								to: "/search",
 								search: {
@@ -348,12 +479,48 @@ export function SearchPage() {
 									view: "related",
 									songId: videoId,
 									albumId: undefined,
+									artistId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						onViewAlbum={(browseId) => {
+							setSelectedAlbumId(browseId);
+							setSelectedSongId(null);
+							setSelectedArtistId(null);
+							setView("album");
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "album",
+									albumId: browseId,
+									songId: undefined,
+									artistId: undefined,
+								},
+								replace: true,
+							});
+						}}
+						onViewArtist={(channelId) => {
+							setSelectedArtistId(channelId);
+							setSelectedAlbumId(null);
+							setSelectedSongId(null);
+							setView("artist");
+							navigate({
+								to: "/search",
+								search: {
+									q: query,
+									view: "artist",
+									artistId: channelId,
+									albumId: undefined,
+									songId: undefined,
 								},
 								replace: true,
 							});
 						}}
 						onBack={() => {
 							setView("results");
+							setSelectedSongId(null);
 							navigate({
 								to: "/search",
 								search: {
@@ -361,6 +528,7 @@ export function SearchPage() {
 									view: "results",
 									albumId: undefined,
 									songId: undefined,
+									artistId: undefined,
 								},
 								replace: true,
 							});

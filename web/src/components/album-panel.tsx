@@ -2,8 +2,8 @@ import { Button } from "@heroui/react";
 import { ArrowLeft, Disc3, Download } from "lucide-react";
 import type { AlbumResponse } from "../api/album";
 import { getAlbumThumbnail, getTrackMeta } from "../api/album";
-import { EmptyState } from "./common/empty-state";
 import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import { EmptyState } from "./common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
 interface AlbumPanelProps {
@@ -48,17 +48,16 @@ export function AlbumPanel({
                 }
                 isIconOnly
                 aria-label="Download album"
-                startContent={
-                  albumStatus.status === "idle" ? (
-                    <Download className="h-4 w-4" />
-                  ) : (
-                    <DownloadStatusIcon
-                      status={albumStatus.status}
-                      progress={albumStatus.progress}
-                    />
-                  )
-                }
-              />
+              >
+                {albumStatus.status === "idle" ? (
+                  <Download className="h-4 w-4" />
+                ) : (
+                  <DownloadStatusIcon
+                    status={albumStatus.status}
+                    progress={albumStatus.progress}
+                  />
+                )}
+              </Button>
             )}
             <Button
               variant="light"
@@ -114,16 +113,26 @@ export function AlbumPanel({
                 <EmptyState icon={Disc3} title="No tracks available" />
               ) : (
                 <div className="space-y-2">
-                  {tracks.map((track, index) => (
-                    <div
-                      key={`${track.videoId ?? "track"}-${index}`}
-                      onClick={() => {
-                        if (track.videoId) onViewSong?.(track.videoId);
-                      }}
-                      className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                        track.videoId ? "cursor-pointer hover:bg-content2" : ""
-                      }`}
-                    >
+                  {tracks.map((track, index) => {
+                    const trackStatus =
+                      track.videoId
+                        ? trackStatuses[track.videoId]?.status ?? "idle"
+                        : "idle";
+                    const trackProgress =
+                      track.videoId
+                        ? trackStatuses[track.videoId]?.progress ?? null
+                        : null;
+
+                    return (
+                      <div
+                        key={`${track.videoId ?? "track"}-${index}`}
+                        onClick={() => {
+                          if (track.videoId) onViewSong?.(track.videoId);
+                        }}
+                        className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
+                          track.videoId ? "cursor-pointer hover:bg-content2" : ""
+                        }`}
+                      >
                       <div className="text-foreground-400 w-6 text-xs">
                         {track.trackNumber ?? index + 1}
                       </div>
@@ -137,36 +146,32 @@ export function AlbumPanel({
                           </div>
                         )}
                       </div>
-                      {track.videoId && onDownloadTrack && (
-                        <Button
-                          size="sm"
-                          variant="flat"
-                          onPress={() => onDownloadTrack(track.videoId!)}
-                          onClick={(event) => event.stopPropagation()}
-                          isDisabled={
-                            trackStatuses[track.videoId]?.status === "queued" ||
-                            trackStatuses[track.videoId]?.status === "downloading"
-                          }
-                          isIconOnly
-                          aria-label={`Download ${track.title}`}
-                          startContent={
-                            trackStatuses[track.videoId]?.status === "idle" ? (
+                        {track.videoId && onDownloadTrack && (
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={() => onDownloadTrack(track.videoId!)}
+                            onClick={(event) => event.stopPropagation()}
+                            isDisabled={
+                              trackStatus === "queued" ||
+                              trackStatus === "downloading"
+                            }
+                            isIconOnly
+                            aria-label={`Download ${track.title}`}
+                          >
+                            {trackStatus === "idle" ? (
                               <Download className="h-4 w-4" />
                             ) : (
                               <DownloadStatusIcon
-                                status={
-                                  trackStatuses[track.videoId]?.status ?? "idle"
-                                }
-                                progress={
-                                  trackStatuses[track.videoId]?.progress ?? null
-                                }
+                                status={trackStatus}
+                                progress={trackProgress}
                               />
-                            )
-                          }
-                        />
-                      )}
-                    </div>
-                  ))}
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

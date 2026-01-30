@@ -83,7 +83,7 @@ class AlbumTrack(YTMusicModel):
     video_id: str | None = Field(default=None, alias="videoId")
     title: str
     artists: list[Artist] = Field(default_factory=list)
-    track_number: int = Field(alias="trackNumber")
+    track_number: int | None = Field(default=None, alias="trackNumber")
     duration_seconds: int
     duration: str
 

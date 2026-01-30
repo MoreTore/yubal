@@ -1,8 +1,8 @@
 import { Button } from "@heroui/react";
 import { Download, ExternalLink, Search } from "lucide-react";
 import type { SearchResult } from "../api/search";
-import { EmptyState } from "./common/empty-state";
 import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import { EmptyState } from "./common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
 interface SearchResultsPanelProps {
@@ -12,6 +12,7 @@ interface SearchResultsPanelProps {
   onQueueUrl: (url: string) => void;
   onViewAlbum: (browseId: string) => void;
   onViewSong: (videoId: string) => void;
+  onViewArtist: (channelId: string) => void;
   downloadStatuses: Record<string, { status: DownloadStatus; progress: number | null }>;
 }
 
@@ -84,6 +85,16 @@ function getThumbnailUrl(result: SearchResult): string | null {
   return sorted[0]?.url ?? null;
 }
 
+function getBrowseId(result: SearchResult): string | null {
+  const candidates = [result.browseId, result.channelId, result.artists?.[0]?.id];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 export function SearchResultsPanel({
   results,
   query,
@@ -91,6 +102,7 @@ export function SearchResultsPanel({
   onQueueUrl,
   onViewAlbum,
   onViewSong,
+  onViewArtist,
   downloadStatuses,
 }: SearchResultsPanelProps) {
   const topArtistIndex = results.findIndex(
@@ -142,6 +154,7 @@ export function SearchResultsPanel({
 
   const hasResults = results.length > 0;
   const topArtistThumbnail = topArtist ? getThumbnailUrl(topArtist) : null;
+  const topArtistBrowseId = topArtist ? getBrowseId(topArtist) : null;
   const topArtistUrl = topArtist ? getResultUrl(topArtist) : null;
   const topArtistStatus: { status: DownloadStatus; progress: number | null } =
     topArtistUrl
@@ -182,7 +195,14 @@ export function SearchResultsPanel({
                 <div className="text-foreground-400 text-xs uppercase tracking-wider">
                   Top result
                 </div>
-                <div className="bg-content2/70 border-content3/40 relative overflow-hidden rounded-2xl border p-4">
+                <div
+                  className={`bg-content2/70 border-content3/40 relative overflow-hidden rounded-2xl border p-4 ${
+                    topArtistBrowseId ? "cursor-pointer hover:bg-content2" : ""
+                  }`}
+                  onClick={() => {
+                    if (topArtistBrowseId) onViewArtist(topArtistBrowseId);
+                  }}
+                >
                   {topArtistThumbnail && (
                     <div
                       className="absolute inset-0 bg-cover bg-center blur-2xl scale-110 opacity-20"
@@ -212,6 +232,7 @@ export function SearchResultsPanel({
                           size="sm"
                           variant="flat"
                           onPress={() => onQueueUrl(topArtistUrl)}
+                          onClick={(event) => event.stopPropagation()}
                           isDisabled={
                             topArtistStatus.status === "queued" ||
                             topArtistStatus.status === "downloading"
@@ -237,13 +258,16 @@ export function SearchResultsPanel({
                           const title = getTitle(item);
                           const infoLine = getInfoLine(item);
                           const url = getResultUrl(item);
-                          const browseId = item.browseId;
+                          const browseId = getBrowseId(item);
                           const isAlbum =
                             item.resultType === "album" || item.category === "Albums";
                           const isSong =
                             item.resultType === "song" ||
                             item.category?.toLowerCase() === "songs" ||
                             item.category?.toLowerCase() === "listen again";
+                          const isArtist =
+                            item.resultType === "artist" ||
+                            item.category?.toLowerCase() === "artists";
                           const thumbnailUrl = getThumbnailUrl(item);
                           const status: {
                             status: DownloadStatus;
@@ -256,12 +280,14 @@ export function SearchResultsPanel({
                           return (
                             <div
                               key={`top-item-${index}-${title}`}
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 if (isAlbum && browseId) onViewAlbum(browseId);
                                 if (isSong && item.videoId) onViewSong(item.videoId);
+                                if (isArtist && browseId) onViewArtist(browseId);
                               }}
                               className={`bg-content1/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
-                                isAlbum || (isSong && item.videoId)
+                                isAlbum || (isSong && item.videoId) || (isArtist && browseId)
                                   ? "cursor-pointer hover:bg-content1"
                                   : ""
                               }`}
@@ -327,13 +353,16 @@ export function SearchResultsPanel({
                     const title = getTitle(item);
                     const infoLine = getInfoLine(item);
                     const url = getResultUrl(item);
-                    const browseId = item.browseId;
+                    const browseId = getBrowseId(item);
                     const isAlbum =
                       item.resultType === "album" || item.category === "Albums";
                     const isSong =
                       item.resultType === "song" ||
                       item.category?.toLowerCase() === "songs" ||
                       item.category?.toLowerCase() === "listen again";
+                    const isArtist =
+                      item.resultType === "artist" ||
+                      item.category?.toLowerCase() === "artists";
                     const thumbnailUrl = getThumbnailUrl(item);
                     const status: {
                       status: DownloadStatus;
@@ -350,11 +379,12 @@ export function SearchResultsPanel({
                         onClick={() => {
                           if (isAlbum && browseId) onViewAlbum(browseId);
                           if (isSong && item.videoId) onViewSong(item.videoId);
+                          if (isArtist && browseId) onViewArtist(browseId);
                         }}
                         className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
                           canQueue ? "transition" : "opacity-80"
                         } ${
-                          isAlbum || (isSong && item.videoId)
+                          isAlbum || (isSong && item.videoId) || (isArtist && browseId)
                             ? "cursor-pointer hover:bg-content2"
                             : ""
                         }`}

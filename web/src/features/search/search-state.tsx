@@ -2,7 +2,7 @@ import { useSearch } from "@/hooks/use-search";
 import type { ReactNode } from "react";
 import { createContext, useContext, useMemo, useState } from "react";
 
-export type ViewMode = "results" | "album" | "related";
+export type ViewMode = "results" | "album" | "related" | "artist";
 
 interface SearchStateValue {
   input: string;
@@ -13,6 +13,8 @@ interface SearchStateValue {
   setSelectedAlbumId: (value: string | null) => void;
   selectedSongId: string | null;
   setSelectedSongId: (value: string | null) => void;
+  selectedArtistId: string | null;
+  setSelectedArtistId: (value: string | null) => void;
   results: ReturnType<typeof useSearch>["results"];
   query: ReturnType<typeof useSearch>["query"];
   isSearching: ReturnType<typeof useSearch>["isSearching"];
@@ -28,6 +30,7 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<ViewMode>("results");
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
   const searchState = useSearch();
 
   const value = useMemo(
@@ -40,6 +43,8 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
       setSelectedAlbumId,
       selectedSongId,
       setSelectedSongId,
+      selectedArtistId,
+      setSelectedArtistId,
       ...searchState,
     }),
     [
@@ -47,6 +52,7 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
       view,
       selectedAlbumId,
       selectedSongId,
+      selectedArtistId,
       searchState,
     ],
   );

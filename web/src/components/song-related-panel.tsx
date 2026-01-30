@@ -1,8 +1,8 @@
 import { Button } from "@heroui/react";
 import { ArrowLeft, Download, Music2 } from "lucide-react";
 import type { RelatedItem, RelatedSection } from "../api/song-related";
-import { EmptyState } from "./common/empty-state";
 import { DownloadStatusIcon, type DownloadStatus } from "./common/download-indicator";
+import { EmptyState } from "./common/empty-state";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
 
 interface SongRelatedPanelProps {
@@ -11,6 +11,8 @@ interface SongRelatedPanelProps {
   onQueueUrl: (url: string) => void;
   downloadStatuses: Record<string, { status: DownloadStatus; progress: number | null }>;
   onViewSong: (videoId: string) => void;
+  onViewAlbum: (browseId: string) => void;
+  onViewArtist: (channelId: string) => void;
   onBack: () => void;
 }
 
@@ -44,12 +46,25 @@ function getSongUrl(item: RelatedItem): string | null {
   return null;
 }
 
+function getBrowseId(item: RelatedItem): string | null {
+  if (item.browseId && typeof item.browseId === "string") return item.browseId;
+  const artistId = item.artists?.[0]?.id;
+  return typeof artistId === "string" ? artistId : null;
+}
+
+function isArtistSection(title: string | undefined): boolean {
+  if (!title) return false;
+  return title.toLowerCase().includes("artist");
+}
+
 export function SongRelatedPanel({
   sections,
   isLoading,
   onQueueUrl,
   downloadStatuses,
   onViewSong,
+  onViewAlbum,
+  onViewArtist,
   onBack,
 }: SongRelatedPanelProps) {
   return (
@@ -94,7 +109,9 @@ export function SongRelatedPanel({
                       const subtitle = getSubtitle(item);
                       const thumbnailUrl = getThumbnailUrl(item);
                       const url = getSongUrl(item);
-                      const canView = Boolean(item.videoId);
+                      const browseId = getBrowseId(item);
+                      const isArtist = isArtistSection(section.title) || Boolean(item.subscribers);
+                      const canView = Boolean(item.videoId || browseId);
                       const status: {
                         status: DownloadStatus;
                         progress: number | null;
@@ -109,7 +126,17 @@ export function SongRelatedPanel({
                         <div
                           key={`${title}-${index}`}
                           onClick={() => {
-                            if (item.videoId) onViewSong(item.videoId);
+                            if (item.videoId) {
+                              onViewSong(item.videoId);
+                              return;
+                            }
+                            if (browseId) {
+                              if (isArtist) {
+                                onViewArtist(browseId);
+                              } else {
+                                onViewAlbum(browseId);
+                              }
+                            }
                           }}
                           className={`bg-content2/60 flex items-center gap-3 rounded-xl px-3 py-2 ${
                             canView ? "cursor-pointer hover:bg-content2" : ""

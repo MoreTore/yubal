@@ -3,7 +3,7 @@
 import logging
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from ytmusicapi import YTMusic
 from ytmusicapi.exceptions import YTMusicError, YTMusicServerError, YTMusicUserError
@@ -73,6 +73,21 @@ class YTMusicProtocol(Protocol):
 
     def get_song_related(self, video_id: str) -> list[dict[str, Any]]:
         """Fetch related content for a song by video ID."""
+        ...
+
+    def get_artist(self, channel_id: str) -> dict[str, Any]:
+        """Fetch artist details and top releases by channel ID."""
+        ...
+
+    def get_artist_albums(
+        self,
+        channel_id: str,
+        params: str,
+        *,
+        limit: int | None = 100,
+        order: Literal["Recency", "Popularity", "Alphabetical order"] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch full list of artist albums/singles/shows."""
         ...
 
 
@@ -455,6 +470,75 @@ class YTMusicClient:
         except YTMusicError as e:
             logger.warning("YTMusic error for related '%s': %s", related_key, e)
             raise APIError(f"Failed to fetch related content: {e}") from e
+
+    def get_artist(self, channel_id: str) -> dict[str, Any]:
+        """Fetch artist details and top releases by channel ID.
+
+        Args:
+            channel_id: YouTube Music artist channel ID.
+
+        Returns:
+            Raw artist response from ytmusicapi.
+
+        Raises:
+            ValueError: If channel_id is empty.
+            APIError: If API request fails.
+        """
+        if not channel_id or not channel_id.strip():
+            raise ValueError("channel_id cannot be empty")
+
+        logger.debug("Fetching artist: %s", channel_id)
+        try:
+            return self._ytm.get_artist(channel_id)
+        except (YTMusicServerError, YTMusicUserError) as e:
+            logger.warning("YTMusic API error for artist %s: %s", channel_id, e)
+            raise APIError(f"Failed to fetch artist: {e}") from e
+        except YTMusicError as e:
+            logger.warning("YTMusic error for artist %s: %s", channel_id, e)
+            raise APIError(f"Failed to fetch artist: {e}") from e
+
+    def get_artist_albums(
+        self,
+        channel_id: str,
+        params: str,
+        *,
+        limit: int | None = 100,
+        order: Literal["Recency", "Popularity", "Alphabetical order"] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch full list of artist albums, singles, or shows.
+
+        Args:
+            channel_id: Artist browse ID.
+            params: Params token from get_artist().
+            limit: Max number of items to return.
+            order: Optional sort order.
+
+        Returns:
+            List of album results.
+
+        Raises:
+            ValueError: If channel_id or params is empty.
+            APIError: If API request fails.
+        """
+        if not channel_id or not channel_id.strip():
+            raise ValueError("channel_id cannot be empty")
+        if not params or not params.strip():
+            raise ValueError("params cannot be empty")
+
+        logger.debug("Fetching artist albums: %s", channel_id)
+        try:
+            return self._ytm.get_artist_albums(
+                channel_id,
+                params,
+                limit=limit,
+                order=order,
+            )
+        except (YTMusicServerError, YTMusicUserError) as e:
+            logger.warning("YTMusic API error for artist albums %s: %s", channel_id, e)
+            raise APIError(f"Failed to fetch artist albums: {e}") from e
+        except YTMusicError as e:
+            logger.warning("YTMusic error for artist albums %s: %s", channel_id, e)
+            raise APIError(f"Failed to fetch artist albums: {e}") from e
 
     def _normalize_watch_track(self, track: dict) -> dict:
         """Normalize get_watch_playlist track to PlaylistTrack format.

@@ -9,9 +9,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from importlib.metadata import version
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from rich.console import Console
@@ -20,9 +19,19 @@ from yubal import cleanup_part_files
 
 from yubal_api.api.container import Services
 from yubal_api.api.exceptions import register_exception_handlers
-from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions, albums, search, songs
+from yubal_api.api.routes import (
+    albums,
+    artists,
+    cookies,
+    health,
+    jobs,
+    logs,
+    scheduler,
+    search,
+    songs,
+    subscriptions,
+)
 from yubal_api.db import DB_FILE, SubscriptionRepository, create_db_engine, init_db
-
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import (
@@ -151,6 +160,7 @@ def create_api_router() -> APIRouter:
     api_router.include_router(search.router)
     api_router.include_router(albums.router)
     api_router.include_router(songs.router)
+    api_router.include_router(artists.router)
     return api_router
 
 
