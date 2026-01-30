@@ -32,6 +32,7 @@ export function CookieDropdown({
         <DropdownTrigger>
           <Button
             isIconOnly
+            size="sm"
             variant="light"
             aria-label="Cookie options"
             isLoading={isDeleting}

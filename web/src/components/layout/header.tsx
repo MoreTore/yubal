@@ -77,7 +77,7 @@ export function Header() {
               isBlock
               href={item.href}
               color="foreground"
-              className="text-foreground-400 text-medium group-data-[active=true]:text-foreground flex items-center gap-2 px-3 py-2 font-medium"
+              className="text-foreground-400 text-small group-data-[active=true]:text-foreground flex items-center gap-2 px-3 py-2 font-medium"
             >
               {item.label}
               {item.href === "/subscriptions" && subscriptionCount > 0 && (
@@ -88,7 +88,7 @@ export function Header() {
                   className="font-mono"
                   classNames={{
                     content:
-                      "text-foreground-400 group-data-[active=true]:text-foreground",
+                      "text-foreground-400 text-xs group-data-[active=true]:text-foreground",
                   }}
                 >
                   {subscriptionCount}
@@ -104,6 +104,7 @@ export function Header() {
         <NavbarItem className="hidden sm:flex">
           <Button
             as="a"
+            size="sm"
             href="https://github.com/guillevc/yubal"
             target="_blank"
             rel="noopener noreferrer"
@@ -115,7 +116,7 @@ export function Header() {
               />
             }
           >
-            Star on GitHub
+            <span className="text-small">Star on GitHub</span>
           </Button>
         </NavbarItem>
         <NavbarItem className="hidden sm:flex">
