@@ -1,8 +1,8 @@
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
 import { execSync } from "child_process";
 import { resolve } from "path";
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 function getVersion(): string {
   if (process.env.VITE_VERSION) return process.env.VITE_VERSION;
