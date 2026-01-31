@@ -7,7 +7,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from yubal import CancelToken, cleanup_part_files
+from yubal import AudioCodec, CancelToken, cleanup_part_files
 
 from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.domain.enums import JobStatus, ProgressStep
@@ -43,7 +43,7 @@ class JobExecutor:
         self,
         job_store: JobExecutionStore,
         base_path: Path,
-        audio_format: str = "opus",
+        audio_format: AudioCodec = AudioCodec.OPUS,
         cookies_path: Path | None = None,
         fetch_lyrics: bool = True,
         subscription_repository: SubscriptionRepository | None = None,
@@ -69,6 +69,32 @@ class JobExecutor:
         self._background_tasks: set[asyncio.Task[Any]] = set()
         # Map job_id -> CancelToken for cancellation support
         self._cancel_tokens: dict[str, CancelToken] = {}
+
+    def create_and_start_job(
+        self, url: str, max_items: int | None = None
+    ) -> Job | None:
+        """Create a new job and start it if ready.
+
+        This is the primary entry point for job creation. It handles:
+        - Creating the job with proper audio format from settings
+        - Starting the job if a slot is available
+
+        Args:
+            url: The URL to download content from.
+            max_items: Maximum number of items to download (None for all).
+
+        Returns:
+            The created Job, or None if queue is full.
+        """
+        result = self._job_store.create(url, self._audio_format, max_items)
+        if result is None:
+            return None
+
+        job, should_start = result
+        if should_start:
+            self.start_job(job)
+
+        return job
 
     def start_job(self, job: Job) -> None:
         """Start a job as a background task.

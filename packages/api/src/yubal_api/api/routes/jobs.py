@@ -7,7 +7,6 @@ Jobs are processed sequentially in FIFO order.
 from fastapi import APIRouter, status
 
 from yubal_api.api.deps import (
-    AudioFormatDep,
     JobExecutorDep,
     JobStoreDep,
 )
@@ -44,23 +43,16 @@ def _get_job_or_raise(job_store: JobStore, job_id: str) -> Job:
 )
 async def create_job(
     request: CreateJobRequest,
-    audio_format: AudioFormatDep,
-    job_store: JobStoreDep,
     job_executor: JobExecutorDep,
 ) -> JobCreatedResponse:
     """Create a new sync job.
 
     Jobs are queued and executed sequentially. Returns 409 if queue is full.
     """
-    result = job_store.create(request.url, audio_format, request.max_items)
+    job = job_executor.create_and_start_job(request.url, request.max_items)
 
-    if result is None:
+    if job is None:
         raise QueueFullError()
-
-    job, should_start = result
-
-    if should_start:
-        job_executor.start_job(job)
 
     return JobCreatedResponse(id=job.id)
 

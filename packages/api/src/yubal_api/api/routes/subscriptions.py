@@ -32,7 +32,7 @@ router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
 
 @router.post("/sync", response_model=SyncResponse)
-def sync_all_subscriptions(
+async def sync_all_subscriptions(
     scheduler: SchedulerDep,
 ) -> SyncResponse:
     """Sync all enabled subscriptions."""
@@ -147,7 +147,7 @@ def delete_subscription(
 
 
 @router.post("/{subscription_id}/sync", response_model=SyncResponse)
-def sync_subscription(
+async def sync_subscription(
     subscription_id: UUID,
     repository: RepositoryDep,
     scheduler: SchedulerDep,

@@ -1,5 +1,6 @@
 """Alembic environment configuration for database migrations."""
 
+import logging
 from logging.config import fileConfig
 
 from alembic import context
@@ -17,7 +18,10 @@ settings = get_settings()
 settings.db_path.parent.mkdir(parents=True, exist_ok=True)
 config.set_main_option("sqlalchemy.url", f"sqlite:///{settings.db_path}")
 
-if config.config_file_name is not None:
+# Only configure logging from alembic.ini if not already configured.
+# When running programmatically (via app.py), logging is already set up.
+# This prevents alembic from overwriting the app's log level configuration.
+if config.config_file_name is not None and not logging.root.handlers:
     fileConfig(config.config_file_name)
 
 target_metadata = SQLModel.metadata

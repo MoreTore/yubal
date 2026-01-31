@@ -132,7 +132,7 @@ def create_services(repository: SubscriptionRepository) -> Services:
     # Create scheduler
     scheduler_service = Scheduler(
         repository=repository,
-        job_store=job_store,
+        job_executor=job_executor,
         settings=settings,
     )
 

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Protocol
 
-from yubal import PhaseStats
+from yubal import AudioCodec, PhaseStats
 
 from yubal_api.domain.enums import JobStatus
 from yubal_api.domain.job import ContentInfo, Job
@@ -17,6 +17,19 @@ class JobExecutionStore(Protocol):
 
     All methods are synchronous as they only operate on in-memory data.
     """
+
+    def create(
+        self,
+        url: str,
+        audio_format: AudioCodec,
+        max_items: int | None = None,
+    ) -> tuple[Job, bool] | None:
+        """Create a new job.
+
+        Returns:
+            Tuple of (job, should_start) or None if queue is full.
+        """
+        ...
 
     def transition(
         self,

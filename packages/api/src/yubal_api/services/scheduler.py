@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.db.subscription import Subscription
-from yubal_api.services.job_store import JobStore
+from yubal_api.services.job_executor import JobExecutor
 from yubal_api.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -20,12 +20,12 @@ class Scheduler:
     def __init__(
         self,
         repository: SubscriptionRepository,
-        job_store: JobStore,
+        job_executor: JobExecutor,
         settings: Settings,
     ) -> None:
         """Initialize scheduler."""
         self._repository = repository
-        self._job_store = job_store
+        self._job_executor = job_executor
         self._settings = settings
         self._task: asyncio.Task[None] | None = None
         self._stop_event = asyncio.Event()
@@ -98,29 +98,29 @@ class Scheduler:
         job_ids: list[str] = []
         for subscription in subscriptions:
             try:
-                result = self._job_store.create(
-                    subscription.url, max_items=subscription.max_items
+                job = self._job_executor.create_and_start_job(
+                    subscription.url, subscription.max_items
                 )
-                if result is None:
+                if job is None:
                     logger.warning(
-                        "Could not create job for subscription %s (queue full)",
+                        "Could not create job for %s (queue full)",
                         subscription.name,
                     )
                     continue
-                job, _ = result
+
                 job_ids.append(job.id)
                 self._repository.update(
                     subscription.id,
                     last_synced_at=datetime.now(UTC),
                 )
                 logger.info(
-                    "Created sync job %s for subscription %s",
+                    "Created sync job %s for %s",
                     job.id[:8],
                     subscription.name,
                 )
             except Exception:
                 logger.exception(
-                    "Failed to create job for subscription %s",
+                    "Failed to create job for %s",
                     subscription.name,
                 )
         return job_ids
