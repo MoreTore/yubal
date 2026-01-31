@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+---
+services:
+  yubal:
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "yubal_api.api.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--log-level",
+        "debug",
+        "--reload",
+        "--reload-dir",
+        "/app/packages",
+      ]
+    environment:
+      YUBAL_PORT: 8000
+      YUBAL_TZ: Europe/Madrid
+      YUBAL_CONFIG: /tmp/yubal-config
+      YUBAL_LOG_LEVEL: DEBUG
+      YUBAL_DEBUG: "true"
+      PYTHONPATH: /app/packages/api/src:/app/packages/yubal/src
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./packages:/app/packages
+
+  web:
+    image: oven/bun:1-alpine
+    working_dir: /app/web
+    environment:
+      VITE_API_PROXY_TARGET: http://yubal:8000
+    command: ["/bin/sh", "-c", "bun install --frozen-lockfile && bun run dev --host 0.0.0.0 --port 5173"]
+    ports:
+      - 5173:5173
+    volumes:
+      - ./web:/app/web
+      - web_node_modules:/app/web/node_modules
+      - bun_cache:/root/.bun
+    depends_on:
+      - yubal
+
+volumes:
+  web_node_modules:
+  bun_cache:

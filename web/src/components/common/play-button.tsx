@@ -23,6 +23,7 @@ export function PlayButton({
     isLoading,
     loadingVideoId,
     play,
+    prefetch,
     pause,
     resume,
   } = useAudioPlayer();
@@ -64,6 +65,8 @@ export function PlayButton({
       variant="light"
       isIconOnly
       aria-label={isPlaying ? "Pause" : "Play"}
+      onMouseEnter={() => prefetch(videoId)}
+      onFocus={() => prefetch(videoId)}
       onPress={() => {
         void handlePress();
       }}

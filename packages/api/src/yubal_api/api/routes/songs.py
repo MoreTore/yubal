@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -31,6 +32,9 @@ ALLOWED_STREAM_HEADERS = {
     "cache-control",
 }
 
+_STREAM_CACHE: dict[str, tuple[dict[str, Any], dict[str, Any], datetime | None]] = {}
+_STREAM_CACHE_LOCK = asyncio.Lock()
+
 
 class _YTDlpLogger:
     """Proxy yt-dlp logs through the application logger."""
@@ -47,6 +51,12 @@ class _YTDlpLogger:
 
 def _ensure_cache_dir(base_dir: Path) -> Path:
     cache_dir = base_dir / "yt-dlp-cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def _ensure_stream_cache_dir(base_dir: Path) -> Path:
+    cache_dir = base_dir / "stream-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
 
@@ -77,7 +87,7 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
-def _parse_expiration(url: str) -> str | None:
+def _parse_expiration_dt(url: str) -> datetime | None:
     try:
         expire_value = parse_qs(urlparse(url).query).get("expire")
         if not expire_value:
@@ -85,7 +95,24 @@ def _parse_expiration(url: str) -> str | None:
         timestamp = int(expire_value[0])
     except (TypeError, ValueError):
         return None
-    return datetime.fromtimestamp(timestamp, tz=UTC).isoformat()
+    return datetime.fromtimestamp(timestamp, tz=UTC)
+
+
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def _parse_expiration(url: str) -> str | None:
+    expires_at = _parse_expiration_dt(url)
+    return expires_at.isoformat() if expires_at else None
 
 
 def _select_stream_format(info: dict[str, Any]) -> dict[str, Any]:
@@ -116,23 +143,133 @@ def _extract_stream_info(
     return info, _select_stream_format(info)
 
 
+def _stream_cache_path(cache_dir: Path, video_id: str) -> Path:
+    return cache_dir / f"{video_id}.json"
+
+
+def _serialize_stream_cache(
+    info: dict[str, Any],
+    stream_format: dict[str, Any],
+    expires_at: datetime | None,
+) -> dict[str, Any]:
+    return {
+        "expiresAt": expires_at.isoformat() if expires_at else None,
+        "info": {
+            "id": info.get("id"),
+            "url": info.get("url"),
+            "thumbnails": info.get("thumbnails"),
+            "duration": info.get("duration"),
+            "filesize": info.get("filesize"),
+            "webpage_url": info.get("webpage_url"),
+            "title": info.get("title"),
+            "fulltitle": info.get("fulltitle"),
+            "artist": info.get("artist"),
+            "uploader": info.get("uploader"),
+            "channel": info.get("channel"),
+            "channel_id": info.get("channel_id"),
+        },
+        "format": {
+            "mimeType": stream_format.get("mimeType"),
+            "ext": stream_format.get("ext"),
+            "tbr": stream_format.get("tbr"),
+            "abr": stream_format.get("abr"),
+            "asr": stream_format.get("asr"),
+            "filesize": stream_format.get("filesize"),
+            "filesize_approx": stream_format.get("filesize_approx"),
+        },
+    }
+
+
+def _deserialize_stream_cache(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], datetime | None] | None:
+    info = payload.get("info")
+    stream_format = payload.get("format")
+    if not isinstance(info, dict) or not isinstance(stream_format, dict):
+        return None
+    expires_at = _parse_iso_datetime(payload.get("expiresAt"))
+    return info, stream_format, expires_at
+
+
+def _read_stream_cache(
+    cache_dir: Path,
+    video_id: str,
+) -> tuple[dict[str, Any], dict[str, Any], datetime | None] | None:
+    path = _stream_cache_path(cache_dir, video_id)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    result = _deserialize_stream_cache(payload)
+    if not result:
+        return None
+    info, stream_format, expires_at = result
+    if expires_at and expires_at <= datetime.now(UTC):
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        return None
+    return info, stream_format, expires_at
+
+
+def _write_stream_cache(
+    cache_dir: Path,
+    video_id: str,
+    info: dict[str, Any],
+    stream_format: dict[str, Any],
+    expires_at: datetime | None,
+) -> None:
+    path = _stream_cache_path(cache_dir, video_id)
+    payload = _serialize_stream_cache(info, stream_format, expires_at)
+    try:
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    except OSError:
+        return
+
+
+async def _get_stream_info(
+    video_id: str,
+    cookies_path: Path | None,
+    cache_dir: Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    async with _STREAM_CACHE_LOCK:
+        cached = _STREAM_CACHE.get(video_id)
+        if cached:
+            info, stream_format, expires_at = cached
+            if not expires_at or expires_at > datetime.now(UTC):
+                logger.debug("Stream cache hit for %s", video_id)
+                return info, stream_format
+            _STREAM_CACHE.pop(video_id, None)
+
+    stream_cache_dir = _ensure_stream_cache_dir(cache_dir)
+    cached_on_disk = _read_stream_cache(stream_cache_dir, video_id)
+    if cached_on_disk:
+        info, stream_format, expires_at = cached_on_disk
+        async with _STREAM_CACHE_LOCK:
+            _STREAM_CACHE[video_id] = (info, stream_format, expires_at)
+        logger.debug("Stream disk cache hit for %s", video_id)
+        return info, stream_format
+
+    info, stream_format = _extract_stream_info(video_id, cookies_path, cache_dir)
+    stream_url = info.get("url") or ""
+    expires_at = _parse_expiration_dt(stream_url) if stream_url else None
+    async with _STREAM_CACHE_LOCK:
+        _STREAM_CACHE[video_id] = (info, stream_format, expires_at)
+    _write_stream_cache(stream_cache_dir, video_id, info, stream_format, expires_at)
+    return info, stream_format
+
+
 @router.get("/{video_id}", status_code=status.HTTP_200_OK)
 async def get_song(video_id: str) -> dict[str, Any]:
     """Get streaming metadata for a song by video ID."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
     cache_dir = _ensure_cache_dir(settings.temp)
 
     try:
-        song = client.get_song(video_id)
-    except APIError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
-        ) from exc
-
-    try:
-        playback_info, playback_format = _extract_stream_info(
+        playback_info, playback_format = await _get_stream_info(
             video_id,
             settings.cookies_file,
             cache_dir,
@@ -143,20 +280,8 @@ async def get_song(video_id: str) -> dict[str, Any]:
             detail=str(exc),
         ) from exc
 
-    video_details = song.get("videoDetails") or {}
-    microformat = (song.get("microformat") or {}).get("microformatDataRenderer", {})
-    microformat_details = microformat.get("videoDetails") or {}
-    thumbnails = (
-        video_details.get("thumbnail", {}).get("thumbnails")
-        or microformat.get("thumbnail", {}).get("thumbnails")
-        or playback_info.get("thumbnails")
-        or []
-    )
-    duration_seconds = (
-        _safe_int(video_details.get("lengthSeconds"))
-        or _safe_int(microformat_details.get("durationSeconds"))
-        or _safe_int(playback_info.get("duration"))
-    )
+    thumbnails = playback_info.get("thumbnails") or []
+    duration_seconds = _safe_int(playback_info.get("duration"))
 
     stream_url = playback_info.get("url")
     if not stream_url:
@@ -179,19 +304,18 @@ async def get_song(video_id: str) -> dict[str, Any]:
     }
 
     artist = (
-        video_details.get("author")
-        or playback_info.get("artist")
+        playback_info.get("artist")
         or playback_info.get("uploader")
         or playback_info.get("channel")
     )
+    channel_id = playback_info.get("channel_id")
 
     return {
-        "videoId": video_details.get("videoId") or playback_info.get("id") or video_id,
-        "title": video_details.get("title")
-        or playback_info.get("title")
+        "videoId": playback_info.get("id") or video_id,
+        "title": playback_info.get("title")
         or playback_info.get("fulltitle"),
         "artist": artist,
-        "channelId": video_details.get("channelId") or playback_info.get("channel_id"),
+        "channelId": channel_id,
         "durationSeconds": duration_seconds,
         "thumbnails": thumbnails,
         "sourceUrl": playback_info.get("webpage_url"),
@@ -213,7 +337,7 @@ async def stream_song(
     cache_dir = _ensure_cache_dir(settings.temp)
 
     try:
-        playback_info, _ = _extract_stream_info(
+        playback_info, _ = await _get_stream_info(
             video_id,
             settings.cookies_file,
             cache_dir,
@@ -236,7 +360,8 @@ async def stream_song(
         request_headers["Range"] = range_header
 
     http_client = httpx.AsyncClient(timeout=None)
-    upstream = await http_client.stream("GET", stream_url, headers=request_headers)
+    stream_ctx = http_client.stream("GET", stream_url, headers=request_headers)
+    upstream = await stream_ctx.__aenter__()
 
     if upstream.status_code >= 400:
         await upstream.aclose()
@@ -256,12 +381,10 @@ async def stream_song(
         async for chunk in upstream.aiter_raw():
             yield chunk
 
-    def _finalize() -> None:
-        async def closer() -> None:
-            await upstream.aclose()
-            await http_client.aclose()
-
-        _ = asyncio.create_task(closer())
+    async def _finalize() -> None:
+        await upstream.aclose()
+        await stream_ctx.__aexit__(None, None, None)
+        await http_client.aclose()
 
     return StreamingResponse(
         chunk_generator(),

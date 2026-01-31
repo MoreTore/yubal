@@ -1,11 +1,13 @@
+import { useAudioPlayer } from "@/features/player/audio-player-provider";
 import { Button } from "@heroui/react";
 import { ArrowLeft, User2 } from "lucide-react";
+import { useEffect } from "react";
 import type { ArtistItem, ArtistResponse } from "../api/artist";
 import {
-  getMusicUrl,
-  getSubtitle,
-  getThumbnailUrl,
-  getTitle,
+    getMusicUrl,
+    getSubtitle,
+    getThumbnailUrl,
+    getTitle,
 } from "../lib/music-helpers";
 import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
@@ -66,6 +68,7 @@ export function ArtistPanel({
   downloadStatuses,
 }: ArtistPanelProps) {
   const heroThumbnail = artist ? getThumbnailUrl(artist) : null;
+  const { prefetch } = useAudioPlayer();
   const sections: Array<[ArtistSectionKey, ArtistItem[]]> = [
     ["songs", artist?.songs?.results ?? []],
     ["albums", artist?.albums?.results ?? []],
@@ -73,6 +76,15 @@ export function ArtistPanel({
     ["videos", artist?.videos?.results ?? []],
     ["related", artist?.related?.results ?? []],
   ];
+
+  useEffect(() => {
+    const songItems = artist?.songs?.results ?? [];
+    songItems
+      .map((item) => item.videoId)
+      .filter(Boolean)
+      .slice(0, 3)
+      .forEach((videoId) => prefetch(videoId!));
+  }, [artist, prefetch]);
 
   return (
     <Panel>

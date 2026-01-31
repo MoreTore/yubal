@@ -1,5 +1,7 @@
+import { useAudioPlayer } from "@/features/player/audio-player-provider";
 import { Button } from "@heroui/react";
 import { ArrowLeft, Music2 } from "lucide-react";
+import { useEffect } from "react";
 import type { RelatedSection } from "../api/song-related";
 import {
   getBrowseId,
@@ -42,6 +44,23 @@ export function SongRelatedPanel({
   onViewArtist,
   onBack,
 }: SongRelatedPanelProps) {
+  const { prefetch } = useAudioPlayer();
+
+  useEffect(() => {
+    const ids: string[] = [];
+    for (const section of sections) {
+      if (ids.length >= 3) break;
+      const items = Array.isArray(section.contents) ? section.contents : [];
+      for (const item of items) {
+        if (item.videoId) {
+          ids.push(item.videoId);
+        }
+        if (ids.length >= 3) break;
+      }
+    }
+    ids.forEach((videoId) => prefetch(videoId));
+  }, [sections, prefetch]);
+
   return (
     <Panel>
       <PanelHeader

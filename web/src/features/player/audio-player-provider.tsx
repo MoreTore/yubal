@@ -39,6 +39,7 @@ interface AudioPlayerContextValue {
   isLoading: boolean;
   loadingVideoId: string | null;
   play: (videoId: string, metadata: PlayMetadata) => Promise<void>;
+  prefetch: (videoId: string) => void;
   pause: () => void;
   resume: () => Promise<void>;
   stop: () => void;
@@ -210,6 +211,19 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     [],
   );
 
+  const prefetch = useCallback((videoId: string) => {
+    if (!videoId) return;
+    const existing = cacheRef.current.get(videoId);
+    if (existing && !isExpired(existing)) return;
+    void fetchSongPlayback(videoId)
+      .then((playback) => {
+        cacheRef.current.set(videoId, playback);
+      })
+      .catch(() => {
+        // Prefetch is best-effort; ignore failures.
+      });
+  }, []);
+
   const pause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -255,11 +269,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       isLoading: state.status === "loading",
       loadingVideoId: state.loadingVideoId,
       play,
+      prefetch,
       pause,
       resume,
       stop,
     }),
-    [state, play, pause, resume, stop],
+    [state, play, prefetch, pause, resume, stop],
   );
 
   return (

@@ -1,10 +1,11 @@
+import { useAudioPlayer } from "@/features/player/audio-player-provider";
 import { Button } from "@heroui/react";
 import { Download, Search } from "lucide-react";
+import { useEffect } from "react";
 import type { SearchResult } from "../api/search";
 import {
   getBrowseId,
   getMusicUrl,
-  getSubtitle,
   getThumbnailUrl,
   getTitle,
 } from "../lib/music-helpers";
@@ -71,6 +72,7 @@ export function SearchResultsPanel({
   onViewArtist,
   downloadStatuses,
 }: SearchResultsPanelProps) {
+  const { prefetch } = useAudioPlayer();
   const topArtistIndex = results.findIndex(
     (item) =>
       item.category?.toLowerCase() === "top result" &&
@@ -129,6 +131,24 @@ export function SearchResultsPanel({
     topArtistUrl
       ? (downloadStatuses[topArtistUrl] ?? { status: "idle", progress: null })
       : { status: "idle", progress: null };
+
+  useEffect(() => {
+    const ids: string[] = [];
+    for (const item of topItems) {
+      if (item.videoId) ids.push(item.videoId);
+      if (ids.length >= 3) break;
+    }
+    if (ids.length < 3) {
+      for (const items of Object.values(grouped)) {
+        for (const item of items) {
+          if (item.videoId) ids.push(item.videoId);
+          if (ids.length >= 3) break;
+        }
+        if (ids.length >= 3) break;
+      }
+    }
+    ids.forEach((videoId) => prefetch(videoId));
+  }, [topItems, grouped, prefetch]);
 
   return (
     <Panel>

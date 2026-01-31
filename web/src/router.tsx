@@ -10,14 +10,14 @@ import { SearchPage } from "@/pages/search";
 import { SubscriptionsPage } from "@/pages/subscriptions";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import {
-  createRootRoute,
-  createRoute,
-  createRouter,
-  NavigateOptions,
-  Outlet,
-  ToOptions,
-  useNavigate,
-  useRouter,
+    createRootRoute,
+    createRoute,
+    createRouter,
+    NavigateOptions,
+    Outlet,
+    ToOptions,
+    useNavigate,
+    useRouter,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 
