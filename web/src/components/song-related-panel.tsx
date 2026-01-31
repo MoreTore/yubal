@@ -4,11 +4,11 @@ import { ArrowLeft, Music2 } from "lucide-react";
 import { useEffect } from "react";
 import type { RelatedSection } from "../api/song-related";
 import {
-  getBrowseId,
-  getMusicUrl,
-  getSubtitle,
-  getThumbnailUrl,
-  getTitle,
+    getBrowseId,
+    getMusicUrl,
+    getSubtitle,
+    getThumbnailUrl,
+    getTitle,
 } from "../lib/music-helpers";
 import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
