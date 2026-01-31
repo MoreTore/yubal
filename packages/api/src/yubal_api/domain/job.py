@@ -15,6 +15,7 @@ class ContentInfo(BaseModel):
     artist: str
     year: int | None = None
     track_count: int
+    album_count: int | None = None
     playlist_id: str = ""
     url: str | None = Field(default=None, json_schema_extra={"format": "uri"})
     thumbnail_url: str | None = Field(default=None, json_schema_extra={"format": "uri"})

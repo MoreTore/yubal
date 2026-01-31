@@ -168,6 +168,25 @@ class DiscographyService:
             errors=errors,
         )
 
+    def resolve_metadata(
+        self,
+        channel_id: str,
+        *,
+        include_albums: bool = True,
+        include_singles: bool = True,
+    ) -> ContentInfo | None:
+        """Resolve discography metadata without downloading."""
+        client = YTMusicClient(cookies_path=self._cookies_path)
+        plan = self._collect_discography(
+            client,
+            channel_id,
+            include_albums=include_albums,
+            include_singles=include_singles,
+        )
+        if not plan.releases:
+            return None
+        return self._build_content_info(plan, channel_id)
+
     # --------------------------------------------------------------------- #
     # Internal helpers
     # --------------------------------------------------------------------- #
@@ -273,6 +292,7 @@ class DiscographyService:
             artist=artist_name,
             year=None,
             track_count=0,
+            album_count=len(plan.releases),
             playlist_id=channel_id,
             url=f"https://music.youtube.com/browse/{channel_id}",
             thumbnail_url=plan.thumbnail_url,

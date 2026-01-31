@@ -148,19 +148,23 @@ function ContentInfo({
   artist,
   year,
   trackCount,
+  albumCount,
   audioCodec,
   audioBitrate,
   showBitrate,
   kind,
+  isDiscography,
 }: {
   title: string;
   artist: string | null;
   year: number | null;
   trackCount: number | null;
+  albumCount: number | null;
   audioCodec: string | null;
   audioBitrate: number | null;
   showBitrate: boolean;
   kind: string | null;
+  isDiscography: boolean;
 }) {
   return (
     <>
@@ -173,11 +177,15 @@ function ContentInfo({
       </p>
       <div className="flex items-center gap-1">
         {kind && <MetadataChip className="capitalize">{kind}</MetadataChip>}
-        {trackCount && kind !== "track" && (
+        {isDiscography && albumCount ? (
+          <MetadataChip>
+            {albumCount} {albumCount === 1 ? "album" : "albums"}
+          </MetadataChip>
+        ) : trackCount && kind !== "track" ? (
           <MetadataChip>
             {trackCount} {trackCount === 1 ? "track" : "tracks"}
           </MetadataChip>
-        )}
+        ) : null}
         {audioCodec && (
           <MetadataChip>
             <span className="uppercase">{audioCodec}</span>
@@ -198,6 +206,10 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
   const { content_info, download_stats } = job;
   const hasPartialFailures =
     job.status === "completed" && (download_stats?.failed ?? 0) > 0;
+  const isDiscography = job.kind === "discography";
+  const kindLabel = isDiscography
+    ? "discography"
+    : (content_info?.kind ?? null);
 
   return (
     <div
@@ -220,10 +232,12 @@ export function JobCard({ job, onCancel, onDelete }: JobCardProps) {
               artist={content_info.artist ?? null}
               year={content_info.year ?? null}
               trackCount={content_info.track_count ?? null}
+              albumCount={content_info.album_count ?? null}
               audioCodec={content_info.audio_codec ?? null}
               audioBitrate={content_info.audio_bitrate ?? null}
               showBitrate={isJobFinished}
-              kind={content_info.kind ?? null}
+              kind={kindLabel}
+              isDiscography={isDiscography}
             />
           ) : (
             <p className="text-foreground-500 truncate text-xs">{job.url}</p>

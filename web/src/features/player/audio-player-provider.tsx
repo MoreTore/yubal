@@ -43,6 +43,7 @@ interface AudioPlayerContextValue {
   pause: () => void;
   resume: () => Promise<void>;
   stop: () => void;
+  seek: (nextSeconds: number) => void;
 }
 
 interface PlayerState {
@@ -260,6 +261,28 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     });
   }, []);
 
+  const seek = useCallback(
+    (nextSeconds: number) => {
+      const audio = audioRef.current;
+      if (!audio || !state.currentTrack) return;
+      if (!Number.isFinite(nextSeconds)) return;
+
+      const duration = Number.isFinite(audio.duration)
+        ? audio.duration
+        : state.durationSeconds ?? null;
+      const clamped =
+        duration && duration > 0
+          ? Math.min(Math.max(nextSeconds, 0), duration)
+          : Math.max(nextSeconds, 0);
+
+      audio.currentTime = clamped;
+      setState((prev) =>
+        prev.currentTrack ? { ...prev, progressSeconds: clamped } : prev,
+      );
+    },
+    [state.currentTrack, state.durationSeconds],
+  );
+
   const value = useMemo<AudioPlayerContextValue>(
     () => ({
       currentTrack: state.currentTrack,
@@ -273,8 +296,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       pause,
       resume,
       stop,
+      seek,
     }),
-    [state, play, prefetch, pause, resume, stop],
+    [state, play, prefetch, pause, resume, stop, seek],
   );
 
   return (
@@ -292,4 +316,3 @@ export function useAudioPlayer(): AudioPlayerContextValue {
   }
   return context;
 }
-

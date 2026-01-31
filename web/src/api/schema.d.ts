@@ -497,6 +497,8 @@ export interface components {
             year?: number | null;
             /** Track Count */
             track_count: number;
+            /** Album Count */
+            album_count?: number | null;
             /**
              * Playlist Id
              * @default

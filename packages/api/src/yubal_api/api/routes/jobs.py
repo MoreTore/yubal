@@ -65,6 +65,8 @@ async def create_job(
 
     job, should_start = result
 
+    job_executor.start_metadata_prefetch(job)
+
     if should_start:
         job_executor.start_job(job)
 

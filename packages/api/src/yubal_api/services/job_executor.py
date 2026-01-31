@@ -13,6 +13,7 @@ from yubal_api.domain.enums import JobKind, JobStatus, ProgressStep
 from yubal_api.domain.job import ContentInfo, Job
 from yubal_api.services.protocols import JobExecutionStore
 from yubal_api.services.discography import DiscographyResult, DiscographyService
+from yubal_api.services.metadata import MetadataResolver
 from yubal_api.services.sync import ProgressCallback, SyncService
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ class JobExecutor:
 
         # Track background tasks to prevent GC during execution
         self._background_tasks: set[asyncio.Task[Any]] = set()
+        self._metadata_tasks: set[asyncio.Task[Any]] = set()
         # Map job_id -> CancelToken for cancellation support
         self._cancel_tokens: dict[str, CancelToken] = {}
 
@@ -82,6 +84,15 @@ class JobExecutor:
         )
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
+
+    def start_metadata_prefetch(self, job: Job) -> None:
+        """Resolve metadata early without starting downloads."""
+        task = asyncio.create_task(
+            self._run_metadata_prefetch(job),
+            name=f"job-meta-{job.id[:8]}",
+        )
+        self._metadata_tasks.add(task)
+        task.add_done_callback(self._metadata_tasks.discard)
 
     def cancel_job(self, job_id: str) -> bool:
         """Signal cancellation for a running job.
@@ -114,6 +125,40 @@ class JobExecutor:
         for token in tokens:
             token.cancel()
         return len(tokens)
+
+    async def _run_metadata_prefetch(self, job: Job) -> None:
+        try:
+            resolver = MetadataResolver(
+                audio_format=self._audio_format,
+                cookies_path=self._cookies_path,
+                base_path=self._base_path,
+                fetch_lyrics=self._fetch_lyrics,
+            )
+            content_info = await asyncio.to_thread(
+                resolver.resolve,
+                job.url,
+                kind=job.kind,
+                channel_id=job.channel_id,
+                max_items=job.max_items,
+            )
+            if content_info is None:
+                return
+
+            current = self._job_store.get(job.id)
+            if (
+                current is None
+                or current.status.is_finished
+                or current.content_info is not None
+            ):
+                return
+
+            self._job_store.transition(
+                job.id,
+                current.status,
+                content_info=content_info,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("Metadata prefetch failed for %s: %s", job.id[:8], exc)
 
     async def _run_job(self, job: Job) -> None:
         """Background task that runs the sync operation."""

@@ -70,6 +70,29 @@ html.flexoki-dark {
   background-color: #000;
 }
 
+/* Audio scrubber styling */
+.audio-scrubber {
+  accent-color: hsl(var(--heroui-primary));
+}
+
+.audio-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: hsl(var(--heroui-primary));
+  border: none;
+}
+
+.audio-scrubber::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: hsl(var(--heroui-primary));
+  border: none;
+}
+
 /* Console panel ANSI styling using HeroUI semantic colors */
 /* ansi_up outputs class names like ansi-red-fg, ansi-bright-green-fg, etc. */
 .console-logs {
