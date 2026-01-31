@@ -26,12 +26,24 @@ export type CreateJobResult =
       activeJobId?: string;
     };
 
+export interface CreateJobOptions {
+  maxItems?: number;
+  kind?: components["schemas"]["JobKind"];
+  channelId?: string;
+}
+
 export async function createJob(
   url: string,
-  maxItems?: number,
+  options: CreateJobOptions = {},
 ): Promise<CreateJobResult> {
+  const { maxItems, kind, channelId } = options;
   const { data, error, response } = await api.POST("/jobs", {
-    body: { url, max_items: maxItems },
+    body: {
+      url,
+      max_items: maxItems,
+      kind,
+      channel_id: channelId,
+    },
   });
 
   if (error) {

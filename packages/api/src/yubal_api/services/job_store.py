@@ -11,7 +11,7 @@ from datetime import datetime
 
 from yubal import AudioCodec, PhaseStats
 
-from yubal_api.domain.enums import JobStatus
+from yubal_api.domain.enums import JobKind, JobStatus
 from yubal_api.domain.job import ContentInfo, Job
 from yubal_api.domain.types import Clock, IdGenerator
 
@@ -64,6 +64,9 @@ class JobStore:
         url: str,
         audio_format: AudioCodec = AudioCodec.OPUS,
         max_items: int | None = None,
+        *,
+        kind: JobKind = JobKind.SINGLE,
+        channel_id: str | None = None,
     ) -> tuple[Job, bool] | None:
         """Create a new job.
 
@@ -88,6 +91,8 @@ class JobStore:
                 url=url,
                 audio_format=audio_format,
                 max_items=max_items,
+                kind=kind,
+                channel_id=channel_id,
             )
             self._jobs[job.id] = job
 

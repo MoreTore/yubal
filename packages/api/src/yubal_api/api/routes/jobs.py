@@ -52,7 +52,13 @@ async def create_job(
 
     Jobs are queued and executed sequentially. Returns 409 if queue is full.
     """
-    result = job_store.create(request.url, audio_format, request.max_items)
+    result = job_store.create(
+        request.url,
+        audio_format,
+        request.max_items,
+        kind=request.kind,
+        channel_id=request.channel_id,
+    )
 
     if result is None:
         raise QueueFullError()

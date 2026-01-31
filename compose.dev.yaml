@@ -2,6 +2,7 @@
 ---
 services:
   yubal:
+    user: 1000:1000 # run as UID:GID (run `id` to check yours)
     command:
       [
         "python",
@@ -29,6 +30,8 @@ services:
       - ./data:/app/data
       - ./config:/app/config
       - ./packages:/app/packages
+    ports:
+      - 8000:8000
 
   web:
     image: oven/bun:1-alpine

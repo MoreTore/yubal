@@ -18,7 +18,7 @@ export function DownloadsPage() {
 
   const handleDownload = async () => {
     if (canDownload) {
-      await startJob(url, maxItems);
+      await startJob(url, { maxItems });
       setUrl("");
     }
   };

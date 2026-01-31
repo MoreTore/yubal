@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, status
 from yubal import APIError
-from yubal.client import YTMusicClient
+from yubal_api.services.ytmusic_client import get_ytmusic_client
 
 from yubal_api.settings import get_settings
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/albums", tags=["albums"])
 async def get_album(browse_id: str) -> dict:
     """Get album details and tracks by browse ID."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
+    client = get_ytmusic_client(settings.cookies_file)
 
     try:
         album = client.get_album(browse_id)

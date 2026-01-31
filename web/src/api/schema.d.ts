@@ -572,6 +572,17 @@ export interface components {
              * @description Maximum number of tracks to download
              */
             max_items?: number | null;
+            /**
+             * Kind
+             * @description Type of job to create
+             * @default single
+             */
+            kind?: components["schemas"]["JobKind"];
+            /**
+             * Channel Id
+             * @description Artist channel ID (required for discography jobs)
+             */
+            channel_id?: string | null;
         };
         /**
          * ErrorResponse
@@ -615,6 +626,10 @@ export interface components {
             audio_format: components["schemas"]["AudioCodec"];
             /** Max Items */
             max_items?: number | null;
+            /** @default single */
+            kind: components["schemas"]["JobKind"];
+            /** Channel Id */
+            channel_id?: string | null;
             /** @default pending */
             status: components["schemas"]["JobStatus"];
             /**
@@ -648,6 +663,12 @@ export interface components {
              */
             message: "Job created";
         };
+        /**
+         * JobKind
+         * @description Type of background job.
+         * @enum {string}
+         */
+        JobKind: "single" | "discography";
         /**
          * JobStatus
          * @description Status of a background job.

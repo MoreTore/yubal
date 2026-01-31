@@ -2,9 +2,16 @@
 
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, Field, WithJsonSchema
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    Field,
+    WithJsonSchema,
+    model_validator,
+)
 from yubal import AudioCodec, is_supported_url
 
+from yubal_api.domain.enums import JobKind
 from yubal_api.domain.job import Job
 
 
@@ -51,6 +58,21 @@ class CreateJobRequest(BaseModel):
         le=10000,
         description="Maximum number of tracks to download",
     )
+    kind: JobKind = Field(
+        default=JobKind.SINGLE,
+        description="Type of job to create",
+    )
+    channel_id: str | None = Field(
+        default=None,
+        description="Artist channel ID (required for discography jobs)",
+        min_length=1,
+    )
+
+    @model_validator(mode="after")
+    def _validate_discography(cls, values: "CreateJobRequest") -> "CreateJobRequest":
+        if values.kind == JobKind.DISCOGRAPHY and not values.channel_id:
+            raise ValueError("channel_id is required for discography jobs")
+        return values
 
 
 class JobsResponse(BaseModel):

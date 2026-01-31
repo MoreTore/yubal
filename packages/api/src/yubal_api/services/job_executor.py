@@ -9,10 +9,11 @@ from typing import Any
 
 from yubal import CancelToken, cleanup_part_files
 
-from yubal_api.domain.enums import JobStatus, ProgressStep
+from yubal_api.domain.enums import JobKind, JobStatus, ProgressStep
 from yubal_api.domain.job import ContentInfo, Job
 from yubal_api.services.protocols import JobExecutionStore
-from yubal_api.services.sync import SyncService
+from yubal_api.services.discography import DiscographyResult, DiscographyService
+from yubal_api.services.sync import ProgressCallback, SyncService
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class JobExecutor:
             job: The job to start executing.
         """
         task = asyncio.create_task(
-            self._run_job(job.id, job.url, job.max_items),
+            self._run_job(job),
             name=f"job-{job.id[:8]}",  # Helpful for debugging
         )
         self._background_tasks.add(task)
@@ -114,10 +115,9 @@ class JobExecutor:
             token.cancel()
         return len(tokens)
 
-    async def _run_job(
-        self, job_id: str, url: str, max_items: int | None = None
-    ) -> None:
+    async def _run_job(self, job: Job) -> None:
         """Background task that runs the sync operation."""
+        job_id = job.id
         cancel_token = CancelToken()
         self._cancel_tokens[job_id] = cancel_token
 
@@ -168,13 +168,23 @@ class JobExecutor:
                 self._cookies_path,
                 self._fetch_lyrics,
             )
-            result = await asyncio.to_thread(
-                sync_service.run,
-                url,
-                on_progress,
-                cancel_token,
-                max_items,
-            )
+            if job.kind == JobKind.DISCOGRAPHY:
+                if not job.channel_id:
+                    raise ValueError("Discography jobs require a channel_id")
+                result = await asyncio.to_thread(
+                    self._run_discography,
+                    job,
+                    cancel_token,
+                    on_progress,
+                )
+            else:
+                result = await asyncio.to_thread(
+                    sync_service.run,
+                    job.url,
+                    on_progress,
+                    cancel_token,
+                    job.max_items,
+                )
 
             # Handle result (cancelled status already set by cancel_job API)
             if cancel_token.is_cancelled:
@@ -188,7 +198,7 @@ class JobExecutor:
                     download_stats=result.download_stats,
                 )
             else:
-                error_msg = result.error or "Unknown error"
+                error_msg = self._result_error(result)
                 logger.error("Job %s failed: %s", job_id[:8], error_msg)
                 self._job_store.transition(job_id, JobStatus.FAILED)
 
@@ -209,6 +219,36 @@ class JobExecutor:
             # This ensures no concurrent downloads
             self._job_store.release_active(job_id)
             self._start_next_pending()
+
+    def _run_discography(
+        self,
+        job: Job,
+        cancel_token: CancelToken,
+        on_progress: ProgressCallback | None,
+    ) -> DiscographyResult:
+        service = DiscographyService(
+            self._base_path,
+            self._audio_format,
+            self._cookies_path,
+            self._fetch_lyrics,
+        )
+        return service.run(
+            channel_id=job.channel_id or "",
+            cancel_token=cancel_token,
+            on_progress=on_progress,
+        )
+
+    @staticmethod
+    def _result_error(result: Any) -> str:
+        error = getattr(result, "error", None)
+        if error:
+            return error
+        errors = getattr(result, "errors", None)
+        if errors:
+            if isinstance(errors, list):
+                return "; ".join(errors)
+            return str(errors)
+        return "Unknown error"
 
     @staticmethod
     def _step_to_status(step: ProgressStep) -> JobStatus:

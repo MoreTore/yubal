@@ -17,6 +17,13 @@ class JobStatus(StrEnum):
         return self in (self.COMPLETED, self.FAILED, self.CANCELLED)
 
 
+class JobKind(StrEnum):
+    """Type of background job."""
+
+    SINGLE = "single"
+    DISCOGRAPHY = "discography"
+
+
 class ProgressStep(StrEnum):
     """Steps in the sync workflow. Values match JobStatus."""
 

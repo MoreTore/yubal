@@ -17,7 +17,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
 from yubal import APIError
-from yubal.client import YTMusicClient
+from yubal_api.services.ytmusic_client import get_ytmusic_client
 
 from yubal_api.settings import get_settings
 
@@ -399,7 +399,7 @@ async def stream_song(
 async def get_song_related(video_id: str) -> list[dict]:
     """Get related content for a song by video ID."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
+    client = get_ytmusic_client(settings.cookies_file)
 
     try:
         related = client.get_song_related(video_id)

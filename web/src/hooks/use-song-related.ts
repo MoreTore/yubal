@@ -4,6 +4,7 @@ import { fetchSongRelated, type RelatedSection } from "../api/song-related";
 import { showErrorToast } from "../lib/toast";
 
 const relatedCache = new Map<string, RelatedSection[]>();
+const relatedInflight = new Map<string, Promise<RelatedSection[]>>();
 
 export function useSongRelated(videoId: string | null) {
   const [sections, setSections] = useState<RelatedSection[]>([]);
@@ -26,7 +27,15 @@ export function useSongRelated(videoId: string | null) {
     let active = true;
     setIsLoading(true);
 
-    fetchSongRelated(videoId)
+    const inflight =
+      relatedInflight.get(videoId) ??
+      fetchSongRelated(videoId).finally(() => {
+        relatedInflight.delete(videoId);
+      });
+
+    relatedInflight.set(videoId, inflight);
+
+    inflight
       .then((data) => {
         if (active) {
           relatedCache.set(videoId, data);

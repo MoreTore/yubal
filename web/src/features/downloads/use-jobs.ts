@@ -4,6 +4,7 @@ import {
   createJob,
   deleteJob as deleteJobApi,
   listJobs,
+  type CreateJobOptions,
   type Job,
 } from "@/api/jobs";
 import { isActive } from "@/lib/job-status";
@@ -13,7 +14,7 @@ export type { Job } from "@/api/jobs";
 
 export interface UseJobsResult {
   jobs: Job[];
-  startJob: (url: string, maxItems?: number) => Promise<boolean>;
+  startJob: (url: string, options?: CreateJobOptions) => Promise<boolean>;
   cancelJob: (jobId: string) => Promise<void>;
   deleteJob: (jobId: string) => Promise<void>;
   refreshJobs: () => Promise<void>;
@@ -57,8 +58,8 @@ export function useJobs(): UseJobsResult {
   }, [fetchJobs, stopPolling]);
 
   const startJob = useCallback(
-    async (url: string, maxItems?: number) => {
-      const result = await createJob(url, maxItems);
+    async (url: string, options?: CreateJobOptions) => {
+      const result = await createJob(url, options);
 
       if (!result.success) {
         showErrorToast("Download failed", result.error);

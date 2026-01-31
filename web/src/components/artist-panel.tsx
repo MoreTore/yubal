@@ -1,13 +1,11 @@
-import { useAudioPlayer } from "@/features/player/audio-player-provider";
 import { Button } from "@heroui/react";
-import { ArrowLeft, User2 } from "lucide-react";
-import { useEffect } from "react";
+import { ArrowLeft, Download, User2 } from "lucide-react";
 import type { ArtistItem, ArtistResponse } from "../api/artist";
 import {
-    getMusicUrl,
-    getSubtitle,
-    getThumbnailUrl,
-    getTitle,
+  getMusicUrl,
+  getSubtitle,
+  getThumbnailUrl,
+  getTitle,
 } from "../lib/music-helpers";
 import type { DownloadStatus } from "./common/download-indicator";
 import { EmptyState } from "./common/empty-state";
@@ -26,6 +24,7 @@ interface ArtistPanelProps {
     string,
     { status: DownloadStatus; progress: number | null }
   >;
+  onDownloadDiscography: (channelId: string, url: string) => void;
 }
 
 type ArtistSectionKey = "songs" | "albums" | "singles" | "videos" | "related";
@@ -66,9 +65,19 @@ export function ArtistPanel({
   onViewSong,
   onViewArtist,
   downloadStatuses,
+  onDownloadDiscography,
 }: ArtistPanelProps) {
   const heroThumbnail = artist ? getThumbnailUrl(artist) : null;
-  const { prefetch } = useAudioPlayer();
+  const channelId = artist?.channelId ?? null;
+  const discographyUrl = channelId
+    ? `https://music.youtube.com/browse/${channelId}`
+    : null;
+  const discographyStatus = discographyUrl
+    ? downloadStatuses[discographyUrl]
+    : undefined;
+  const isDiscographyActive = Boolean(
+    discographyStatus && discographyStatus.status !== "idle",
+  );
   const sections: Array<[ArtistSectionKey, ArtistItem[]]> = [
     ["songs", artist?.songs?.results ?? []],
     ["albums", artist?.albums?.results ?? []],
@@ -76,15 +85,6 @@ export function ArtistPanel({
     ["videos", artist?.videos?.results ?? []],
     ["related", artist?.related?.results ?? []],
   ];
-
-  useEffect(() => {
-    const songItems = artist?.songs?.results ?? [];
-    songItems
-      .map((item) => item.videoId)
-      .filter(Boolean)
-      .slice(0, 3)
-      .forEach((videoId) => prefetch(videoId!));
-  }, [artist, prefetch]);
 
   return (
     <Panel>
@@ -142,6 +142,22 @@ export function ArtistPanel({
                 </p>
               )}
             </section>
+
+            {channelId && discographyUrl && (
+              <div className="flex justify-end">
+                <Button
+                  color="primary"
+                  radius="full"
+                  variant={isDiscographyActive ? "flat" : "solid"}
+                  size="sm"
+                  startContent={<Download className="h-4 w-4" />}
+                  isDisabled={isDiscographyActive}
+                  onPress={() => onDownloadDiscography(channelId, discographyUrl)}
+                >
+                  {isDiscographyActive ? "Downloading..." : "Download discography"}
+                </Button>
+              </div>
+            )}
 
             {sections.map(([key, items]) =>
               items.length === 0 ? null : (

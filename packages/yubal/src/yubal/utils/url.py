@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from yubal.exceptions import PlaylistParseError
 
 PLAYLIST_ID_PATTERN = re.compile(r"list=([A-Za-z0-9_-]+)")
+BROWSE_ID_PATTERN = re.compile(r"/browse/([A-Za-z0-9_-]+)")
 VIDEO_ID_PATTERN = re.compile(r"v=([A-Za-z0-9_-]+)")
 
 # Maximum URL length to prevent potential abuse (standard browser limit)
@@ -13,7 +14,7 @@ MAX_URL_LENGTH = 2048
 
 
 def parse_playlist_id(url: str) -> str:
-    """Extract playlist ID from YouTube Music URL.
+    """Extract playlist or browse ID from YouTube Music URL.
 
     Args:
         url: Full YouTube Music playlist URL.
@@ -27,6 +28,8 @@ def parse_playlist_id(url: str) -> str:
     if not url or len(url) > MAX_URL_LENGTH:
         raise PlaylistParseError(f"Could not extract playlist ID from: {url}")
     if match := PLAYLIST_ID_PATTERN.search(url):
+        return match.group(1)
+    if match := BROWSE_ID_PATTERN.search(url):
         return match.group(1)
     raise PlaylistParseError(f"Could not extract playlist ID from: {url}")
 

@@ -4,7 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 from yubal import APIError
-from yubal.client import YTMusicClient
+from yubal_api.services.ytmusic_client import get_ytmusic_client
 
 from yubal_api.settings import get_settings
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/artists", tags=["artists"])
 async def get_artist(channel_id: str) -> dict:
     """Get artist details and top releases by channel ID."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
+    client = get_ytmusic_client(settings.cookies_file)
 
     try:
         artist = client.get_artist(channel_id)
@@ -37,7 +37,7 @@ async def get_artist_albums(
 ) -> list[dict]:
     """Get full list of artist albums/singles/shows."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
+    client = get_ytmusic_client(settings.cookies_file)
 
     try:
         albums = client.get_artist_albums(

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query, status
 from yubal import APIError
-from yubal.client import YTMusicClient
+from yubal_api.services.ytmusic_client import get_ytmusic_client
 
 from yubal_api.schemas.search import SearchResponse, SearchSuggestionsResponse
 from yubal_api.settings import get_settings
@@ -26,7 +26,7 @@ async def search(
 ) -> SearchResponse:
     """Search YouTube Music using ytmusicapi."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
+    client = get_ytmusic_client(settings.cookies_file)
 
     try:
         results = client.search(
@@ -54,7 +54,7 @@ async def search_suggestions(
 ) -> SearchSuggestionsResponse:
     """Get search suggestions from YouTube Music."""
     settings = get_settings()
-    client = YTMusicClient(cookies_path=settings.cookies_file)
+    client = get_ytmusic_client(settings.cookies_file)
 
     try:
         suggestions = client.search_suggestions(query, detailed_runs=detailed_runs)

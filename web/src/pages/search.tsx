@@ -332,6 +332,9 @@ export function SearchPage() {
               });
             }}
             downloadStatuses={downloadStatuses}
+            onDownloadDiscography={(channelId, url) => {
+              startJob(url, { kind: "discography", channelId });
+            }}
           />
         )}
 
@@ -458,6 +461,9 @@ export function SearchPage() {
               });
             }}
             downloadStatuses={downloadStatuses}
+            onDownloadDiscography={(channelId, url) => {
+              startJob(url, { kind: "discography", channelId });
+            }}
           />
         )}
 

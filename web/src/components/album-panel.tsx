@@ -1,7 +1,5 @@
-import { useAudioPlayer } from "@/features/player/audio-player-provider";
 import { Button } from "@heroui/react";
 import { ArrowLeft, Disc3, Download } from "lucide-react";
-import { useEffect } from "react";
 import type { AlbumResponse } from "../api/album";
 import { getAlbumThumbnail, getTrackMeta } from "../api/album";
 import {
@@ -39,15 +37,6 @@ export function AlbumPanel({
   const thumbnail = getAlbumThumbnail(album);
   const tracks = album?.tracks ?? [];
   const hasTracks = tracks.length > 0;
-  const { prefetch } = useAudioPlayer();
-
-  useEffect(() => {
-    tracks
-      .map((track) => track.videoId)
-      .filter(Boolean)
-      .slice(0, 3)
-      .forEach((videoId) => prefetch(videoId!));
-  }, [tracks, prefetch]);
 
   return (
     <Panel>
