@@ -43,7 +43,7 @@ export function SubscriptionsPage() {
       <h1 className="text-foreground mb-5 text-2xl font-bold">My playlists</h1>
 
       {/* URL Input Section */}
-      <section className="mb-4 flex gap-2">
+      <section className="mb-6 flex gap-2">
         <div className="flex-1">
           <UrlInput
             value={url}
