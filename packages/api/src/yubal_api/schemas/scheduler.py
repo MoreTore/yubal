@@ -1,8 +1,8 @@
 """Scheduler status schemas."""
 
-from datetime import datetime
-
 from pydantic import BaseModel
+
+from yubal_api.schemas.types import UTCDateTime
 
 
 class SubscriptionCounts(BaseModel):
@@ -18,5 +18,5 @@ class SchedulerStatus(BaseModel):
     running: bool
     enabled: bool
     interval_minutes: int
-    next_run_at: datetime | None
+    next_run_at: UTCDateTime | None
     subscription_counts: SubscriptionCounts

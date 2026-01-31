@@ -1,12 +1,12 @@
 """Subscription request/response schemas."""
 
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from yubal_api.db.subscription import SubscriptionType
 from yubal_api.schemas.jobs import YouTubeMusicUrl
+from yubal_api.schemas.types import UTCDateTime
 
 
 class SubscriptionCreate(BaseModel):
@@ -32,8 +32,8 @@ class SubscriptionResponse(BaseModel):
     enabled: bool
     max_items: int | None
     thumbnail_url: str | None = Field(default=None, json_schema_extra={"format": "uri"})
-    created_at: datetime
-    last_synced_at: datetime | None
+    created_at: UTCDateTime
+    last_synced_at: UTCDateTime | None
 
     model_config = {"from_attributes": True}
 
