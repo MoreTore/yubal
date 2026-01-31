@@ -2,7 +2,7 @@ import { heroui } from "@heroui/react";
 
 export default heroui({
   themes: {
-    "flexoki-dark": {
+    dark: {
       extend: "dark",
       colors: {
         // Primary (cyan - links, active states)
@@ -41,7 +41,7 @@ export default heroui({
       },
     },
 
-    "flexoki-light": {
+    light: {
       extend: "light",
       colors: {
         // Primary (cyan - use 600 for light mode)
