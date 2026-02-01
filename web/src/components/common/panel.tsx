@@ -1,4 +1,4 @@
-import { ScrollShadow } from "@heroui/react";
+import { Card, CardBody, CardHeader, ScrollShadow } from "@heroui/react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { forwardRef } from "react";
 
@@ -7,15 +7,16 @@ export interface PanelProps extends HTMLAttributes<HTMLElement> {
 }
 
 export const Panel = forwardRef<HTMLElement, PanelProps>(
-  ({ children, className = "", ...props }, ref) => {
+  ({ children, className = "" }) => {
     return (
-      <section
-        ref={ref}
-        className={`bg-content1 rounded-large shadow-medium flex flex-col overflow-hidden ${className}`}
-        {...props}
+      <Card
+        className={className}
+        classNames={{
+          body: "px-0",
+        }}
       >
         {children}
-      </section>
+      </Card>
     );
   },
 );
@@ -29,16 +30,16 @@ export interface PanelHeaderProps extends HTMLAttributes<HTMLElement> {
 }
 
 export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
-  (
-    { leadingIcon, badge, trailingIcon, children, className = "", ...props },
-    ref,
-  ) => {
+  ({
+    leadingIcon,
+    badge,
+    trailingIcon,
+    children,
+    className = "",
+    ...props
+  }) => {
     return (
-      <header
-        ref={ref}
-        className={`shrink-0 px-4 py-3 ${className}`}
-        {...props}
-      >
+      <CardHeader className={`shrink-0 px-4 py-3 ${className}`} {...props}>
         <div
           className={`text-foreground-500 flex items-center gap-2 ${className}`}
           {...props}
@@ -48,7 +49,7 @@ export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
           {badge}
           {trailingIcon && <span className="ml-auto">{trailingIcon}</span>}
         </div>
-      </header>
+      </CardHeader>
     );
   },
 );
@@ -62,14 +63,16 @@ export interface PanelContentProps extends HTMLAttributes<HTMLDivElement> {
 export const PanelContent = forwardRef<HTMLDivElement, PanelContentProps>(
   ({ children, className = "", height = "h-72", ...props }, ref) => {
     return (
-      <ScrollShadow
-        ref={ref}
-        className={`${height} p-3 ${className}`}
-        offset={2}
-        {...props}
-      >
-        {children}
-      </ScrollShadow>
+      <CardBody>
+        <ScrollShadow
+          ref={ref}
+          className={`${height} px-4 ${className}`}
+          offset={2}
+          {...props}
+        >
+          {children}
+        </ScrollShadow>
+      </CardBody>
     );
   },
 );
