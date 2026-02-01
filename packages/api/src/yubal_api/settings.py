@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
-from pydantic import BeforeValidator, Field, model_validator
+from pydantic import BeforeValidator, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from yubal import AudioCodec
 
@@ -84,6 +84,33 @@ class Settings(BaseSettings):
     # Timezone
     tz: Timezone = Field(default="UTC", description="Timezone for timestamps")
 
+    # Authentication
+    auth_enabled: bool = Field(default=False, description="Enable local auth")
+    auth_username: str | None = Field(
+        default=None, description="Initial admin username when enabling auth"
+    )
+    auth_password: SecretStr | None = Field(
+        default=None,
+        repr=False,
+        description="Initial admin password (hashed and persisted on first start)",
+    )
+    auth_config_file: Path | None = Field(
+        default=None,
+        description="Path to persisted auth configuration (hashed credentials + secret)",
+    )
+    auth_cookie_name: str = Field(
+        default="yubal_session", description="Session cookie name"
+    )
+    auth_cookie_secure: bool = Field(
+        default=False, description="Mark auth cookie as Secure (requires HTTPS)"
+    )
+    auth_session_hours: int = Field(
+        default=24 * 7,
+        ge=1,
+        le=24 * 30,
+        description="Session lifetime in hours",
+    )
+
     @model_validator(mode="before")
     @classmethod
     def set_path_defaults(cls, data: Any) -> Any:
@@ -96,8 +123,17 @@ class Settings(BaseSettings):
         root = Path(root) if isinstance(root, str) else root
         if not data.get("data"):
             data["data"] = root / "data"
+        elif isinstance(data["data"], str):
+            data["data"] = Path(data["data"])
         if not data.get("config"):
             data["config"] = root / "config"
+        elif isinstance(data["config"], str):
+            data["config"] = Path(data["config"])
+        config_path = data.get("config", root / "config")
+        if not data.get("auth_config_file"):
+            data["auth_config_file"] = config_path / "auth.json"
+        elif isinstance(data["auth_config_file"], str):
+            data["auth_config_file"] = Path(data["auth_config_file"])
         return data
 
     @property

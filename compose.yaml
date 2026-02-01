@@ -9,6 +9,9 @@ services:
     environment:
       YUBAL_PORT: 8000
       YUBAL_TZ: Europe/Madrid
+      YUBAL_AUTH_ENABLED: "true"
+      YUBAL_AUTH_USERNAME: admin
+      YUBAL_AUTH_PASSWORD: change-me
     ports:
       - 8000:8000
     volumes:

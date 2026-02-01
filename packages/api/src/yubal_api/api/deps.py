@@ -19,6 +19,7 @@ from yubal import AudioCodec
 
 from yubal_api.api.container import Services, get_services
 from yubal_api.db.repository import SubscriptionRepository
+from yubal_api.services.auth import AuthService
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.scheduler import Scheduler
@@ -49,10 +50,16 @@ def _get_scheduler(services: ServicesDep) -> Scheduler:
     return services.scheduler
 
 
+def _get_auth_service(services: ServicesDep) -> AuthService:
+    """Get auth service from services container."""
+    return services.auth_service
+
+
 JobStoreDep = Annotated[JobStore, Depends(_get_job_store)]
 JobExecutorDep = Annotated[JobExecutor, Depends(_get_job_executor)]
 RepositoryDep = Annotated[SubscriptionRepository, Depends(_get_repository)]
 SchedulerDep = Annotated[Scheduler, Depends(_get_scheduler)]
+AuthServiceDep = Annotated[AuthService, Depends(_get_auth_service)]
 
 # -- Settings dependencies --
 

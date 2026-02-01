@@ -11,7 +11,7 @@ from importlib.metadata import version
 
 from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from rich.console import Console
 from rich.logging import RichHandler
@@ -20,6 +20,7 @@ from yubal import cleanup_part_files
 from yubal_api.api.container import Services
 from yubal_api.api.exceptions import register_exception_handlers
 from yubal_api.api.routes import (
+    auth,
     albums,
     artists,
     cookies,
@@ -32,6 +33,7 @@ from yubal_api.api.routes import (
     subscriptions,
 )
 from yubal_api.db import DB_FILE, SubscriptionRepository, create_db_engine, init_db
+from yubal_api.services.auth import AuthService
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import (
@@ -100,6 +102,9 @@ def suppress_logging() -> None:
 setup_logging()
 logger = logging.getLogger(__name__)
 
+API_PREFIX = "/api"
+AUTH_EXEMPT_PREFIXES = ("/api/auth",)
+AUTH_EXEMPT_PATHS = {"/api/health"}
 
 def create_services(repository: SubscriptionRepository) -> Services:
     """Create all application services with proper dependency wiring.
@@ -139,18 +144,22 @@ def create_services(repository: SubscriptionRepository) -> Services:
     # Wire up coordinator with executor
     shutdown_coordinator.set_job_executor(job_executor)
 
+    auth_service = AuthService(settings)
+
     return Services(
         job_store=job_store,
         job_executor=job_executor,
         shutdown_coordinator=shutdown_coordinator,
         repository=repository,
         scheduler=scheduler_service,
+        auth_service=auth_service,
     )
 
 
 def create_api_router() -> APIRouter:
     """Create the API router with all routes under /api prefix."""
     api_router = APIRouter(prefix="/api")
+    api_router.include_router(auth.router)
     api_router.include_router(health.router)
     api_router.include_router(jobs.router)
     api_router.include_router(logs.router)
@@ -236,6 +245,28 @@ def create_app() -> FastAPI:
 
     # API routes under /api prefix
     app.include_router(create_api_router())
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        services = getattr(request.app.state, "services", None)
+        auth_service = getattr(services, "auth_service", None) if services else None
+
+        path = request.url.path
+        if (
+            auth_service is None
+            or not auth_service.enabled
+            or request.method == "OPTIONS"
+            or not path.startswith(API_PREFIX)
+            or path.startswith(AUTH_EXEMPT_PREFIXES)
+            or path in AUTH_EXEMPT_PATHS
+        ):
+            return await call_next(request)
+
+        token = request.cookies.get(auth_service.cookie_name)
+        if not auth_service.verify_session(token):
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+
+        return await call_next(request)
 
     # Static files from YUBAL_ROOT/web/dist
     # Fix MIME types for Windows (registry defaults .js to text/plain)

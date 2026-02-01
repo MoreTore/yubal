@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from yubal_api.services.job_store import JobStore
     from yubal_api.services.scheduler import Scheduler
     from yubal_api.services.shutdown import ShutdownCoordinator
+    from yubal_api.services.auth import AuthService
 
 
 @dataclass
@@ -33,6 +34,7 @@ class Services:
     shutdown_coordinator: "ShutdownCoordinator"
     repository: "SubscriptionRepository"
     scheduler: "Scheduler"
+    auth_service: "AuthService"
 
     def close(self) -> None:
         """Clean up resources. Called at application shutdown."""

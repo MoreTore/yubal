@@ -64,6 +64,7 @@ When downloading a playlist, each track goes to its album folder—the M3U file 
 ## ✨ Features
 
 - **Web UI** — Real-time progress, job queue, responsive design
+- **Local auth (optional)** — Password-protect the UI with signed, HTTP-only sessions
 - **Albums, playlists & tracks** — Paste any YouTube Music link, get organized files
 - **Smart deduplication** — Same track across 10 playlists? Stored once, referenced everywhere
 - **Reliable downloads** — Automatic retry on failures, safe to interrupt
@@ -101,6 +102,11 @@ docker compose up -d
 # Open http://localhost:8000
 ```
 
+> [!CAUTION]
+> When enabling auth, set `YUBAL_AUTH_USERNAME` and `YUBAL_AUTH_PASSWORD` to strong values.  
+> They are only read on the first start to create `config/auth.json` (hashed credentials).  
+> You can remove them from the environment once the file exists.
+
 ## ⚙️ Configuration
 
 | Variable              | Description                          | Default (Docker) |
@@ -110,6 +116,7 @@ docker compose up -d
 | `YUBAL_AUDIO_FORMAT`  | `opus`, `mp3`, or `m4a`              | `opus`           |
 | `YUBAL_AUDIO_QUALITY` | Transcode quality (0=best, 10=worst) | `0`              |
 | `YUBAL_TZ`            | Timezone (IANA format)               | `UTC`            |
+| `YUBAL_AUTH_ENABLED`  | Enable local username/password auth  | `false`          |
 | `YUBAL_LOG_LEVEL`     | `DEBUG`, `INFO`, `WARNING`, `ERROR`  | `INFO`           |
 
 <details>
@@ -123,6 +130,12 @@ docker compose up -d
 | `YUBAL_CORS_ORIGINS` | Allowed CORS origins   | `["*"]`          |
 | `YUBAL_RELOAD`       | Auto-reload (dev only) | `false`          |
 | `YUBAL_TEMP`         | Temp directory         | System temp      |
+| `YUBAL_AUTH_ENABLED` | Enable local auth      | `false`          |
+| `YUBAL_AUTH_USERNAME` | Bootstrap username (required on first start when auth is enabled) | `-` |
+| `YUBAL_AUTH_PASSWORD` | Bootstrap password (hashed into config on first start) | `-` |
+| `YUBAL_AUTH_COOKIE_SECURE` | Mark auth cookie as Secure (set `true` behind HTTPS) | `false` |
+| `YUBAL_AUTH_SESSION_HOURS` | Session lifetime in hours | `168` |
+| `YUBAL_AUTH_CONFIG_FILE` | Auth config path (hashed credentials + secret) | `/app/config/auth.json` |
 
 </details>
 
@@ -171,6 +184,22 @@ GONIC_MULTI_VALUE_ALBUM_ARTIST=multi
 M3U playlists are not supported ([pending PR](https://github.com/sentriz/gonic/pull/537)).
 
 </details>
+
+## 🔐 Local Authentication
+
+Protect the UI with a simple username/password plus signed sessions.
+
+1. Set `YUBAL_AUTH_ENABLED=true` alongside `YUBAL_AUTH_USERNAME` and `YUBAL_AUTH_PASSWORD`.
+2. Start yubal once. It writes a hashed config to `config/auth.json` (600 permissions) and derives the session secret from it.
+3. Remove the password env var if you like—subsequent boots reuse the hashed config.
+
+When auth is enabled:
+
+- Every `/api/*` request requires the HTTP-only `yubal_session` cookie.
+- The web UI shows a login screen plus a “Sign out” button in the header.
+- Sessions survive restarts and are signed with the persisted secret.
+
+To rotate credentials, delete `config/auth.json`, set new `YUBAL_AUTH_USERNAME/PASSWORD`, and restart.
 
 ## 🍪 Cookies (Optional)
 

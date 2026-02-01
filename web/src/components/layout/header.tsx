@@ -1,6 +1,7 @@
 import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
 import { CookieDropdown } from "@/features/cookies/cookie-dropdown";
 import { useCookies } from "@/features/cookies/use-cookies";
+import { useAuth } from "@/features/auth/auth-context";
 import {
   Button,
   Link,
@@ -26,6 +27,8 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
+  const { enabled: authEnabled, status: authStatus, logout, isLoggingOut } = useAuth();
+  const isAuthenticated = !authEnabled || authStatus === "authenticated";
   const {
     cookiesConfigured,
     isUploading,
@@ -34,7 +37,7 @@ export function Header() {
     handleFileSelect,
     handleDropdownAction,
     triggerFileUpload,
-  } = useCookies();
+  } = useCookies(isAuthenticated);
 
   return (
     <Navbar
@@ -98,16 +101,31 @@ export function Header() {
             Star on GitHub
           </Button>
         </NavbarItem>
-        <NavbarItem className="hidden sm:flex">
-          <CookieDropdown
-            variant="desktop"
-            cookiesConfigured={cookiesConfigured}
-            isUploading={isUploading}
-            isDeleting={isDeleting}
-            onDropdownAction={handleDropdownAction}
-            onUploadClick={triggerFileUpload}
-          />
-        </NavbarItem>
+        {isAuthenticated && (
+          <NavbarItem className="hidden sm:flex">
+            <CookieDropdown
+              variant="desktop"
+              cookiesConfigured={cookiesConfigured}
+              isUploading={isUploading}
+              isDeleting={isDeleting}
+              onDropdownAction={handleDropdownAction}
+              onUploadClick={triggerFileUpload}
+            />
+          </NavbarItem>
+        )}
+        {authEnabled && isAuthenticated && (
+          <NavbarItem className="hidden sm:flex">
+            <Button
+              size="sm"
+              variant="flat"
+              color="danger"
+              onPress={logout}
+              isLoading={isLoggingOut}
+            >
+              Sign out
+            </Button>
+          </NavbarItem>
+        )}
         <NavbarItem>
           <AnimatedThemeToggler />
         </NavbarItem>
@@ -140,6 +158,19 @@ export function Header() {
             Star on GitHub
           </Link>
         </NavbarMenuItem>
+        {authEnabled && isAuthenticated && (
+          <NavbarMenuItem>
+            <Button
+              color="danger"
+              variant="flat"
+              className="w-full"
+              onPress={logout}
+              isLoading={isLoggingOut}
+            >
+              Sign out
+            </Button>
+          </NavbarMenuItem>
+        )}
       </NavbarMenu>
 
       {/* Hidden file input for cookie upload */}

@@ -13,22 +13,24 @@ interface UseCookiesReturn {
   triggerFileUpload: () => void;
 }
 
-export function useCookies(): UseCookiesReturn {
+export function useCookies(isActive = true): UseCookiesReturn {
   const [cookiesConfigured, setCookiesConfigured] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!isActive) return;
     getCookiesStatus()
       .then(setCookiesConfigured)
       .catch(() => {
         // Fail silently - cookies status is non-critical
       });
-  }, []);
+  }, [isActive]);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isActive) return;
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -55,10 +57,11 @@ export function useCookies(): UseCookiesReturn {
         }
       }
     },
-    [],
+    [isActive],
   );
 
   const handleDelete = useCallback(async () => {
+    if (!isActive) return;
     setIsDeleting(true);
     try {
       const success = await deleteCookies();
@@ -73,11 +76,12 @@ export function useCookies(): UseCookiesReturn {
     } finally {
       setIsDeleting(false);
     }
-  }, []);
+  }, [isActive]);
 
   const triggerFileUpload = useCallback(() => {
+    if (!isActive) return;
     fileInputRef.current?.click();
-  }, []);
+  }, [isActive]);
 
   const handleDropdownAction = useCallback(
     (key: React.Key) => {

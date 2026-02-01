@@ -5,10 +5,12 @@ import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { AudioPlayerProvider } from "@/features/player/audio-player-provider";
 import { SearchStateProvider } from "@/features/search/search-state";
+import { useAuth } from "@/features/auth/auth-context";
 import { DownloadsPage } from "@/pages/downloads";
+import { LoginPage } from "@/pages/login";
 import { SearchPage } from "@/pages/search";
 import { SubscriptionsPage } from "@/pages/subscriptions";
-import { HeroUIProvider, ToastProvider } from "@heroui/react";
+import { HeroUIProvider, Spinner, ToastProvider } from "@heroui/react";
 import {
     createRootRoute,
     createRoute,
@@ -18,11 +20,35 @@ import {
     ToOptions,
     useNavigate,
     useRouter,
+    useRouterState,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Spinner color="primary" />
+    </div>
+  );
+}
+
 function RootLayout() {
   const router = useRouter();
+  const routerState = useRouterState();
+  const { enabled, status } = useAuth();
+  const isLoginRoute = routerState.location.pathname === "/login";
+
+  useEffect(() => {
+    if (!enabled || status === "loading") return;
+    if (enabled && status === "unauthenticated" && !isLoginRoute) {
+      router.navigate({ to: "/login", replace: true });
+    } else if (enabled && status === "authenticated" && isLoginRoute) {
+      router.navigate({ to: "/", replace: true });
+    }
+  }, [enabled, status, isLoginRoute, router]);
+
+  const shouldShowLoader =
+    status === "loading" || (enabled && status === "unauthenticated" && !isLoginRoute);
 
   return (
     <HeroUIProvider
@@ -30,18 +56,24 @@ function RootLayout() {
       useHref={(to) => router.buildLocation({ to }).href}
     >
       <ToastProvider />
-      <AudioPlayerProvider>
-        <SearchStateProvider>
-          <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="m-auto w-full max-w-4xl flex-1 px-4 pt-6 pb-32">
-              <Outlet />
-            </main>
-            <Footer />
-          </div>
-          <AudioPlayerBar />
-        </SearchStateProvider>
-      </AudioPlayerProvider>
+      {shouldShowLoader ? (
+        <LoadingScreen />
+      ) : isLoginRoute ? (
+        <Outlet />
+      ) : (
+        <AudioPlayerProvider>
+          <SearchStateProvider>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="m-auto w-full max-w-4xl flex-1 px-4 pt-6 pb-32">
+                <Outlet />
+              </main>
+              <Footer />
+            </div>
+            <AudioPlayerBar />
+          </SearchStateProvider>
+        </AudioPlayerProvider>
+      )}
     </HeroUIProvider>
   );
 }
@@ -93,10 +125,16 @@ const searchRoute = createRoute({
   },
 });
 
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+});
 const routeTree = rootRoute.addChildren([
   downloadsRoute,
   subscriptionsRoute,
   searchRoute,
+  loginRoute,
 ]);
 
 export const router = createRouter({ routeTree });
