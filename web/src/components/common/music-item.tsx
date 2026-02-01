@@ -24,6 +24,7 @@ interface MusicItemProps {
   onDownload?: (url: string) => void;
   size?: "sm" | "md" | "lg";
   showPlayButton?: boolean;
+  trailingContent?: React.ReactNode;
 }
 
 export function MusicItem({
@@ -32,6 +33,7 @@ export function MusicItem({
   onDownload,
   size = "md",
   showPlayButton = false,
+  trailingContent,
 }: MusicItemProps) {
   const {
     title,
@@ -88,6 +90,7 @@ export function MusicItem({
             durationSeconds={durationSeconds ?? null}
           />
         )}
+        {trailingContent}
         {url && onDownload && (
           <Button
             size="sm"

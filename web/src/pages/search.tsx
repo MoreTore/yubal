@@ -180,6 +180,7 @@ export function SearchPage() {
 
     for (const job of jobs) {
       if (!job.url) continue;
+      if (byUrl[job.url]) continue;
       const status = mapJobStatus(job.status);
       const entry = {
         status,
@@ -188,10 +189,10 @@ export function SearchPage() {
       byUrl[job.url] = entry;
 
       const videoId = getVideoIdFromUrl(job.url);
-      if (videoId) byVideoId[videoId] = entry;
+      if (videoId && !byVideoId[videoId]) byVideoId[videoId] = entry;
 
       const browseId = getBrowseIdFromUrl(job.url);
-      if (browseId) byBrowseId[browseId] = entry;
+      if (browseId && !byBrowseId[browseId]) byBrowseId[browseId] = entry;
     }
 
     return {
@@ -473,6 +474,9 @@ export function SearchPage() {
             isLoading={isRelatedLoading}
             onQueueUrl={(url) => startJob(url)}
             downloadStatuses={downloadStatuses}
+            onDownloadDiscography={(channelId, url) => {
+              startJob(url, { kind: "discography", channelId });
+            }}
             onViewSong={(videoId) => {
               setSelectedSongId(videoId);
               setSelectedArtistId(null);

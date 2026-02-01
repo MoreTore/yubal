@@ -208,7 +208,7 @@ class DiscographyService:
             items: list[dict[str, Any]] = list(section.get("results") or [])
             params = section.get("params")
 
-            if params:
+            if params and not self._section_is_track_items(items):
                 try:
                     extra = client.get_artist_albums(
                         channel_id,
@@ -217,9 +217,31 @@ class DiscographyService:
                     )
                     items.extend(extra or [])
                 except Exception as exc:  # pragma: no cover - network guard
-                    logger.warning(
-                        "Failed to fetch %s for channel %s: %s", key, channel_id, exc
-                    )
+                    if self._is_non_album_shelf_error(exc):
+                        logger.info(
+                            "Skipping %s continuation for channel %s (non-album shelf)",
+                            key,
+                            channel_id,
+                        )
+                        logger.debug(
+                            "Continuation error for %s (%s): %s",
+                            key,
+                            channel_id,
+                            exc,
+                        )
+                    else:
+                        logger.warning(
+                            "Failed to fetch %s for channel %s: %s",
+                            key,
+                            channel_id,
+                            exc,
+                        )
+            elif params:
+                logger.debug(
+                    "Skipping %s continuation for channel %s (track-like results)",
+                    key,
+                    channel_id,
+                )
 
             for item in items:
                 browse_id = item.get("browseId")
@@ -350,6 +372,30 @@ class DiscographyService:
             reverse=True,
         )
         return sorted_thumbs[0].get("url") if sorted_thumbs else None
+
+    @staticmethod
+    def _section_is_track_items(items: Iterable[dict[str, Any]]) -> bool:
+        has_video = False
+        has_browse = False
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            if item.get("videoId"):
+                has_video = True
+            browse_id = item.get("browseId")
+            if isinstance(browse_id, str) and browse_id.strip():
+                has_browse = True
+            if has_video and has_browse:
+                return False
+        return has_video and not has_browse
+
+    @staticmethod
+    def _is_non_album_shelf_error(exc: Exception) -> bool:
+        message = str(exc)
+        return (
+            "musicCarouselShelfRenderer" in message
+            and "musicShelfRenderer" in message
+        )
 
 
 def _scale_progress(index: int, total: int, percent: float | None) -> float | None:

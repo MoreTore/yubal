@@ -1,5 +1,5 @@
 import { Button } from "@heroui/react";
-import { ArrowLeft, Download, User2 } from "lucide-react";
+import { ArrowLeft, User2 } from "lucide-react";
 import type { ArtistItem, ArtistResponse } from "../api/artist";
 import {
   getMusicUrl,
@@ -7,7 +7,8 @@ import {
   getThumbnailUrl,
   getTitle,
 } from "../lib/music-helpers";
-import type { DownloadStatus } from "./common/download-indicator";
+import { type DownloadStatus } from "./common/download-indicator";
+import { DiscographyDownloadButton } from "./common/discography-download-button";
 import { EmptyState } from "./common/empty-state";
 import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
@@ -69,15 +70,6 @@ export function ArtistPanel({
 }: ArtistPanelProps) {
   const heroThumbnail = artist ? getThumbnailUrl(artist) : null;
   const channelId = artist?.channelId ?? null;
-  const discographyUrl = channelId
-    ? `https://music.youtube.com/browse/${channelId}`
-    : null;
-  const discographyStatus = discographyUrl
-    ? downloadStatuses[discographyUrl]
-    : undefined;
-  const isDiscographyActive = Boolean(
-    discographyStatus && discographyStatus.status !== "idle",
-  );
   const sections: Array<[ArtistSectionKey, ArtistItem[]]> = [
     ["songs", artist?.songs?.results ?? []],
     ["albums", artist?.albums?.results ?? []],
@@ -143,19 +135,14 @@ export function ArtistPanel({
               )}
             </section>
 
-            {channelId && discographyUrl && (
+            {channelId && (
               <div className="flex justify-end">
-                <Button
-                  color="primary"
-                  radius="full"
-                  variant={isDiscographyActive ? "flat" : "solid"}
-                  size="sm"
-                  startContent={<Download className="h-4 w-4" />}
-                  isDisabled={isDiscographyActive}
-                  onPress={() => onDownloadDiscography(channelId, discographyUrl)}
-                >
-                  {isDiscographyActive ? "Downloading..." : "Download discography"}
-                </Button>
+                <DiscographyDownloadButton
+                  channelId={channelId}
+                  artistName={artist.name ?? "artist"}
+                  downloadStatuses={downloadStatuses}
+                  onDownloadDiscography={onDownloadDiscography}
+                />
               </div>
             )}
 

@@ -8,7 +8,8 @@ import {
     getThumbnailUrl,
     getTitle,
 } from "../lib/music-helpers";
-import type { DownloadStatus } from "./common/download-indicator";
+import { type DownloadStatus } from "./common/download-indicator";
+import { DiscographyDownloadButton } from "./common/discography-download-button";
 import { EmptyState } from "./common/empty-state";
 import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
@@ -24,6 +25,7 @@ interface SongRelatedPanelProps {
   onViewSong: (videoId: string) => void;
   onViewAlbum: (browseId: string) => void;
   onViewArtist: (channelId: string) => void;
+  onDownloadDiscography: (channelId: string, url: string) => void;
   onBack: () => void;
 }
 
@@ -40,6 +42,7 @@ export function SongRelatedPanel({
   onViewSong,
   onViewAlbum,
   onViewArtist,
+  onDownloadDiscography,
   onBack,
 }: SongRelatedPanelProps) {
   return (
@@ -88,6 +91,7 @@ export function SongRelatedPanel({
                       const isArtist =
                         isArtistSection(section.title) ||
                         Boolean(item.subscribers);
+                      const artistChannelId = isArtist ? browseId : null;
                       const canView = Boolean(item.videoId || browseId);
                       const status = url
                         ? (downloadStatuses[url] ?? {
@@ -95,6 +99,14 @@ export function SongRelatedPanel({
                             progress: null,
                           })
                         : { status: "idle" as DownloadStatus, progress: null };
+                      const discographyAction = (
+                        <DiscographyDownloadButton
+                          channelId={artistChannelId}
+                          artistName={title}
+                          downloadStatuses={downloadStatuses}
+                          onDownloadDiscography={onDownloadDiscography}
+                        />
+                      );
                       const meta = [item.year, item.duration, item.itemCount]
                         .filter(Boolean)
                         .join(" • ");
@@ -127,7 +139,10 @@ export function SongRelatedPanel({
                               }
                             }
                           }}
-                          onDownload={url ? onQueueUrl : undefined}
+                          onDownload={
+                            !isArtist && url ? onQueueUrl : undefined
+                          }
+                          trailingContent={discographyAction}
                           showPlayButton={Boolean(item.videoId)}
                         />
                       );

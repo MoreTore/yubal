@@ -11,6 +11,7 @@ import {
   DownloadStatusIcon,
   type DownloadStatus,
 } from "./common/download-indicator";
+import { DiscographyDownloadButton } from "./common/discography-download-button";
 import { EmptyState } from "./common/empty-state";
 import { MusicItem } from "./common/music-item";
 import { Panel, PanelContent, PanelHeader } from "./common/panel";
@@ -69,15 +70,38 @@ export function SearchResultsPanel({
   onViewAlbum,
   onViewSong,
   onViewArtist,
-  onDownloadDiscography: _onDownloadDiscography,
+  onDownloadDiscography,
   downloadStatuses,
 }: SearchResultsPanelProps) {
+  const renderDiscographyButton = (item: SearchResult) => {
+    if (!onDownloadDiscography) return null;
+    const isArtist =
+      item.resultType === "artist" ||
+      item.category?.toLowerCase() === "artists";
+    if (!isArtist) return null;
+
+    const channelId = getBrowseId(item);
+    if (!channelId) return null;
+
+    return (
+      <DiscographyDownloadButton
+        channelId={channelId}
+        artistName={getTitle(item)}
+        downloadStatuses={downloadStatuses}
+        onDownloadDiscography={onDownloadDiscography}
+      />
+    );
+  };
+
   const topArtistIndex = results.findIndex(
     (item) =>
       item.category?.toLowerCase() === "top result" &&
       item.resultType === "artist",
   );
   const topArtist = topArtistIndex >= 0 ? results[topArtistIndex] : null;
+  const topArtistDiscographyAction = topArtist
+    ? renderDiscographyButton(topArtist)
+    : null;
   const usedIndexes = new Set<number>();
 
   const topItems: SearchResult[] = [];
@@ -197,29 +221,34 @@ export function SearchResultsPanel({
                           Artist
                         </div>
                       </div>
-                      {topArtistUrl && (
-                        <Button
-                          size="sm"
-                          variant="flat"
-                          onPress={() => onQueueUrl(topArtistUrl)}
-                          onClick={(event) => event.stopPropagation()}
-                          isDisabled={
-                            topArtistStatus.status === "queued" ||
-                            topArtistStatus.status === "downloading"
-                          }
-                          isIconOnly
-                          aria-label="Download top result"
-                          startContent={
-                            topArtistStatus.status === "idle" ? (
-                              <Download className="h-4 w-4" />
-                            ) : (
-                              <DownloadStatusIcon
-                                status={topArtistStatus.status}
-                                progress={topArtistStatus.progress}
-                              />
-                            )
-                          }
-                        />
+                      {(topArtistDiscographyAction || topArtistUrl) && (
+                        <div className="flex items-center gap-2">
+                          {topArtistDiscographyAction}
+                          {topArtistUrl && (
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              onPress={() => onQueueUrl(topArtistUrl)}
+                              onClick={(event) => event.stopPropagation()}
+                              isDisabled={
+                                topArtistStatus.status === "queued" ||
+                                topArtistStatus.status === "downloading"
+                              }
+                              isIconOnly
+                              aria-label="Download top result"
+                              startContent={
+                                topArtistStatus.status === "idle" ? (
+                                  <Download className="h-4 w-4" />
+                                ) : (
+                                  <DownloadStatusIcon
+                                    status={topArtistStatus.status}
+                                    progress={topArtistStatus.progress}
+                                  />
+                                )
+                              }
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
                     {topItems.length > 0 && (
@@ -278,6 +307,7 @@ export function SearchResultsPanel({
                                   onViewArtist(browseId);
                               }}
                               onDownload={url ? onQueueUrl : undefined}
+                              trailingContent={renderDiscographyButton(item)}
                               showPlayButton={Boolean(isSong && item.videoId)}
                             />
                           );
@@ -342,6 +372,7 @@ export function SearchResultsPanel({
                           if (isArtist && browseId) onViewArtist(browseId);
                         }}
                         onDownload={url ? onQueueUrl : undefined}
+                        trailingContent={renderDiscographyButton(item)}
                         showPlayButton={Boolean(isSong && item.videoId)}
                       />
                     );
