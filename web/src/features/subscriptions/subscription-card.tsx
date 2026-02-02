@@ -3,7 +3,7 @@ import { ComponentProps, ReactNode } from "react";
 
 type RootProps = ComponentProps<typeof Card>;
 
-function Root({ children, className, ...props }: RootProps) {
+function _Root({ children, className, ...props }: RootProps) {
   return (
     <Card className={className} {...props}>
       <CardBody className="flex flex-row items-center justify-between p-5">
@@ -17,7 +17,7 @@ type HeaderProps = ComponentProps<"div"> & {
   title: string;
 };
 
-function Header({ title, children, className, ...props }: HeaderProps) {
+function _Header({ title, children, className, ...props }: HeaderProps) {
   return (
     <div className={className} {...props}>
       <p className="text-foreground-500 text-small mb-1 font-medium">{title}</p>
@@ -31,7 +31,7 @@ type ValueProps = ComponentProps<"span"> & {
   suffix?: string;
 };
 
-function Value({ children, suffix, className, ...props }: ValueProps) {
+function _Value({ children, suffix, className, ...props }: ValueProps) {
   return (
     <>
       <span className={cn("text-large font-bold", className)} {...props}>
@@ -46,7 +46,7 @@ function Value({ children, suffix, className, ...props }: ValueProps) {
 
 type IconProps = ComponentProps<"div">;
 
-function Icon({ children, className, ...props }: IconProps) {
+function _Icon({ children, className, ...props }: IconProps) {
   return (
     <div
       className={cn(
@@ -60,14 +60,17 @@ function Icon({ children, className, ...props }: IconProps) {
   );
 }
 
-type SubscriptionCardComponent = typeof Root & {
-  Header: typeof Header;
-  Value: typeof Value;
-  Icon: typeof Icon;
+type SubscriptionCardComponent = typeof _Root & {
+  Header: typeof _Header;
+  Value: typeof _Value;
+  Icon: typeof _Icon;
 };
 
-export const SubscriptionCard: SubscriptionCardComponent = Object.assign(Root, {
-  Header,
-  Value,
-  Icon,
-});
+export const SubscriptionCard: SubscriptionCardComponent = Object.assign(
+  _Root,
+  {
+    Header: _Header,
+    Value: _Value,
+    Icon: _Icon,
+  },
+);

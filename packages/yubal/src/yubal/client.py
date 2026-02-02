@@ -3,7 +3,7 @@
 import logging
 from collections import OrderedDict
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from ytmusicapi import YTMusic
 from ytmusicapi.exceptions import YTMusicError, YTMusicServerError, YTMusicUserError
@@ -296,7 +296,7 @@ class YTMusicClient:
             logger.warning("YTMusic error for track %s: %s", video_id, e)
             raise APIError(f"Failed to fetch track: {e}") from e
 
-        tracks = data.get("tracks") or []
+        tracks = cast(list[dict[str, Any]], data.get("tracks") or [])
         if not tracks:
             raise TrackNotFoundError(f"Track not found: {video_id}")
 

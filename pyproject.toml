@@ -10,7 +10,7 @@ members = ["packages/*"]
 yubal = { workspace = true }
 
 [dependency-groups]
-dev = ["ruff>=0.14.11", "ty>=0.0.11", "pytest>=9.0.2", "pytest-cov>=7.0.0"]
+dev = ["ruff>=0.14.11", "ty>=0.0.11", "pytest>=9.0.2", "pytest-cov>=7.0.0", "pytest-socket>=0.7.0"]
 
 [tool.ruff]
 target-version = "py312"
@@ -25,4 +25,4 @@ quote-style = "double"
 
 [tool.pytest.ini_options]
 testpaths = ["packages/*/tests"]
-addopts = "--tb=short"
+addopts = "--tb=short --disable-socket"

@@ -1,9 +1,10 @@
 """Tests for download service."""
 
 import logging
+from collections.abc import Iterator
 from dataclasses import FrozenInstanceError
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
@@ -17,6 +18,18 @@ from yubal.services.downloader import (
     DownloadStatus,
     YTDLPDownloader,
 )
+
+
+@pytest.fixture(autouse=True)
+def _mock_network_calls() -> Iterator[None]:
+    """Mock network calls to avoid slow HTTP requests in tests."""
+    with (
+        patch("yubal.services.downloader.fetch_cover", return_value=b"fake cover"),
+        patch(
+            "yubal.services.lyrics.httpx.get", return_value=MagicMock(status_code=404)
+        ),
+    ):
+        yield
 
 
 @pytest.fixture
