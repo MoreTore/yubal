@@ -5,17 +5,14 @@ import { isActive } from "@/lib/job-status";
 import { DownloadIcon, InboxIcon } from "lucide-react";
 import { JobCard } from "./job-card";
 
-interface DownloadsPanelProps {
+type Props = {
   jobs: Job[];
+  isLoading: boolean;
   onCancel: (jobId: string) => void;
   onDelete: (jobId: string) => void;
-}
+};
 
-export function DownloadsPanel({
-  jobs,
-  onCancel,
-  onDelete,
-}: DownloadsPanelProps) {
+export function DownloadsPanel({ jobs, isLoading, onCancel, onDelete }: Props) {
   return (
     <Panel>
       <PanelHeader
@@ -31,12 +28,19 @@ export function DownloadsPanel({
         Downloads
       </PanelHeader>
       <PanelContent height="h-124" className="space-y-2">
-        {jobs.length === 0 ? (
+        {isLoading ? (
+          <div className="flex h-full items-center justify-center">
+            <span className="text-foreground-400 text-small font-mono">
+              Loading...
+            </span>
+          </div>
+        ) : jobs.length === 0 ? (
           <EmptyState icon={InboxIcon} title="No downloads yet" />
         ) : (
           <div className="flex flex-col gap-2">
             {jobs.map((job) => (
               <JobCard
+                key={job.id}
                 job={job}
                 onCancel={isActive(job.status) ? onCancel : undefined}
                 onDelete={!isActive(job.status) ? onDelete : undefined}

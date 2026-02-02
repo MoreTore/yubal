@@ -17,11 +17,11 @@ type ParsedLine =
   | { type: "json"; entry: LogEntry; key: string }
   | { type: "text"; text: string; key: string };
 
-interface ConsolePanelProps {
+type Props = {
   jobs?: Job[];
-}
+};
 
-export function ConsolePanel({ jobs = [] }: ConsolePanelProps) {
+export function ConsolePanel({ jobs = [] }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { lines, isOffline } = useLogs();
   const [isExpanded, setIsExpanded] = useLocalStorage(

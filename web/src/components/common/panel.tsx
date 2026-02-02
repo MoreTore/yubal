@@ -41,7 +41,7 @@ export const PanelHeader = forwardRef<HTMLElement, PanelHeaderProps>(
     return (
       <CardHeader className={`shrink-0 px-4 py-3 ${className}`} {...props}>
         <div
-          className={`text-foreground-500 flex items-center gap-2 ${className}`}
+          className={`text-foreground-500 flex w-full items-center gap-2 ${className}`}
           {...props}
         >
           {leadingIcon && <span>{leadingIcon}</span>}

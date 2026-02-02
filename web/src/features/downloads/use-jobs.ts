@@ -13,6 +13,7 @@ export type { Job } from "@/api/jobs";
 
 export interface UseJobsResult {
   jobs: Job[];
+  isLoading: boolean;
   startJob: (url: string, maxItems?: number) => Promise<void>;
   cancelJob: (jobId: string) => Promise<void>;
   deleteJob: (jobId: string) => Promise<void>;
@@ -23,6 +24,7 @@ const POLL_INTERVAL = 2000;
 
 export function useJobs(): UseJobsResult {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -121,6 +123,8 @@ export function useJobs(): UseJobsResult {
         }
       } catch (error) {
         console.error("Failed to fetch jobs:", error);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     }
 
@@ -134,6 +138,7 @@ export function useJobs(): UseJobsResult {
 
   return {
     jobs,
+    isLoading,
     startJob,
     cancelJob,
     deleteJob,

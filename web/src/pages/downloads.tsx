@@ -12,7 +12,7 @@ const DEFAULT_MAX_ITEMS = 100;
 export function DownloadsPage() {
   const [url, setUrl] = useState("");
   const [maxItems, setMaxItems] = useState(DEFAULT_MAX_ITEMS);
-  const { jobs, startJob, cancelJob, deleteJob } = useJobs();
+  const { jobs, isLoading, startJob, cancelJob, deleteJob } = useJobs();
 
   const canDownload = isValidUrl(url);
 
@@ -72,6 +72,7 @@ export function DownloadsPage() {
       <section className="flex flex-col gap-6">
         <DownloadsPanel
           jobs={jobs}
+          isLoading={isLoading}
           onCancel={cancelJob}
           onDelete={handleDeleteJob}
         />
