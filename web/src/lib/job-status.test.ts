@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { JobStatus } from "@/api/jobs";
-import { isActive, isFinished } from "./job-status";
+import { isActive, isFinished, isRunning } from "./job-status";
 
 const ALL_STATUSES: JobStatus[] = [
   "pending",
@@ -59,6 +59,32 @@ describe("isActive", () => {
   test("isActive and isFinished are mutually exclusive", () => {
     for (const status of ALL_STATUSES) {
       expect(isActive(status)).toBe(!isFinished(status));
+    }
+  });
+});
+
+describe("isRunning", () => {
+  test("returns true for running statuses (excludes pending)", () => {
+    expect(isRunning("fetching_info")).toBe(true);
+    expect(isRunning("downloading")).toBe(true);
+    expect(isRunning("importing")).toBe(true);
+  });
+
+  test("returns false for pending status", () => {
+    expect(isRunning("pending")).toBe(false);
+  });
+
+  test("returns false for finished statuses", () => {
+    expect(isRunning("completed")).toBe(false);
+    expect(isRunning("failed")).toBe(false);
+    expect(isRunning("cancelled")).toBe(false);
+  });
+
+  test("isRunning is a subset of isActive", () => {
+    for (const status of ALL_STATUSES) {
+      if (isRunning(status)) {
+        expect(isActive(status)).toBe(true);
+      }
     }
   });
 });

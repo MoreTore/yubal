@@ -17,7 +17,7 @@ def get_scheduler_status(
     return SchedulerStatus(
         running=scheduler.is_running,
         enabled=scheduler.enabled,
-        interval_minutes=scheduler.interval_minutes,
+        cron_expression=scheduler.cron_expression,
         next_run_at=scheduler.next_run_at,
         subscription_counts=SubscriptionCounts(
             total=repository.count(),

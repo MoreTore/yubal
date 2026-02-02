@@ -17,6 +17,6 @@ class SchedulerStatus(BaseModel):
 
     running: bool
     enabled: bool
-    interval_minutes: int
+    cron_expression: str
     next_run_at: UTCDateTime | None
     subscription_counts: SubscriptionCounts

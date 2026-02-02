@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
+from croniter import croniter
 from pydantic import BeforeValidator, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from yubal import AudioCodec
@@ -28,6 +29,17 @@ def _validate_timezone(v: str) -> str:
 
 
 Timezone = Annotated[str, BeforeValidator(_validate_timezone)]
+
+
+def _validate_cron_expression(v: str) -> str:
+    """Validate cron expression using croniter."""
+    if isinstance(v, str):
+        if not croniter.is_valid(v):
+            raise ValueError(f"Invalid cron expression: {v}")
+    return v
+
+
+CronExpression = Annotated[str, BeforeValidator(_validate_cron_expression)]
 
 
 class Settings(BaseSettings):
@@ -74,11 +86,9 @@ class Settings(BaseSettings):
     sync_enabled: bool = Field(
         default=True, description="Enable playlist sync scheduler"
     )
-    sync_interval_minutes: int = Field(
-        default=60,
-        ge=5,
-        le=10080,
-        description="Sync interval in minutes (5 min to 1 week)",
+    sync_cron: CronExpression = Field(
+        default="0 */6 * * *",
+        description="Cron expression for sync schedule",
     )
 
     # Timezone

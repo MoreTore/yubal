@@ -1,7 +1,7 @@
 import type { Job, JobStatus } from "@/api/jobs";
 import { HoverFade } from "@/components/common/hover-fade";
 import { useHover } from "@/hooks/use-hover";
-import { isActive, isFinished } from "@/lib/job-status";
+import { isActive, isFinished, isRunning } from "@/lib/job-status";
 import {
   Button,
   Card,
@@ -192,7 +192,8 @@ function ContentInfo({
 
 export function JobCard({ job, onCancel, onDelete }: Props) {
   const [isHovered, hoverHandlers] = useHover();
-  const isRunning = isActive(job.status);
+  const isJobActive = isActive(job.status);
+  const isJobRunning = isRunning(job.status);
   const isJobFinished = isFinished(job.status);
   const { content_info, download_stats } = job;
   const hasPartialFailures =
@@ -231,7 +232,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
           )}
         </div>
 
-        <HoverFade show={isRunning || isHovered} initialShow={isRunning}>
+        <HoverFade show={isJobActive || isHovered} initialShow={isJobActive}>
           <Button
             as="a"
             href={job.url}
@@ -246,7 +247,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
           </Button>
         </HoverFade>
 
-        {isRunning && onCancel && (
+        {isJobActive && onCancel && (
           <Button
             variant="light"
             size="sm"
@@ -273,7 +274,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
         )}
       </CardBody>
 
-      {isRunning && (
+      {isJobRunning && (
         <CardFooter className="flex items-center gap-2 pt-0">
           <Progress
             value={job.progress}

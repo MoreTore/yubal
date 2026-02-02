@@ -715,8 +715,8 @@ export interface components {
             running: boolean;
             /** Enabled */
             enabled: boolean;
-            /** Interval Minutes */
-            interval_minutes: number;
+            /** Cron Expression */
+            cron_expression: string;
             /** Next Run At */
             next_run_at: string | null;
             subscription_counts: components["schemas"]["SubscriptionCounts"];

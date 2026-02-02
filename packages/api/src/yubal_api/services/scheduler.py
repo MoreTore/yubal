@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
+
+from croniter import croniter
 
 from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.db.subscription import Subscription
@@ -43,14 +45,24 @@ class Scheduler:
         return self._settings.sync_enabled
 
     @property
-    def interval_minutes(self) -> int:
-        """Get sync interval in minutes (from settings)."""
-        return self._settings.sync_interval_minutes
+    def cron_expression(self) -> str:
+        """Get cron expression (from settings)."""
+        return self._settings.sync_cron
 
     @property
     def next_run_at(self) -> datetime | None:
         """Get next scheduled run time."""
         return self._next_run_at
+
+    def _get_next_run_time(self) -> datetime:
+        """Calculate next run time using croniter in configured timezone."""
+        tz = self._settings.timezone
+        cron = croniter(self._settings.sync_cron, datetime.now(tz))
+        next_time = cron.get_next(datetime)
+        # Convert to UTC for storage/comparison
+        if next_time.tzinfo is None:
+            next_time = next_time.replace(tzinfo=tz)
+        return next_time.astimezone(UTC)
 
     def start(self) -> None:
         """Start the scheduler background task."""
@@ -77,13 +89,13 @@ class Scheduler:
     async def _run_loop(self) -> None:
         """Main scheduler loop."""
         while not self._stop_event.is_set():
-            interval = self._settings.sync_interval_minutes * 60
-            self._next_run_at = datetime.now(UTC) + timedelta(seconds=interval)
+            self._next_run_at = self._get_next_run_time()
+            wait_seconds = (self._next_run_at - datetime.now(UTC)).total_seconds()
 
             try:
                 await asyncio.wait_for(
                     self._stop_event.wait(),
-                    timeout=interval,
+                    timeout=max(0, wait_seconds),
                 )
                 break  # Stop event was set
             except TimeoutError:

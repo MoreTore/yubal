@@ -180,3 +180,47 @@ class TestTimezone:
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert errors[0]["loc"] == ("tz",)
+
+
+class TestCronExpression:
+    """Tests for cron expression validation."""
+
+    @pytest.mark.parametrize(
+        "cron",
+        [
+            "0 * * * *",  # Every hour
+            "*/30 * * * *",  # Every 30 minutes
+            "0 */6 * * *",  # Every 6 hours
+            "0 3 * * *",  # Daily at 3am
+            "0 0 * * 0",  # Weekly on Sunday
+            "0 0 1 * *",  # Monthly on 1st
+        ],
+    )
+    def test_accepts_valid_cron_expressions(self, cron: str) -> None:
+        """Should accept valid cron expressions."""
+        settings = _create_settings(sync_cron=cron)
+        assert settings.sync_cron == cron
+
+    @pytest.mark.parametrize(
+        "invalid_cron",
+        [
+            "invalid",
+            "* * *",  # Too few fields
+            "60 * * * *",  # Invalid minute (0-59)
+            "* 25 * * *",  # Invalid hour (0-23)
+            "",
+        ],
+    )
+    def test_rejects_invalid_cron_expressions(self, invalid_cron: str) -> None:
+        """Should reject invalid cron expressions."""
+        with pytest.raises(ValidationError) as exc_info:
+            _create_settings(sync_cron=invalid_cron)
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("sync_cron",)
+
+    def test_default_cron_expression(self) -> None:
+        """Should use every 6 hours as default."""
+        settings = _create_settings()
+        assert settings.sync_cron == "0 */6 * * *"
