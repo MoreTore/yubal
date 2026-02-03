@@ -12,3 +12,8 @@ export function formatTimeAgo(dateString: string | null | undefined): string {
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays}d ago`;
 }
+
+export function formatDateTime(dateString: string | null | undefined): string {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleString();
+}

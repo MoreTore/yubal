@@ -1,6 +1,7 @@
 import type { Job, JobStatus } from "@/api/jobs";
 import { HoverFade } from "@/components/common/hover-fade";
 import { useHover } from "@/hooks/use-hover";
+import { formatDateTime } from "@/lib/format";
 import { isActive, isFinished, isRunning } from "@/lib/job-status";
 import {
   Button,
@@ -10,6 +11,7 @@ import {
   Chip,
   Image,
   Progress,
+  Tooltip,
 } from "@heroui/react";
 import {
   CheckCircle,
@@ -135,6 +137,7 @@ function ContentInfo({
   showBitrate,
   kind,
   source,
+  createdAt,
 }: {
   title: string;
   artist: string | null;
@@ -145,6 +148,7 @@ function ContentInfo({
   showBitrate: boolean;
   kind: "playlist" | "album" | "track" | null;
   source: "manual" | "scheduler";
+  createdAt: string | undefined;
 }) {
   return (
     <div>
@@ -160,6 +164,25 @@ function ContentInfo({
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {source === "scheduler" && (
+          <Tooltip
+            content={
+              createdAt
+                ? `Synced @ ${formatDateTime(createdAt)}`
+                : "Synced by the scheduler"
+            }
+            closeDelay={0}
+          >
+            <Chip
+              size="sm"
+              variant="flat"
+              startContent={<ZapIcon size={14} className="mx-1" />}
+              className="bg-sky-500/15 font-mono text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
+            >
+              Auto
+            </Chip>
+          </Tooltip>
+        )}
         {kind && (
           <JobChip variant={kind}>
             <span className="capitalize">{kind}</span>
@@ -174,16 +197,6 @@ function ContentInfo({
           <JobChip variant="flat">
             {`${audioCodec} ${showBitrate && audioBitrate ? `@ ${audioBitrate}kbps` : ""}`}
           </JobChip>
-        )}
-        {source === "scheduler" && (
-          <Chip
-            size="sm"
-            variant="flat"
-            startContent={<ZapIcon size={14} className="mx-1" />}
-            className="bg-sky-500/15 font-mono text-sky-600 dark:bg-sky-500/20 dark:text-sky-300"
-          >
-            Auto
-          </Chip>
         )}
       </div>
     </div>
@@ -224,6 +237,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
               showBitrate={isJobFinished}
               kind={content_info.kind ?? null}
               source={job.source}
+              createdAt={job.created_at}
             />
           ) : (
             <p className="text-foreground-500 truncate font-mono text-xs">
