@@ -1,6 +1,6 @@
 import type { Subscription } from "@/api/subscriptions";
 import { EmptyState } from "@/components/common/empty-state";
-import { formatTimeAgo } from "@/lib/format";
+import { useTimeAgo } from "@/hooks/use-time-ago";
 import {
   Button,
   Image,
@@ -21,6 +21,13 @@ import {
 import { useCallback } from "react";
 
 type ColumnKey = "name" | "lastSynced" | "limit" | "enabled" | "actions";
+
+function TimeAgo({ dateString }: { dateString: string | null | undefined }) {
+  const timeAgo = useTimeAgo(dateString);
+  return (
+    <span className="text-foreground-500 font-mono text-sm">{timeAgo}</span>
+  );
+}
 
 const columns: { name: string; key: ColumnKey }[] = [
   { name: "PLAYLIST", key: "name" },
@@ -81,11 +88,7 @@ export function SubscriptionsTable({
           );
         }
         case "lastSynced":
-          return (
-            <span className="text-foreground-500 font-mono text-sm">
-              {formatTimeAgo(subscription.last_synced_at)}
-            </span>
-          );
+          return <TimeAgo dateString={subscription.last_synced_at} />;
         case "limit":
           return (
             <span className="text-foreground-500 font-mono text-sm">
