@@ -2,9 +2,9 @@
 
 # yubal
 
-**Download from YouTube Music. Get an organized library.**
+**YouTube Music downloader with automatic tagging and playlist sync.**
 
-One link in, tagged and organized files out. Albums sorted by artist and year. Playlists without duplicates. Media server ready.
+Paste a link, get a properly tagged and organized library. Subscribe to playlists to keep them synced. Albums sorted by artist and year. No duplicates. Media server ready.
 
 [![CI](https://github.com/guillevc/yubal/actions/workflows/ci.yaml/badge.svg)](https://github.com/guillevc/yubal/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/v/release/guillevc/yubal)](https://github.com/guillevc/yubal/releases)
@@ -14,13 +14,12 @@ One link in, tagged and organized files out. Albums sorted by artist and year. P
 <picture>
   <img src="docs/demo.gif" alt="yubal demo">
 </picture>
-
-<sub>GIF is 3× speed</sub>
-
 </div>
 
 > [!IMPORTANT]
-> **Upgrading from v0.1?** The folder structure and config has changed. See the [v0.2.0 release notes](https://github.com/guillevc/yubal/releases/tag/v0.2.0) for migration steps.
+> **Upgrading from a previous version?** Folder and file names now preserve unicode characters (`Bjork` → `Björk`), which may create duplicates alongside existing ASCII-named items.
+>
+> Check your library and merge any duplicates after upgrading.
 
 ## 📖 Why yubal?
 
@@ -47,8 +46,8 @@ data/
 │       └── cover.jpg
 │
 └── Playlists/
-    ├── My Favorites.m3u
-    └── My Favorites.jpg
+    ├── My Favorites [n2g-XhDv].m3u
+    └── My Favorites [n2g-XhDv].jpg
 ```
 
 When downloading a playlist, each track goes to its album folder—the M3U file just references them:
@@ -84,6 +83,8 @@ services:
     ports:
       - 8000:8000
     environment:
+      YUBAL_SCHEDULER_ENABLED: true
+      YUBAL_SCHEDULER_CRON: "0 0 * * *"
       YUBAL_TZ: UTC
     volumes:
       - ./data:/app/data
@@ -108,9 +109,9 @@ docker compose up -d
 | ------------------------- | ------------------------------------ | ---------------- |
 | `YUBAL_AUDIO_FORMAT`      | `opus`, `mp3`, or `m4a`              | `opus`           |
 | `YUBAL_AUDIO_QUALITY`     | Transcode quality (0=best, 10=worst) | `0`              |
-| `YUBAL_FETCH_LYRICS`      | Fetch lyrics from lrclib.net         | `true`           |
 | `YUBAL_SCHEDULER_ENABLED` | Enable automatic scheduled sync      | `true`           |
 | `YUBAL_SCHEDULER_CRON`    | Cron schedule for auto-sync          | `0 0 * * *`      |
+| `YUBAL_FETCH_LYRICS`      | Fetch lyrics from lrclib.net         | `true`           |
 | `YUBAL_TZ`                | Timezone (IANA format)               | `UTC`            |
 
 <details>
@@ -188,16 +189,13 @@ Need age-restricted content, private playlists, or Premium quality? Add your coo
 
 ## 🗺️ What's Coming
 
-- [x] Cookie import via Web UI
-- [x] Multi-arch Docker images
-- [x] Configurable audio format
 - [x] Playlist support with M3U generation ([v0.2.0](https://github.com/guillevc/yubal/releases/tag/v0.2.0))
 - [x] Single track downloads ([v0.3.0](https://github.com/guillevc/yubal/releases/tag/v0.3.0))
 - [x] Automatic lyrics (.lrc) ([v0.3.0](https://github.com/guillevc/yubal/releases/tag/v0.3.0))
 - [x] Auto-sync playlists ([v0.4.0](https://github.com/guillevc/yubal/releases/tag/v0.4.0))
+- [ ] UGC tracks (user-generated content, remixes, unofficial tracks)
 - [ ] Flat folder mode
 - [ ] Browser extension
-- [ ] Batch import
 - [ ] Post-download webhooks
 - [ ] New music automatic discovery
 
