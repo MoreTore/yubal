@@ -3,8 +3,10 @@
 from pathlib import Path
 
 from yubal.utils.cookies import (
+    ESSENTIAL_COOKIES,
     build_cookie_header,
     cookies_to_ytmusic_auth,
+    filter_essential_cookies,
     generate_sapisidhash,
     get_sapisid,
     is_authenticated_cookies,
@@ -70,6 +72,48 @@ class TestParseNetscapeCookies:
         result = parse_netscape_cookies(cookies_file)
 
         assert result == {"SID": "value1"}
+
+
+class TestFilterEssentialCookies:
+    """Tests for filter_essential_cookies."""
+
+    def test_keeps_essential_cookies(self) -> None:
+        """Should keep only cookies in ESSENTIAL_COOKIES set."""
+        cookies = {
+            "__Secure-3PAPISID": "sapisid_value",
+            "SID": "sid_value",
+            "HSID": "hsid_value",
+            "PREF": "tracking_pref",
+            "VISITOR_PRIVACY_METADATA": "privacy_junk",
+            "__Secure-YEC": "some_yec_value",
+        }
+
+        result = filter_essential_cookies(cookies)
+
+        assert "__Secure-3PAPISID" in result
+        assert "SID" in result
+        assert "HSID" in result
+        # Non-essential cookies should be filtered out
+        assert "PREF" not in result
+        assert "VISITOR_PRIVACY_METADATA" not in result
+        assert "__Secure-YEC" not in result
+
+    def test_returns_empty_for_no_essential_cookies(self) -> None:
+        """Should return empty dict when no essential cookies present."""
+        cookies = {
+            "PREF": "tracking",
+            "VISITOR_PRIVACY_METADATA": "privacy",
+        }
+
+        result = filter_essential_cookies(cookies)
+
+        assert result == {}
+
+    def test_essential_cookies_constant_contains_required(self) -> None:
+        """ESSENTIAL_COOKIES should include all required auth cookies."""
+        # These are the minimum required for ytmusicapi auth
+        required = {"__Secure-3PAPISID", "SAPISID", "SID", "HSID", "SSID"}
+        assert required.issubset(ESSENTIAL_COOKIES)
 
 
 class TestBuildCookieHeader:
@@ -152,10 +196,11 @@ class TestCookiesToYtmusicAuth:
         result = cookies_to_ytmusic_auth(cookies_file)
 
         assert result is not None
-        assert "Authorization" in result
-        assert result["Authorization"].startswith("SAPISIDHASH ")
-        assert "Cookie" in result
-        assert "__Secure-3PAPISID=test_sapisid" in result["Cookie"]
+        # Headers use lowercase keys to match ytmusicapi browser auth format
+        assert "authorization" in result
+        assert result["authorization"].startswith("SAPISIDHASH ")
+        assert "cookie" in result
+        assert "__Secure-3PAPISID=test_sapisid" in result["cookie"]
         assert result["x-origin"] == "https://music.youtube.com"
 
     def test_returns_none_for_missing_file(self, tmp_path: Path) -> None:

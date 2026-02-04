@@ -13,6 +13,34 @@ logger = logging.getLogger(__name__)
 # Origin for SAPISIDHASH calculation
 YTM_ORIGIN = "https://music.youtube.com"
 
+# Essential cookies required for YouTube Music authentication.
+# Browser cookie exports often include many unnecessary cookies that can cause
+# HTTP 413 (Request Entity Too Large) errors. Only these are needed for auth.
+ESSENTIAL_COOKIES = frozenset(
+    {
+        # Core auth cookies (SAPISID variants)
+        "__Secure-3PAPISID",
+        "__Secure-1PAPISID",
+        "SAPISID",
+        "APISID",
+        # Session IDs
+        "SID",
+        "HSID",
+        "SSID",
+        "__Secure-1PSID",
+        "__Secure-3PSID",
+        # Session validation
+        "SIDCC",
+        "__Secure-1PSIDCC",
+        "__Secure-3PSIDCC",
+        # Session timestamps
+        "__Secure-1PSIDTS",
+        "__Secure-3PSIDTS",
+        # Login info
+        "LOGIN_INFO",
+    }
+)
+
 
 def parse_netscape_cookies(cookies_path: Path) -> dict[str, str]:
     """Parse Netscape format cookies.txt into a dict.
@@ -45,6 +73,22 @@ def parse_netscape_cookies(cookies_path: Path) -> dict[str, str]:
             cookies[name] = value
 
     return cookies
+
+
+def filter_essential_cookies(cookies: dict[str, str]) -> dict[str, str]:
+    """Filter cookies to only those essential for YouTube Music authentication.
+
+    Browser cookie exports often include many unnecessary cookies (tracking,
+    preferences, etc.) that bloat the Cookie header. Large headers cause
+    HTTP 413 errors from YouTube's servers.
+
+    Args:
+        cookies: Dict mapping cookie name to value.
+
+    Returns:
+        Dict containing only cookies required for authentication.
+    """
+    return {k: v for k, v in cookies.items() if k in ESSENTIAL_COOKIES}
 
 
 def build_cookie_header(cookies: dict[str, str]) -> str:
@@ -119,17 +163,27 @@ def cookies_to_ytmusic_auth(cookies_path: Path) -> dict[str, str] | None:
         logger.warning("No SAPISID cookie found - authentication not possible")
         return None
 
-    cookie_header = build_cookie_header(cookies)
+    # Filter to essential cookies only to avoid HTTP 413 errors.
+    # Browser exports can include 90KB+ of cookies, but YouTube's servers
+    # reject requests with headers that large.
+    filtered = filter_essential_cookies(cookies)
+    logger.debug(
+        "Filtered cookies from %d to %d for ytmusicapi auth",
+        len(cookies),
+        len(filtered),
+    )
+
+    cookie_header = build_cookie_header(filtered)
     authorization = generate_sapisidhash(sapisid)
 
     # Return headers in the format ytmusicapi expects
     return {
-        "Accept": "*/*",
-        "Authorization": authorization,
-        "Content-Type": "application/json",
-        "X-Goog-AuthUser": "0",
+        "accept": "*/*",
+        "authorization": authorization,
+        "content-type": "application/json",
+        "x-goog-authuser": "0",
         "x-origin": YTM_ORIGIN,
-        "Cookie": cookie_header,
+        "cookie": cookie_header,
     }
 
 
