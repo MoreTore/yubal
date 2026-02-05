@@ -54,19 +54,30 @@ html {
 html {
   background:
     radial-gradient(
-      ellipse 2500px 500px at 50% 0%,
-      rgba(139, 126, 200, 0.18) 0%,
+      ellipse 2500px 600px at 50% 0%,
+      rgba(139, 126, 200, 0.28) 0%,
       transparent 60%
     ),
     radial-gradient(
-      ellipse 800px 300px at 50% 100%,
-      rgba(58, 169, 159, 0.08) 0%,
+      ellipse 1200px 200px at 50% 100%,
+      rgba(58, 169, 159, 0.18) 0%,
       transparent 60%
     );
   background-color: #fff;
 }
 
 html.dark {
+  background:
+    radial-gradient(
+      ellipse 2500px 600px at 50% 0%,
+      rgba(139, 126, 200, 0.18) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 1200px 200px at 50% 100%,
+      rgba(58, 169, 159, 0.08) 0%,
+      transparent 60%
+    );
   background-color: #000;
 }
 
