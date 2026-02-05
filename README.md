@@ -20,7 +20,7 @@ Paste a link, get a properly tagged and organized library. Subscribe to playlist
 <br/>
 
 > [!IMPORTANT]
-> **Upgrading from a previous version?** Folder and file names now preserve unicode characters (`Bjork` → `Björk`), which may create duplicates alongside existing ASCII-named items.
+> **Upgrading from a v0.3?** Folder and file names now preserve unicode characters (`Bjork` → `Björk`), which may create duplicates alongside existing ASCII-named items.
 >
 > Check your library and merge any duplicates after upgrading.
 
