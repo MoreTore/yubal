@@ -20,15 +20,16 @@ const jobChip = tv({
 
 type Props = {
   children: ReactNode;
+  className?: string;
 } & VariantProps<typeof jobChip>;
 
-export function JobChip({ children, variant }: Props) {
+export function JobChip({ children, variant, className }: Props) {
   return (
     <Chip
       size="sm"
       variant="flat"
       classNames={{
-        base: jobChip({ variant }),
+        base: jobChip({ variant, className }),
       }}
     >
       {children}

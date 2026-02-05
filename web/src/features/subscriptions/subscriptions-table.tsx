@@ -64,7 +64,7 @@ export function SubscriptionsTable({
         case "name": {
           const size = 40;
           return (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 max-md:gap-0">
               {subscription.thumbnail_url ? (
                 <Image
                   alt="Playlist thumbnail"
@@ -73,13 +73,14 @@ export function SubscriptionsTable({
                   height={size}
                   radius="md"
                   fallbackSrc=""
+                  className="max-md:hidden"
                 />
               ) : (
                 <div className="bg-content3 flex h-8 w-8 shrink-0 items-center justify-center rounded">
                   <ListMusicIcon
                     width={size}
                     height={size}
-                    className="text-foreground-400"
+                    className="text-foreground-400 max-md:hidden"
                   />
                 </div>
               )}

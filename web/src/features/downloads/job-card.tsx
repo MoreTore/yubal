@@ -1,6 +1,5 @@
 import type { Job, JobStatus } from "@/api/jobs";
 import { HoverFade } from "@/components/common/hover-fade";
-import { useHover } from "@/hooks/use-hover";
 import { formatDateTime } from "@/lib/format";
 import { isActive, isFinished, isRunning } from "@/lib/job-status";
 import {
@@ -189,12 +188,12 @@ function ContentInfo({
           </JobChip>
         )}
         {trackCount && kind !== "track" && (
-          <JobChip variant="flat">
+          <JobChip variant="flat" className="max-md:hidden">
             {trackCount} {trackCount === 1 ? "track" : "tracks"}
           </JobChip>
         )}
         {audioCodec && (
-          <JobChip variant="flat">
+          <JobChip variant="flat" className="max-md:hidden">
             {`${audioCodec} ${showBitrate && audioBitrate ? `@ ${audioBitrate}kbps` : ""}`}
           </JobChip>
         )}
@@ -204,7 +203,6 @@ function ContentInfo({
 }
 
 export function JobCard({ job, onCancel, onDelete }: Props) {
-  const [isHovered, hoverHandlers] = useHover();
   const isJobActive = isActive(job.status);
   const isJobRunning = isRunning(job.status);
   const isJobFinished = isFinished(job.status);
@@ -214,10 +212,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
   const opacity = `${job.status === "cancelled" ? "opacity - 50" : ""}`;
 
   return (
-    <Card
-      className={`bg-content2 transition-colors ${opacity}`}
-      {...hoverHandlers}
-    >
+    <Card className={`group bg-content2 transition-colors ${opacity}`}>
       <CardBody className="flex flex-row items-center gap-3">
         <Thumbnail
           url={content_info?.thumbnail_url ?? null}
@@ -246,7 +241,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
           )}
         </div>
 
-        <HoverFade show={isJobActive || isHovered} initialShow={isJobActive}>
+        <HoverFade show={isJobActive} initialShow={isJobActive}>
           <Button
             as="a"
             href={job.url}
@@ -255,7 +250,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
             variant="light"
             size="sm"
             isIconOnly
-            className="text-foreground-500 hover:text-primary h-7 w-7 shrink-0"
+            className="text-foreground-500 hover:text-primary h-7 w-7 shrink-0 not-group-hover:hidden max-md:hidden"
           >
             <ExternalLink className="h-4 w-4" />
           </Button>
@@ -266,7 +261,7 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
             variant="light"
             size="sm"
             isIconOnly
-            className="text-foreground-500 hover:text-danger h-7 w-7 shrink-0"
+            className="text-foreground-500 hover:text-danger h-7 w-7 shrink-0 md:not-group-hover:hidden"
             onPress={() => onCancel(job.id)}
           >
             <X className="h-4 w-4" />
@@ -274,17 +269,15 @@ export function JobCard({ job, onCancel, onDelete }: Props) {
         )}
 
         {isJobFinished && onDelete && (
-          <HoverFade show={isHovered}>
-            <Button
-              variant="light"
-              size="sm"
-              isIconOnly
-              className="text-foreground-500 hover:text-danger h-7 w-7 shrink-0"
-              onPress={() => onDelete(job.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </HoverFade>
+          <Button
+            variant="light"
+            size="sm"
+            isIconOnly
+            className="text-foreground-500 hover:text-danger h-7 w-7 shrink-0 not-group-hover:hidden max-md:hidden"
+            onPress={() => onDelete(job.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         )}
       </CardBody>
 
