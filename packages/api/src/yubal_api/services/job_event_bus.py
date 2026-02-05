@@ -1,4 +1,4 @@
-"""Thread-safe event bus for job state changes."""
+"""Event bus for job state changes."""
 
 from __future__ import annotations
 
@@ -15,12 +15,11 @@ if TYPE_CHECKING:
 
 
 class JobEventBus:
-    """Thread-safe event bus for job state changes.
+    """Event bus for job state changes.
 
-    This bus allows background threads (like the job executor) to emit events
-    that are consumed by async SSE subscribers. Thread safety is achieved
-    using a lock for subscriber list access and call_soon_threadsafe for
-    queue operations from non-async contexts.
+    This bus emits events to async SSE subscribers. The emit() method is always
+    called from the event loop thread - either directly from async code or via
+    call_soon_threadsafe from worker threads (see JobExecutor._on_progress).
 
     Backpressure is handled by drop-oldest: if a subscriber's queue is full,
     the oldest event is dropped to make room for the new one.
@@ -31,11 +30,6 @@ class JobEventBus:
     def __init__(self) -> None:
         self._subscribers: list[asyncio.Queue[str]] = []
         self._lock = threading.Lock()
-        self._loop: asyncio.AbstractEventLoop | None = None
-
-    def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
-        """Set event loop for thread-safe emission. Call during app startup."""
-        self._loop = loop
 
     @asynccontextmanager
     async def subscribe(self) -> AsyncIterator[asyncio.Queue[str]]:
@@ -50,15 +44,15 @@ class JobEventBus:
                 self._subscribers.remove(queue)
 
     def emit(self, event: dict[str, Any]) -> None:
-        """Emit event to all subscribers. Thread-safe."""
+        """Emit event to all subscribers.
+
+        Note: This method is always called from the event loop thread
+        (either from async code or via call_soon_threadsafe from worker threads).
+        """
         data = json.dumps(event)
-        loop = self._loop
         with self._lock:
             for queue in list(self._subscribers):
-                if loop is not None and loop.is_running():
-                    loop.call_soon_threadsafe(self._safe_put, queue, data)
-                else:
-                    self._safe_put(queue, data)
+                self._safe_put(queue, data)
 
     def _safe_put(self, queue: asyncio.Queue[str], data: str) -> None:
         """Put data with drop-oldest backpressure."""

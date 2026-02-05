@@ -24,7 +24,6 @@ from yubal_api.api.container import Services
 from yubal_api.api.exceptions import register_exception_handlers
 from yubal_api.api.routes import cookies, health, jobs, logs, scheduler, subscriptions
 from yubal_api.db import SubscriptionRepository, create_db_engine
-from yubal_api.services.job_event_bus import get_job_event_bus
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import (
@@ -180,9 +179,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     services = create_services(repository)
     app.state.services = services
     logger.info("Services initialized")
-
-    # Initialize event bus with event loop for thread-safe emission
-    get_job_event_bus().set_loop(asyncio.get_running_loop())
 
     # Start scheduler
     services.scheduler.start()
