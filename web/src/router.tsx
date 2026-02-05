@@ -2,7 +2,7 @@
 
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
-import { DownloadsPage } from "@/pages/downloads";
+import { JobsPage } from "@/pages/jobs";
 import { SubscriptionsPage } from "@/pages/subscriptions";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import {
@@ -50,19 +50,19 @@ const rootRoute = createRootRoute({
   notFoundComponent: NotFoundRedirect,
 });
 
-const downloadsRoute = createRoute({
+const jobsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: DownloadsPage,
+  component: JobsPage,
 });
 
 const subscriptionsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/subscriptions",
+  path: "/playlists",
   component: SubscriptionsPage,
 });
 
-const routeTree = rootRoute.addChildren([downloadsRoute, subscriptionsRoute]);
+const routeTree = rootRoute.addChildren([jobsRoute, subscriptionsRoute]);
 
 export const router = createRouter({ routeTree });
 

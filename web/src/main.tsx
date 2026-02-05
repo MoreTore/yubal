@@ -2,7 +2,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "./components/common/error-boundary";
-import { JobsProvider } from "./features/downloads/jobs-context";
+import { JobsProvider } from "./features/jobs/jobs-context";
 import { ThemeProvider } from "./hooks/use-theme";
 import "./index.css";
 import { router } from "./router";

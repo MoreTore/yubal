@@ -1,7 +1,7 @@
 import { UrlInput } from "@/components/common/url-input";
 import { ConsolePanel } from "@/features/console/console-panel";
-import { DownloadsPanel } from "@/features/downloads/downloads-panel";
-import { useJobs } from "@/features/downloads/jobs-context";
+import { JobsPanel } from "@/features/jobs/jobs-panel";
+import { useJobs } from "@/features/jobs/jobs-context";
 import { isValidUrl } from "@/lib/url";
 import { Button, NumberInput, Tooltip } from "@heroui/react";
 import { DownloadIcon, HashIcon } from "lucide-react";
@@ -9,7 +9,7 @@ import { useState } from "react";
 
 const DEFAULT_MAX_ITEMS = 100;
 
-export function DownloadsPage() {
+export function JobsPage() {
   const [url, setUrl] = useState("");
   const [maxItems, setMaxItems] = useState(DEFAULT_MAX_ITEMS);
   const { jobs, isLoading, startJob, cancelJob, deleteJob } = useJobs();
@@ -69,7 +69,7 @@ export function DownloadsPage() {
 
       {/* Downloads Panels */}
       <section className="flex flex-col gap-6">
-        <DownloadsPanel
+        <JobsPanel
           jobs={jobs}
           isLoading={isLoading}
           onCancel={cancelJob}

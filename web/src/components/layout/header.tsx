@@ -2,7 +2,7 @@ import { listSubscriptions } from "@/api/subscriptions";
 import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
 import { CookieDropdown } from "@/features/cookies/cookie-dropdown";
 import { useCookies } from "@/features/cookies/use-cookies";
-import { useJobs } from "@/features/downloads/jobs-context";
+import { useJobs } from "@/features/jobs/jobs-context";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import {
   Button,
@@ -28,7 +28,7 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Downloads", startIcon: DownloadIcon, href: "/" },
-  { label: "My playlists", startIcon: ListMusicIcon, href: "/subscriptions" },
+  { label: "My playlists", startIcon: ListMusicIcon, href: "/playlists" },
 ];
 
 export function Header() {
@@ -94,7 +94,7 @@ export function Header() {
               href={item.href}
               startContent={<item.startIcon className="h-4 w-4" />}
               endContent={
-                item.href === "/subscriptions" &&
+                item.href === "/playlists" &&
                 subscriptionCount > 0 && (
                   <Chip
                     size="sm"
@@ -187,7 +187,7 @@ export function Header() {
               onPress={() => setIsMenuOpen(false)}
             >
               {item.label}
-              {item.href === "/subscriptions" && subscriptionCount > 0 && (
+              {item.href === "/playlists" && subscriptionCount > 0 && (
                 <Chip size="sm" variant="flat" color="primary">
                   {subscriptionCount}
                 </Chip>

@@ -12,7 +12,7 @@ type Props = {
   onDelete: (jobId: string) => void;
 };
 
-export function DownloadsPanel({ jobs, isLoading, onCancel, onDelete }: Props) {
+export function JobsPanel({ jobs, isLoading, onCancel, onDelete }: Props) {
   return (
     <Panel>
       <PanelHeader
