@@ -117,23 +117,21 @@ docker compose up -d
 | `YUBAL_SCHEDULER_CRON`    | Cron schedule for auto-sync          | `0 0 * * *`      |
 | `YUBAL_FETCH_LYRICS`      | Fetch lyrics from lrclib.net         | `true`           |
 | `YUBAL_REPLAYGAIN`        | Apply ReplayGain tags to downloads   | `true`           |
-| `YUBAL_ASCII_FILENAMES`   | Transliterate unicode to ASCII       | `false`          |
 | `YUBAL_TZ`                | Timezone (IANA format)               | `UTC`            |
 
 <details>
 <summary>All options</summary>
 
-| Variable             | Description                         | Default (Docker) |
-| -------------------- | ----------------------------------- | ---------------- |
-| `YUBAL_HOST`         | Server bind address                 | `127.0.0.1`      |
-| `YUBAL_PORT`         | Server port                         | `8000`           |
-| `YUBAL_DATA`         | Music library output                | `/app/data`      |
-| `YUBAL_CONFIG`       | Config directory                    | `/app/config`    |
-| `YUBAL_LOG_LEVEL`    | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO`           |
-| `YUBAL_DEBUG`        | Debug mode                          | `false`          |
-| `YUBAL_CORS_ORIGINS` | Allowed CORS origins                | `["*"]`          |
-| `YUBAL_RELOAD`       | Auto-reload (dev only)              | `false`          |
-| `YUBAL_TEMP`         | Temp directory                      | System temp      |
+| Variable                | Description                         | Default (Docker) |
+| ----------------------- | ----------------------------------- | ---------------- |
+| `YUBAL_HOST`            | Server bind address                 | `127.0.0.1`      |
+| `YUBAL_PORT`            | Server port                         | `8000`           |
+| `YUBAL_DATA`            | Music library output                | `/app/data`      |
+| `YUBAL_CONFIG`          | Config directory                    | `/app/config`    |
+| `YUBAL_LOG_LEVEL`       | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO`           |
+| `YUBAL_ASCII_FILENAMES` | Transliterate unicode to ASCII      | `false`          |
+| `YUBAL_CORS_ORIGINS`    | Allowed CORS origins                | `["*"]`          |
+| `YUBAL_TEMP`            | Temp directory                      | System temp      |
 
 </details>
 
