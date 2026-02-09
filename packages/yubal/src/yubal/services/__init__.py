@@ -19,7 +19,7 @@ Internal (not exported):
 """
 
 from yubal.services.extractor import MetadataExtractorService
-from yubal.services.pipeline import PlaylistDownloadService
+from yubal.services.playlist_download_service import PlaylistDownloadService
 
 __all__ = [
     "MetadataExtractorService",

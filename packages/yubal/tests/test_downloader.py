@@ -13,7 +13,7 @@ from yubal.exceptions import CancellationError, DownloadError
 from yubal.models.cancel import CancelToken
 from yubal.models.enums import VideoType
 from yubal.models.track import TrackMetadata
-from yubal.services.downloader import (
+from yubal.services.download_service import (
     DownloadResult,
     DownloadService,
     DownloadStatus,
@@ -25,7 +25,9 @@ from yubal.services.downloader import (
 def _mock_network_calls() -> Iterator[None]:
     """Mock network calls to avoid slow HTTP requests in tests."""
     with (
-        patch("yubal.services.downloader.fetch_cover", return_value=b"fake cover"),
+        patch(
+            "yubal.services.download_service.fetch_cover", return_value=b"fake cover"
+        ),
         patch(
             "yubal.services.lyrics.httpx.get", return_value=MagicMock(status_code=404)
         ),
@@ -386,7 +388,10 @@ class TestDownloadService:
 
         with (
             patch.object(service._tagger, "apply_metadata_tags") as mock_tag,
-            patch("yubal.services.downloader.fetch_cover", return_value=b"cover data"),
+            patch(
+                "yubal.services.download_service.fetch_cover",
+                return_value=b"cover data",
+            ),
         ):
             result = service.download_track(sample_track)
 

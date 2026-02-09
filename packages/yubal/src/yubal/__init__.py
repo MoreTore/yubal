@@ -55,7 +55,7 @@ from yubal.models.results import (
 )
 from yubal.models.track import PlaylistInfo, TrackMetadata
 from yubal.services import MetadataExtractorService, PlaylistDownloadService
-from yubal.services.downloader import DownloadService as _DownloadService
+from yubal.services.download_service import DownloadService as _DownloadService
 from yubal.utils import cleanup_part_files, clear_cover_cache, fetch_cover
 from yubal.utils.url import is_single_track_url, is_supported_url, parse_playlist_id
 

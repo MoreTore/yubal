@@ -26,7 +26,7 @@ from yubal import (
 from yubal.models.enums import ContentKind
 from yubal.models.results import get_audio_bitrate
 from yubal.models.track import PlaylistInfo
-from yubal.services.pipeline import PlaylistDownloadService
+from yubal.services.playlist_download_service import PlaylistDownloadService
 
 from yubal_api.domain.enums import ProgressStep
 from yubal_api.domain.job import ContentInfo

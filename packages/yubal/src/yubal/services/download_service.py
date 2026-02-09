@@ -20,7 +20,7 @@ from yubal.models.progress import DownloadProgress
 from yubal.models.results import DownloadResult
 from yubal.models.track import TrackMetadata
 from yubal.services.lyrics import LyricsService, LyricsServiceProtocol
-from yubal.services.tagger import AudioFileTaggingService
+from yubal.services.tagging_service import AudioFileTaggingService
 from yubal.utils.cover import fetch_cover
 from yubal.utils.filename import build_track_path, build_unmatched_track_path
 

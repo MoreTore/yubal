@@ -12,7 +12,7 @@ from yubal.models.progress import DownloadProgress, ExtractProgress
 from yubal.models.results import DownloadResult
 from yubal.models.track import PlaylistInfo, TrackMetadata
 from yubal.services.artifacts import ArtifactPaths
-from yubal.services.pipeline import PlaylistDownloadService
+from yubal.services.playlist_download_service import PlaylistDownloadService
 
 
 @pytest.fixture

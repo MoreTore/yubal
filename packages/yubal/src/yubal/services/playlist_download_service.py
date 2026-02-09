@@ -21,7 +21,7 @@ from yubal.services.artifacts import (
     PlaylistArtifactsProtocol,
     PlaylistArtifactsService,
 )
-from yubal.services.downloader import DownloadService
+from yubal.services.download_service import DownloadService
 from yubal.services.extractor import MetadataExtractorService
 from yubal.services.replaygain import ReplayGainProtocol, ReplayGainService
 
