@@ -3,13 +3,15 @@
 import asyncio
 import logging
 from datetime import UTC, datetime
+from uuid import UUID
 
 from croniter import croniter
 
+from yubal_api.api.exceptions import SubscriptionNotFoundError
 from yubal_api.db.subscription import Subscription
 from yubal_api.domain.enums import JobSource
 from yubal_api.services.job_executor import JobExecutor
-from yubal_api.services.protocols import SubscriptionRepo
+from yubal_api.services.subscription_service import SubscriptionService
 from yubal_api.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -20,12 +22,12 @@ class Scheduler:
 
     def __init__(
         self,
-        repository: SubscriptionRepo,
+        subscription_service: SubscriptionService,
         job_executor: JobExecutor,
         settings: Settings,
     ) -> None:
         """Initialize scheduler."""
-        self._repository = repository
+        self._subscription_service = subscription_service
         self._job_executor = job_executor
         self._settings = settings
         self._task: asyncio.Task[None] | None = None
@@ -111,7 +113,10 @@ class Scheduler:
         for subscription in subscriptions:
             try:
                 job = self._job_executor.create_and_start_job(
-                    subscription.url, subscription.max_items, JobSource.SCHEDULER
+                    subscription.url,
+                    subscription.max_items,
+                    JobSource.SCHEDULER,
+                    subscription.id,
                 )
                 if job is None:
                     logger.warning(
@@ -121,9 +126,9 @@ class Scheduler:
                     continue
 
                 job_ids.append(job.id)
-                self._repository.update(
+                self._subscription_service.update(
                     subscription.id,
-                    last_synced_at=datetime.now(UTC),
+                    {"last_synced_at": datetime.now(UTC)},
                 )
                 logger.info(
                     "Created sync job %s for %s",
@@ -139,14 +144,15 @@ class Scheduler:
 
     async def _sync_all_enabled(self) -> list[str]:
         """Sync all enabled subscriptions (async wrapper)."""
-        return self._create_jobs_for_subscriptions(self._repository.list(enabled=True))
+        return self._create_jobs_for_subscriptions(
+            self._subscription_service.list(enabled=True)
+        )
 
-    def sync_subscription(self, subscription_id: str) -> str | None:
+    def sync_subscription(self, subscription_id: UUID) -> str | None:
         """Create sync job for a single subscription. Returns job_id or None."""
-        from uuid import UUID
-
-        subscription = self._repository.get(UUID(subscription_id))
-        if subscription is None:
+        try:
+            subscription = self._subscription_service.get(subscription_id)
+        except SubscriptionNotFoundError:
             return None
 
         job_ids = self._create_jobs_for_subscriptions([subscription])
@@ -154,4 +160,6 @@ class Scheduler:
 
     def sync_all(self) -> list[str]:
         """Create sync jobs for all enabled subscriptions. Returns job_ids."""
-        return self._create_jobs_for_subscriptions(self._repository.list(enabled=True))
+        return self._create_jobs_for_subscriptions(
+            self._subscription_service.list(enabled=True)
+        )

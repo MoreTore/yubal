@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from yubal_api.api.deps import RepositoryDep, SchedulerDep, SettingsDep
+from yubal_api.api.deps import SchedulerDep, SettingsDep, SubscriptionServiceDep
 from yubal_api.schemas.scheduler import SchedulerStatus, SubscriptionCounts
 
 router = APIRouter(prefix="/scheduler", tags=["scheduler"])
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/scheduler", tags=["scheduler"])
 
 @router.get("", response_model=SchedulerStatus)
 def get_scheduler_status(
-    repository: RepositoryDep,
+    service: SubscriptionServiceDep,
     scheduler: SchedulerDep,
     settings: SettingsDep,
 ) -> SchedulerStatus:
@@ -22,7 +22,7 @@ def get_scheduler_status(
         timezone=settings.tz,
         next_run_at=scheduler.next_run_at,
         subscription_counts=SubscriptionCounts(
-            total=repository.count(),
-            enabled=repository.count(enabled=True),
+            total=service.count(),
+            enabled=service.count(enabled=True),
         ),
     )

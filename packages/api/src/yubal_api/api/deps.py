@@ -22,8 +22,7 @@ from yubal_api.services.job_event_bus import JobEventBus
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import LogBuffer
-from yubal_api.services.playlist_info import PlaylistInfoService
-from yubal_api.services.protocols import SubscriptionRepo
+from yubal_api.services.playlist_info_service import PlaylistInfoService
 from yubal_api.services.scheduler import Scheduler
 from yubal_api.services.subscription_service import SubscriptionService
 from yubal_api.settings import Settings, get_settings
@@ -47,11 +46,6 @@ def _get_job_executor(services: ServicesDep) -> JobExecutor:
     return services.job_executor
 
 
-def _get_repository(services: ServicesDep) -> SubscriptionRepo:
-    """Get subscription repository from services container."""
-    return services.repository
-
-
 def _get_scheduler(services: ServicesDep) -> Scheduler:
     """Get scheduler from services container."""
     return services.scheduler
@@ -64,7 +58,6 @@ def _get_subscription_service(services: ServicesDep) -> SubscriptionService:
 
 JobStoreDep = Annotated[JobStore, Depends(_get_job_store)]
 JobExecutorDep = Annotated[JobExecutor, Depends(_get_job_executor)]
-RepositoryDep = Annotated[SubscriptionRepo, Depends(_get_repository)]
 SchedulerDep = Annotated[Scheduler, Depends(_get_scheduler)]
 SubscriptionServiceDep = Annotated[
     SubscriptionService, Depends(_get_subscription_service)

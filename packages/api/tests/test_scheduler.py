@@ -11,9 +11,9 @@ from yubal_api.services.scheduler import Scheduler
 @pytest.fixture
 def scheduler(mock_settings: MagicMock) -> Scheduler:
     """Create scheduler with mocked dependencies."""
-    repository = MagicMock()
+    subscription_service = MagicMock()
     job_executor = MagicMock()
-    return Scheduler(repository, job_executor, mock_settings)
+    return Scheduler(subscription_service, job_executor, mock_settings)
 
 
 class TestGetNextRunTime:
@@ -69,13 +69,13 @@ class TestGetNextRunTime:
         self, mock_settings: MagicMock
     ) -> None:
         """Same cron in different timezones should produce different UTC times."""
-        repository = MagicMock()
+        subscription_service = MagicMock()
         job_executor = MagicMock()
 
         # Scheduler with UTC
         mock_settings.timezone = ZoneInfo("UTC")
         mock_settings.scheduler_cron = "0 12 * * *"  # Noon
-        scheduler_utc = Scheduler(repository, job_executor, mock_settings)
+        scheduler_utc = Scheduler(subscription_service, job_executor, mock_settings)
         next_utc = scheduler_utc._get_next_run_time()
 
         # Scheduler with Tokyo (UTC+9)
@@ -83,7 +83,9 @@ class TestGetNextRunTime:
         mock_settings_tokyo.scheduler_enabled = True
         mock_settings_tokyo.scheduler_cron = "0 12 * * *"  # Noon
         mock_settings_tokyo.timezone = ZoneInfo("Asia/Tokyo")
-        scheduler_tokyo = Scheduler(repository, job_executor, mock_settings_tokyo)
+        scheduler_tokyo = Scheduler(
+            subscription_service, job_executor, mock_settings_tokyo
+        )
         next_tokyo = scheduler_tokyo._get_next_run_time()
 
         # Noon in Tokyo is 3am UTC, noon in UTC is 12pm UTC

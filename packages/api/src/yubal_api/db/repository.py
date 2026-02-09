@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
-from yubal_api.db.subscription import Subscription, SubscriptionType
+from yubal_api.db.subscription import Subscription, SubscriptionFields, SubscriptionType
 
 
 class SubscriptionRepository:
@@ -49,13 +49,13 @@ class SubscriptionRepository:
             session.refresh(subscription)
             return subscription
 
-    def update(self, id: UUID, **kwargs: object) -> Subscription | None:
+    def update(self, id: UUID, fields: SubscriptionFields) -> Subscription | None:
         """Update subscription fields by ID. Returns None if not found."""
         with Session(self._engine) as session:
             subscription = session.get(Subscription, id)
             if subscription is None:
                 return None
-            for key, value in kwargs.items():
+            for key, value in fields.items():
                 setattr(subscription, key, value)
             session.commit()
             session.refresh(subscription)
@@ -87,26 +87,3 @@ class SubscriptionRepository:
             if type is not None:
                 stmt = stmt.where(Subscription.type == type)
             return session.exec(stmt).one()
-
-    def update_metadata_by_url(
-        self, url: str, name: str, thumbnail_url: str | None
-    ) -> bool:
-        """Update subscription metadata by URL.
-
-        Args:
-            url: The subscription URL.
-            name: The new name.
-            thumbnail_url: The new thumbnail URL.
-
-        Returns:
-            True if a subscription was updated, False if not found.
-        """
-        with Session(self._engine) as session:
-            stmt = select(Subscription).where(Subscription.url == url)
-            subscription = session.exec(stmt).first()
-            if subscription is None:
-                return False
-            subscription.name = name
-            subscription.thumbnail_url = thumbnail_url
-            session.commit()
-            return True

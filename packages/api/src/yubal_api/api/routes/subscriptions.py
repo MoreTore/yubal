@@ -70,8 +70,7 @@ def update_subscription(
     service: SubscriptionServiceDep,
 ) -> SubscriptionResponse:
     """Update a subscription."""
-    updates = data.model_dump(exclude_unset=True)
-    subscription = service.update(subscription_id, **updates)
+    subscription = service.update(subscription_id, data.model_dump(exclude_unset=True))
     return SubscriptionResponse.model_validate(subscription)
 
 
@@ -94,7 +93,7 @@ async def sync_subscription(
     service.get(
         subscription_id
     )  # Validates existence, raises SubscriptionNotFoundError
-    job_id = scheduler.sync_subscription(str(subscription_id))
+    job_id = scheduler.sync_subscription(subscription_id)
     if job_id is None:
         raise QueueFullError()
     return SyncResponse(job_ids=[job_id])

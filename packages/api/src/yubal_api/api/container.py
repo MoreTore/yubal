@@ -13,9 +13,8 @@ from yubal_api.services.job_event_bus import JobEventBus
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import LogBuffer
-from yubal_api.services.protocols import SubscriptionRepo
 from yubal_api.services.scheduler import Scheduler
-from yubal_api.services.shutdown import ShutdownCoordinator
+from yubal_api.services.shutdown_coordinator import ShutdownCoordinator
 from yubal_api.services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,6 @@ class Services:
     job_store: JobStore
     job_executor: JobExecutor
     shutdown_coordinator: ShutdownCoordinator
-    repository: SubscriptionRepo
     subscription_service: SubscriptionService
     scheduler: Scheduler
     job_event_bus: JobEventBus

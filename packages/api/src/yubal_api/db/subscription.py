@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import TypedDict
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
@@ -12,6 +13,15 @@ class SubscriptionType(StrEnum):
 
     PLAYLIST = "playlist"
     # ARTIST = "artist"  # future
+
+
+class SubscriptionFields(TypedDict, total=False):
+    """Partial update fields for a subscription."""
+
+    enabled: bool
+    name: str
+    thumbnail_url: str | None
+    last_synced_at: datetime
 
 
 class Subscription(SQLModel, table=True):

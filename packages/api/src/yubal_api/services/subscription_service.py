@@ -17,9 +17,9 @@ from yubal_api.api.exceptions import (
     SubscriptionConflictError,
     SubscriptionNotFoundError,
 )
-from yubal_api.db.subscription import Subscription, SubscriptionType
-from yubal_api.services.playlist_info import PlaylistInfoService
-from yubal_api.services.protocols import SubscriptionRepo
+from yubal_api.db.subscription import Subscription, SubscriptionFields, SubscriptionType
+from yubal_api.services.playlist_info_service import PlaylistInfoService
+from yubal_api.services.protocols import SubscriptionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class SubscriptionService:
 
     def __init__(
         self,
-        repository: SubscriptionRepo,
+        repository: SubscriptionRepository,
         playlist_info: PlaylistInfoService,
     ) -> None:
         self._repository = repository
@@ -88,24 +88,22 @@ class SubscriptionService:
         )
         return self._repository.create(subscription)
 
-    def update(self, subscription_id: UUID, **kwargs: object) -> Subscription:
-        if not kwargs:
+    def update(self, subscription_id: UUID, fields: SubscriptionFields) -> Subscription:
+        if not fields:
             return self.get(subscription_id)
-        sub = self._repository.update(subscription_id, **kwargs)
+        sub = self._repository.update(subscription_id, fields)
         if sub is None:
             raise SubscriptionNotFoundError(subscription_id)
         return sub
 
+    def count(
+        self,
+        *,
+        enabled: bool | None = None,
+        type: SubscriptionType | None = None,
+    ) -> int:
+        return self._repository.count(enabled=enabled, type=type)
+
     def delete(self, subscription_id: UUID) -> None:
         if not self._repository.delete(subscription_id):
             raise SubscriptionNotFoundError(subscription_id)
-
-    def update_metadata_by_url(
-        self, url: str, name: str, thumbnail_url: str | None
-    ) -> bool:
-        """Update subscription metadata by URL (used by job executor after sync)."""
-        sub = self._repository.get_by_url(url)
-        if sub is None:
-            return False
-        self._repository.update(sub.id, name=name, thumbnail_url=thumbnail_url)
-        return True

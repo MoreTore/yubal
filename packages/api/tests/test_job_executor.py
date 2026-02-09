@@ -2,13 +2,14 @@
 
 import time
 from typing import Any
+from uuid import UUID
 
 import pytest
 from yubal import AudioCodec
 from yubal_api.domain.enums import JobSource, JobStatus
 from yubal_api.domain.job import Job
 from yubal_api.services.job_executor import JobExecutor
-from yubal_api.services.sync import SyncResult
+from yubal_api.services.sync_service import SyncResult
 
 
 class FakeJobStore:
@@ -25,6 +26,7 @@ class FakeJobStore:
         audio_format: AudioCodec = AudioCodec.OPUS,
         max_items: int | None = None,
         source: JobSource = JobSource.MANUAL,
+        subscription_id: UUID | None = None,
     ) -> tuple[Job, bool] | None:
         job = Job(id="test-job", url=url, audio_format=audio_format)
         return job, True

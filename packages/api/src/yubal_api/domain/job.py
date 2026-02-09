@@ -1,6 +1,7 @@
 """Core domain models for the API."""
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 from yubal import AudioCodec, ContentKind, PhaseStats
@@ -32,6 +33,7 @@ class Job(BaseModel):
     url: str = Field(json_schema_extra={"format": "uri"})
     audio_format: AudioCodec = AudioCodec.OPUS
     max_items: int | None = None
+    subscription_id: UUID | None = None
     source: JobSource = JobSource.MANUAL
     status: JobStatus = JobStatus.PENDING
     progress: float = 0.0

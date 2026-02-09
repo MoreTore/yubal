@@ -6,7 +6,7 @@ from uuid import UUID
 
 from yubal import AudioCodec, PhaseStats
 
-from yubal_api.db.subscription import Subscription, SubscriptionType
+from yubal_api.db.subscription import Subscription, SubscriptionFields, SubscriptionType
 from yubal_api.domain.enums import JobSource, JobStatus
 from yubal_api.domain.job import ContentInfo, Job
 
@@ -26,6 +26,7 @@ class JobExecutionStore(Protocol):
         audio_format: AudioCodec,
         max_items: int | None = None,
         source: JobSource = JobSource.MANUAL,
+        subscription_id: UUID | None = None,
     ) -> tuple[Job, bool] | None:
         """Create a new job.
 
@@ -60,7 +61,7 @@ class JobExecutionStore(Protocol):
         ...
 
 
-class SubscriptionRepo(Protocol):
+class SubscriptionRepository(Protocol):
     """Narrow interface for subscription data access."""
 
     def list(
@@ -76,7 +77,7 @@ class SubscriptionRepo(Protocol):
 
     def create(self, subscription: Subscription) -> Subscription: ...
 
-    def update(self, id: UUID, **kwargs: object) -> Subscription | None: ...
+    def update(self, id: UUID, fields: SubscriptionFields) -> Subscription | None: ...
 
     def delete(self, id: UUID) -> bool: ...
 

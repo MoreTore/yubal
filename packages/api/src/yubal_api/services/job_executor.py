@@ -6,14 +6,15 @@ from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from yubal import AudioCodec, CancelToken, cleanup_part_files
 
-from yubal_api.db.repository import SubscriptionRepository
 from yubal_api.domain.enums import JobSource, JobStatus, ProgressStep
 from yubal_api.domain.job import ContentInfo, Job
 from yubal_api.services.protocols import JobExecutionStore
-from yubal_api.services.sync import SyncService
+from yubal_api.services.subscription_service import SubscriptionService
+from yubal_api.services.sync_service import SyncService
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class JobExecutor:
         fetch_lyrics: bool = True,
         apply_replaygain: bool = False,
         ascii_filenames: bool = False,
-        subscription_repository: SubscriptionRepository | None = None,
+        subscription_service: SubscriptionService | None = None,
     ) -> None:
         """Initialize the job executor.
 
@@ -63,7 +64,7 @@ class JobExecutor:
             fetch_lyrics: Whether to fetch lyrics from lrclib.net.
             apply_replaygain: Whether to apply ReplayGain tags using rsgain.
             ascii_filenames: Whether to transliterate unicode to ASCII in filenames.
-            subscription_repository: Optional repository to update subscription names.
+            subscription_service: Optional service to update subscription metadata.
         """
         self._job_store = job_store
         self._base_path = base_path
@@ -72,7 +73,7 @@ class JobExecutor:
         self._fetch_lyrics = fetch_lyrics
         self._apply_replaygain = apply_replaygain
         self._ascii_filenames = ascii_filenames
-        self._subscription_repository = subscription_repository
+        self._subscription_service = subscription_service
 
         # Track background tasks to prevent GC during execution
         self._background_tasks: set[asyncio.Task[Any]] = set()
@@ -84,6 +85,7 @@ class JobExecutor:
         url: str,
         max_items: int | None = None,
         source: JobSource = JobSource.MANUAL,
+        subscription_id: UUID | None = None,
     ) -> Job | None:
         """Create a new job and start it if ready.
 
@@ -95,11 +97,14 @@ class JobExecutor:
             url: The URL to download content from.
             max_items: Maximum number of items to download (None for all).
             source: Source of the job (manual API call or scheduler).
+            subscription_id: Optional subscription that triggered this job.
 
         Returns:
             The created Job, or None if queue is full.
         """
-        result = self._job_store.create(url, self._audio_format, max_items, source)
+        result = self._job_store.create(
+            url, self._audio_format, max_items, source, subscription_id
+        )
         if result is None:
             return None
 
@@ -119,7 +124,7 @@ class JobExecutor:
             job: The job to start executing.
         """
         task = asyncio.create_task(
-            self._run_job(job.id, job.url, job.max_items),
+            self._run_job(job.id, job.url, job.max_items, job.subscription_id),
             name=f"job-{job.id[:8]}",  # Helpful for debugging
         )
         self._background_tasks.add(task)
@@ -158,7 +163,11 @@ class JobExecutor:
         return len(tokens)
 
     async def _run_job(
-        self, job_id: str, url: str, max_items: int | None = None
+        self,
+        job_id: str,
+        url: str,
+        max_items: int | None = None,
+        subscription_id: UUID | None = None,
     ) -> None:
         """Background task that runs the sync operation."""
         cancel_token = CancelToken()
@@ -236,17 +245,18 @@ class JobExecutor:
                         download_stats=result.download_stats,
                     )
                     # Update subscription metadata with latest info from YouTube Music
-                    # TODO: migrate to SubscriptionService when executor
-                    # refactoring is scoped
                     if (
-                        self._subscription_repository
+                        self._subscription_service
+                        and subscription_id
                         and result.content_info
                         and result.content_info.title
                     ):
-                        self._subscription_repository.update_metadata_by_url(
-                            url,
-                            result.content_info.title,
-                            result.content_info.thumbnail_url,
+                        self._subscription_service.update(
+                            subscription_id,
+                            {
+                                "name": result.content_info.title,
+                                "thumbnail_url": result.content_info.thumbnail_url,
+                            },
                         )
                 else:
                     error_msg = result.error or "Unknown error"

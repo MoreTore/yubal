@@ -6,6 +6,7 @@ from collections import OrderedDict
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
+from uuid import UUID
 
 from yubal import AudioCodec, PhaseStats
 
@@ -67,6 +68,7 @@ class JobStore:
         audio_format: AudioCodec = AudioCodec.OPUS,
         max_items: int | None = None,
         source: JobSource = JobSource.MANUAL,
+        subscription_id: UUID | None = None,
     ) -> tuple[Job, bool] | None:
         """Create a new job.
 
@@ -78,6 +80,7 @@ class JobStore:
             audio_format: Audio codec for transcoding.
             max_items: Maximum number of items to download (None for all).
             source: Source of the job (manual API call or scheduler).
+            subscription_id: Optional subscription that triggered this job.
 
         Returns:
             Tuple of (job, should_start_immediately), or None if queue is full.
@@ -92,6 +95,7 @@ class JobStore:
                 url=url,
                 audio_format=audio_format,
                 max_items=max_items,
+                subscription_id=subscription_id,
                 source=source,
             )
             self._jobs[job.id] = job

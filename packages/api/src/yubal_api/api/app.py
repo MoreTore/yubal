@@ -42,9 +42,9 @@ from yubal_api.services.job_event_bus import JobEventBus
 from yubal_api.services.job_executor import JobExecutor
 from yubal_api.services.job_store import JobStore
 from yubal_api.services.log_buffer import BufferHandler, LogBuffer
-from yubal_api.services.playlist_info import PlaylistInfoService
+from yubal_api.services.playlist_info_service import PlaylistInfoService
 from yubal_api.services.scheduler import Scheduler
-from yubal_api.services.shutdown import ShutdownCoordinator
+from yubal_api.services.shutdown_coordinator import ShutdownCoordinator
 from yubal_api.services.subscription_service import SubscriptionService
 from yubal_api.settings import get_settings
 
@@ -143,17 +143,6 @@ def create_services(repository: SubscriptionRepository) -> Services:
         event_bus=job_event_bus,
     )
 
-    job_executor = JobExecutor(
-        job_store=job_store,
-        base_path=settings.data,
-        audio_format=settings.audio_format,
-        cookies_path=settings.cookies_file,
-        fetch_lyrics=settings.fetch_lyrics,
-        apply_replaygain=settings.replaygain,
-        ascii_filenames=settings.ascii_filenames,
-        subscription_repository=repository,
-    )
-
     # Create subscription service
     cookies_path = settings.cookies_file if settings.cookies_file.exists() else None
     playlist_info = PlaylistInfoService(cookies_path=cookies_path)
@@ -162,9 +151,20 @@ def create_services(repository: SubscriptionRepository) -> Services:
         playlist_info=playlist_info,
     )
 
+    job_executor = JobExecutor(
+        job_store=job_store,
+        base_path=settings.data,
+        audio_format=settings.audio_format,
+        cookies_path=settings.cookies_file,
+        fetch_lyrics=settings.fetch_lyrics,
+        apply_replaygain=settings.replaygain,
+        ascii_filenames=settings.ascii_filenames,
+        subscription_service=subscription_service,
+    )
+
     # Create scheduler
     scheduler_service = Scheduler(
-        repository=repository,
+        subscription_service=subscription_service,
         job_executor=job_executor,
         settings=settings,
     )
@@ -176,7 +176,6 @@ def create_services(repository: SubscriptionRepository) -> Services:
         job_store=job_store,
         job_executor=job_executor,
         shutdown_coordinator=shutdown_coordinator,
-        repository=repository,
         subscription_service=subscription_service,
         scheduler=scheduler_service,
         job_event_bus=job_event_bus,

@@ -12,13 +12,16 @@ from yubal_api.api.exceptions import (
     SubscriptionNotFoundError,
 )
 from yubal_api.db.subscription import Subscription, SubscriptionType
-from yubal_api.services.playlist_info import PlaylistInfoService, PlaylistMetadata
+from yubal_api.services.playlist_info_service import (
+    PlaylistInfoService,
+    PlaylistMetadata,
+)
 from yubal_api.services.subscription_service import SubscriptionService
 
 
 @pytest.fixture
 def mock_repo() -> MagicMock:
-    """Create a mock SubscriptionRepo."""
+    """Create a mock SubscriptionRepository."""
     return MagicMock()
 
 
@@ -178,11 +181,11 @@ class TestUpdate:
     ) -> None:
         mock_repo.update.return_value = sample_subscription
 
-        result = service.update(sample_subscription.id, name="New Name")
+        result = service.update(sample_subscription.id, {"name": "New Name"})
 
         assert result == sample_subscription
         mock_repo.update.assert_called_once_with(
-            sample_subscription.id, name="New Name"
+            sample_subscription.id, {"name": "New Name"}
         )
 
     def test_update_not_found(
@@ -192,9 +195,9 @@ class TestUpdate:
         sub_id = uuid4()
 
         with pytest.raises(SubscriptionNotFoundError):
-            service.update(sub_id, name="New Name")
+            service.update(sub_id, {"name": "New Name"})
 
-    def test_update_empty_kwargs_returns_existing(
+    def test_update_empty_fields_returns_existing(
         self,
         service: SubscriptionService,
         mock_repo: MagicMock,
@@ -202,7 +205,7 @@ class TestUpdate:
     ) -> None:
         mock_repo.get.return_value = sample_subscription
 
-        result = service.update(sample_subscription.id)
+        result = service.update(sample_subscription.id, {})
 
         assert result == sample_subscription
         mock_repo.update.assert_not_called()
@@ -228,39 +231,3 @@ class TestDelete:
 
         with pytest.raises(SubscriptionNotFoundError):
             service.delete(sub_id)
-
-
-class TestUpdateMetadataByUrl:
-    def test_update_metadata_found(
-        self,
-        service: SubscriptionService,
-        mock_repo: MagicMock,
-        sample_subscription: Subscription,
-    ) -> None:
-        mock_repo.get_by_url.return_value = sample_subscription
-        mock_repo.update.return_value = sample_subscription
-
-        result = service.update_metadata_by_url(
-            sample_subscription.url, "New Name", "https://example.com/new.jpg"
-        )
-
-        assert result is True
-        mock_repo.update.assert_called_once_with(
-            sample_subscription.id,
-            name="New Name",
-            thumbnail_url="https://example.com/new.jpg",
-        )
-
-    def test_update_metadata_not_found(
-        self, service: SubscriptionService, mock_repo: MagicMock
-    ) -> None:
-        mock_repo.get_by_url.return_value = None
-
-        result = service.update_metadata_by_url(
-            "https://music.youtube.com/playlist?list=PLmissing",
-            "Name",
-            None,
-        )
-
-        assert result is False
-        mock_repo.update.assert_not_called()

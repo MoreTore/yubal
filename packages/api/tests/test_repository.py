@@ -83,7 +83,9 @@ class TestSubscriptionRepository:
         )
         created = repository.create(sub)
 
-        updated = repository.update(created.id, name="Updated Name", enabled=False)
+        updated = repository.update(
+            created.id, {"name": "Updated Name", "enabled": False}
+        )
 
         assert updated is not None
         assert updated.name == "Updated Name"
