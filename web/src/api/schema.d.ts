@@ -488,6 +488,11 @@ export interface components {
              * @default null
              */
             max_items: number | null;
+            /**
+             * Subscription Id
+             * @default null
+             */
+            subscription_id: string | null;
             /** @default manual */
             source: components["schemas"]["JobSource"];
             /** @default pending */
@@ -622,7 +627,7 @@ export interface components {
              * @description Current operation phase
              * @default null
              */
-            phase: string | null;
+            phase: ("extracting" | "downloading" | "composing" | "normalizing") | null;
             /**
              * Phase Num
              * @description Phase number (1-4)
@@ -634,7 +639,7 @@ export interface components {
              * @description Specific event type for granular tracking
              * @default null
              */
-            event_type: string | null;
+            event_type: "track_download" | null;
             /**
              * Current
              * @description Current item index in progress (0-indexed)
@@ -669,7 +674,7 @@ export interface components {
              * @description Type of file: m3u, cover, audio
              * @default null
              */
-            file_type: string | null;
+            file_type: ("m3u" | "cover" | "audio") | null;
             /**
              * Track Title
              * @description Track title being processed

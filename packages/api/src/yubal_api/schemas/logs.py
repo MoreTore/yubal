@@ -21,6 +21,15 @@ SkipReasonType = Literal[
 # Stats type discriminator for frontend rendering
 StatsType = Literal["extraction", "download"]
 
+# Phase names for the download pipeline
+PhaseType = Literal["extracting", "downloading", "composing", "normalizing"]
+
+# Event type discriminator for progress entries
+EventType = Literal["track_download"]
+
+# File type discriminator for file entries
+FileType = Literal["m3u", "cover", "audio"]
+
 
 class LogStats(BaseModel):
     """Statistics for batch operations.
@@ -72,9 +81,9 @@ class LogEntry(BaseModel):
     message: str = Field(..., description="Human-readable log message")
 
     # Optional structured fields for enhanced frontend rendering
-    phase: str | None = Field(None, description="Current operation phase")
+    phase: PhaseType | None = Field(None, description="Current operation phase")
     phase_num: int | None = Field(None, description="Phase number (1-4)", ge=1, le=4)
-    event_type: str | None = Field(
+    event_type: EventType | None = Field(
         None, description="Specific event type for granular tracking"
     )
     current: int | None = Field(
@@ -92,7 +101,9 @@ class LogEntry(BaseModel):
     file_path: str | None = Field(
         None, description="Path to generated or downloaded file"
     )
-    file_type: str | None = Field(None, description="Type of file: m3u, cover, audio")
+    file_type: FileType | None = Field(
+        None, description="Type of file: m3u, cover, audio"
+    )
     track_title: str | None = Field(None, description="Track title being processed")
     track_artist: str | None = Field(None, description="Track artist name")
     header: str | None = Field(
