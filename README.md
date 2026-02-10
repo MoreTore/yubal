@@ -22,7 +22,7 @@ Paste a link, get a properly tagged and organized library. Subscribe to playlist
 > [!IMPORTANT]
 > **Upgrading from v0.3?** Folder and file names now preserve unicode characters (`Bjork` → `Björk`), which may create duplicates alongside existing ASCII-named items.
 >
-> Check your library and merge any duplicates after upgrading.
+> To keep the previous ASCII behavior, set `YUBAL_ASCII_FILENAMES=true`. Otherwise, check your library and merge any duplicates after upgrading.
 
 ## 📖 How It Works
 
@@ -72,7 +72,7 @@ When downloading a playlist, each track goes to its album folder—the M3U file 
 - **Reliable downloads** — Automatic retry on failures, graceful cancellation
 - **Automatic lyrics** — Synced `.lrc` files downloaded alongside tracks when available
 - **ReplayGain tagging** — Track and album ReplayGain/R128 tags for consistent playback volume
-- **Format options** — Native `opus` (best quality), or transcode to `mp3`/`m4a`
+- **Format options** — Native `opus` (best quality), mp3, or m4a (direct download when available, transcoded otherwise)
 - **Media server ready** — Tested with [Navidrome, Jellyfin, and Gonic](#-media-server-integration)
 - **[CLI](packages/yubal/src/yubal/cli/README.md)** — Download and inspect metadata from the terminal
 
@@ -89,6 +89,7 @@ services:
       - 8000:8000
     environment:
       YUBAL_SCHEDULER_CRON: "0 0 * * *"
+      YUBAL_DOWNLOAD_UGC: false
       YUBAL_TZ: UTC
     volumes:
       - ./data:/app/data
@@ -100,7 +101,7 @@ services:
 > **Volume permissions:** The container runs as UID:GID `1000:1000` by default. If your host user has a different UID, either:
 >
 > - Change `user:` to match your UID:GID (run `id` to check), or
-> - Set ownership on the volume directories: `sudo chown 1000:1000 data config`
+> - Set ownership on the volume directories: `chown 1000:1000 -R data config`
 
 ```bash
 docker compose up -d
